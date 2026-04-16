@@ -1,0 +1,6 @@
+﻿targetPool,poolStrategy,productCategories,suggestedDefaultStaffLevel,staffLevel,memberName,memberEmail,enabled,notes
+ultrasound-pool,category_specific_pools,Ultrasound Machine,L1,L1,Tim,tim@apple.dev,true,一期基线成员；上线后按业务排班继续维护。
+operating-pool,category_specific_pools,Operating Technology and Operating equipment,L1,L1,Jane,jane.austen@apple.dev,true,一期基线成员；上线后按业务排班继续维护。
+obgyn-pool,category_specific_pools,OB/GYN and infant and gynecology,L1,L1,Jony,jony.ive@apple.dev,true,一期基线成员；上线后按业务排班继续维护。
+diagnostics-pool,category_specific_pools,Diagnostics equipment,L1,L1,Jane,jane.austen@apple.dev,true,一期基线成员；上线后按业务排班继续维护。
+furniture-pool,category_specific_pools,Hospital furniture,L1,L1,Tim,tim@apple.dev,true,一期基线成员；上线后按业务排班继续维护。

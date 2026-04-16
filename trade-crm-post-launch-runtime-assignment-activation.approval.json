@@ -1,0 +1,9 @@
+{
+  "approved": true,
+  "approvedBy": "trade-crm-implementation-owner",
+  "approvedAt": "2026-04-15T11:40:00+08:00",
+  "changeTicket": "TRDCRM-2026-0415-RUNTIME-ACTIVATION",
+  "activationWindow": "2026-04-15 13:00-14:00 Asia/Shanghai",
+  "rollbackPlan": "If runtime routing metrics regress or assignment anomalies appear, revert to the previous default-assignee routing and disable runtime draft activation within the same change window.",
+  "notes": "Phase-1 convergence completed. Stack is ready for runtime wiring and manual activation can proceed under change control."
+}

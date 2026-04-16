@@ -1,0 +1,7 @@
+﻿priority,source,country,productCategory,userEmail,workspaceMemberId,enabled,notes
+10,ALIBABA,US,,tim@apple.dev,,true,Alibaba 美国线索优先分给 Tim
+20,ALIBABA,DE,,jane.austen@apple.dev,,true,Alibaba 德国线索分给 Jane
+30,ALIBABA,JP,,jony.ive@apple.dev,,true,Alibaba 日本线索分给 Jony
+40,MANUAL,US,,jane.austen@apple.dev,,true,手工录入且国家为美国时优先分给 Jane
+50,MANUAL,,,tim@apple.dev,,true,其他手工录入线索默认分给 Tim
+60,REFERRAL,,,jony.ive@apple.dev,,true,转介绍线索默认分给 Jony

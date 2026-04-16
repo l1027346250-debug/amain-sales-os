@@ -1,0 +1,6 @@
+﻿targetPool,poolStrategy,productCategories,levelKey,levelName,sortOrder,isDefaultLevel,enabled,notes
+ultrasound-pool,category_specific_pools,Ultrasound Machine,L1,Primary,1,true,true,一期基线等级；上线后可扩展更多等级并调整排序。
+operating-pool,category_specific_pools,Operating Technology and Operating equipment,L1,Primary,1,true,true,一期基线等级；上线后可扩展更多等级并调整排序。
+obgyn-pool,category_specific_pools,OB/GYN and infant and gynecology,L1,Primary,1,true,true,一期基线等级；上线后可扩展更多等级并调整排序。
+diagnostics-pool,category_specific_pools,Diagnostics equipment,L1,Primary,1,true,true,一期基线等级；上线后可扩展更多等级并调整排序。
+furniture-pool,category_specific_pools,Hospital furniture,L1,Primary,1,true,true,一期基线等级；上线后可扩展更多等级并调整排序。

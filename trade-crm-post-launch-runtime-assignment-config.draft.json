@@ -1,0 +1,120 @@
+{
+  "status": "ok",
+  "source": "trade-crm-post-launch-staffing-templates",
+  "generatedAt": "2026-04-15T03:32:19.613Z",
+  "staffingFile": "G:\\codex\\twentyCRM\\twenty-1.20.0\\trade-crm-lead-assignment.phase1-pool-staffing-template.csv",
+  "levelFile": "G:\\codex\\twentyCRM\\twenty-1.20.0\\trade-crm-lead-assignment.phase1-pool-staff-level-template.csv",
+  "poolCount": 5,
+  "pools": [
+    {
+      "targetPool": "diagnostics-pool",
+      "poolStrategy": "category_specific_pools",
+      "productCategories": [
+        "Diagnostics equipment"
+      ],
+      "members": [
+        {
+          "staffLevel": "L1",
+          "memberName": "Jane",
+          "memberEmail": "jane.austen@apple.dev"
+        }
+      ],
+      "levels": [
+        {
+          "levelKey": "L1",
+          "levelName": "Primary",
+          "sortOrder": "1",
+          "isDefaultLevel": true
+        }
+      ]
+    },
+    {
+      "targetPool": "furniture-pool",
+      "poolStrategy": "category_specific_pools",
+      "productCategories": [
+        "Hospital furniture"
+      ],
+      "members": [
+        {
+          "staffLevel": "L1",
+          "memberName": "Tim",
+          "memberEmail": "tim@apple.dev"
+        }
+      ],
+      "levels": [
+        {
+          "levelKey": "L1",
+          "levelName": "Primary",
+          "sortOrder": "1",
+          "isDefaultLevel": true
+        }
+      ]
+    },
+    {
+      "targetPool": "obgyn-pool",
+      "poolStrategy": "category_specific_pools",
+      "productCategories": [
+        "OB/GYN and infant and gynecology"
+      ],
+      "members": [
+        {
+          "staffLevel": "L1",
+          "memberName": "Jony",
+          "memberEmail": "jony.ive@apple.dev"
+        }
+      ],
+      "levels": [
+        {
+          "levelKey": "L1",
+          "levelName": "Primary",
+          "sortOrder": "1",
+          "isDefaultLevel": true
+        }
+      ]
+    },
+    {
+      "targetPool": "operating-pool",
+      "poolStrategy": "category_specific_pools",
+      "productCategories": [
+        "Operating Technology and Operating equipment"
+      ],
+      "members": [
+        {
+          "staffLevel": "L1",
+          "memberName": "Jane",
+          "memberEmail": "jane.austen@apple.dev"
+        }
+      ],
+      "levels": [
+        {
+          "levelKey": "L1",
+          "levelName": "Primary",
+          "sortOrder": "1",
+          "isDefaultLevel": true
+        }
+      ]
+    },
+    {
+      "targetPool": "ultrasound-pool",
+      "poolStrategy": "category_specific_pools",
+      "productCategories": [
+        "Ultrasound Machine"
+      ],
+      "members": [
+        {
+          "staffLevel": "L1",
+          "memberName": "Tim",
+          "memberEmail": "tim@apple.dev"
+        }
+      ],
+      "levels": [
+        {
+          "levelKey": "L1",
+          "levelName": "Primary",
+          "sortOrder": "1",
+          "isDefaultLevel": true
+        }
+      ]
+    }
+  ]
+}

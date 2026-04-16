@@ -1,0 +1,159 @@
+name: CI Trade CRM Smoke
+
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+    inputs:
+      include_pg_state:
+        description: Include PostgreSQL-backed integration-hub state checks
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  changed-files-check:
+    if: github.event_name != 'merge_group'
+    uses: ./.github/workflows/changed-files.yaml
+    with:
+      files: |
+        package.json
+        yarn.lock
+        integration-hub/**
+        packages/twenty-server/**
+        packages/twenty-shared/**
+        scripts/verify-trade-crm-smoke.js
+        .github/workflows/ci-trade-crm-smoke.yaml
+        README.md
+
+  trade-crm-smoke:
+    needs: changed-files-check
+    if: github.event_name == 'merge_group' || needs.changed-files-check.outputs.any_changed == 'true'
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PG_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/default
+      REDIS_URL: redis://127.0.0.1:6379
+      APP_SECRET: trade-crm-ci-secret
+      TRADE_CRM_DEFAULT_ASSIGNEE_USER_EMAIL: tim@apple.dev
+      TRADE_CRM_SMOKE_INCLUDE_PG_STATE: ${{ github.event_name == 'workflow_dispatch' && inputs.include_pg_state && '1' || '0' }}
+    steps:
+      - name: Fetch custom Github Actions and base branch history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Install dependencies
+        uses: ./.github/actions/yarn-install
+
+      - name: Build twenty-shared
+        run: npx nx build twenty-shared
+
+      - name: Server / Write .env
+        run: npx nx reset:env twenty-server
+
+      - name: Server / Create DB
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d postgres -c 'CREATE DATABASE "default";'
+          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d postgres -c 'CREATE DATABASE "test";'
+          npx nx run twenty-server:database:init:prod
+
+      - name: Trade CRM / Smoke CI
+        run: yarn verify:trade-crm-smoke:ci
+
+      - name: Trade CRM / Publish job summary
+        if: always()
+        shell: bash
+        run: |
+          node <<'EOF'
+          const fs = require('node:fs');
+          const summaryPath = 'tmp/trade-crm-smoke/last-smoke-summary.json';
+          const stepSummaryPath = process.env.GITHUB_STEP_SUMMARY;
+
+          if (!fs.existsSync(summaryPath) || !stepSummaryPath) {
+            process.exit(0);
+          }
+
+          const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+          const lines = [
+            '## Trade CRM Smoke Summary',
+            '',
+            `- Status: \`${summary.status ?? 'unknown'}\``,
+            `- Warning count: \`${summary.warningCount ?? 0}\``,
+            `- Warning codes: \`${(summary.warningCodes ?? []).join(', ') || 'none'}\``,
+            `- Failed checks: \`${(summary.failedChecks ?? []).join(', ') || 'none'}\``,
+            `- PostgreSQL state checks: \`${summary.includePgStateChecks === true ? 'enabled' : 'disabled'}\``,
+            `- Active state backend: \`${summary.opsSnapshotSummary?.stateBackend ?? 'n/a'}\``,
+            `- Ready outbox events: \`${summary.opsSnapshotSummary?.readyOutboxEvents ?? 'n/a'}\``,
+            `- Processed outbox events: \`${summary.opsSnapshotSummary?.processedOutboxEvents ?? 'n/a'}\``,
+            `- Processed outbox consumer audit (count:capped-list): \`${summary.opsSnapshotSummary?.processedOutboxConsumerAuditSignal ?? '0:none'}\``,
+            `- Processed outbox consumer audit summary: ${summary.opsSnapshotSummary?.processedOutboxConsumerAuditNarrative ?? 'No named downstream consumer acknowledgements were recorded in the current snapshot.'}`,
+            `- Processed outbox consumer audit summary (ZH): ${summary.opsSnapshotSummary?.processedOutboxConsumerAuditNarrativeZh ?? '当前快照中没有记录到已命名的下游消费方确认。'}`,
+            `- Lead assignment register: \`${summary.leadAssignmentRegisterFile ?? 'n/a'}\``,
+            `- Generated rules file: \`${summary.leadAssignmentGeneratedRulesFile ?? 'n/a'}\``,
+            `- Register rule count: \`${summary.leadAssignmentRegisterRuleCount ?? 'n/a'}\``,
+            `- Register workspace: \`${summary.leadAssignmentRegisterWorkspaceId ?? 'n/a'}\``,
+            `- Post-launch assignment stack status: \`${summary.postLaunchAssignmentStackStatus ?? 'n/a'}\``,
+            `- Post-launch assignment pool strategy: \`${summary.postLaunchAssignmentPoolStrategy ?? 'n/a'}\``,
+            `- Assignment stack audit signal: \`${summary.assignmentStackAuditSignal ?? 'n/a'}\``,
+            `- Assignment stack bundled sources: \`${summary.assignmentStackBundledSourceCount ?? 'n/a'}\``,
+            `- Assignment stack copied sources: \`${summary.assignmentStackCopiedBundledSourceCount ?? 'n/a'}\``,
+            `- Assignment stack missing sources: \`${summary.assignmentStackMissingBundledSourceCount ?? 'n/a'}\``,
+            `- Assignment stack report: \`${summary.assignmentStackArtifacts?.markdown ?? 'n/a'}\``,
+            `- Assignment stack manifest: \`${summary.assignmentStackArtifacts?.manifest ?? 'n/a'}\``,
+            `- Ops headline: \`${summary.opsSnapshotSummary?.headline ?? 'n/a'}\``,
+            '',
+            '### Checks',
+            '',
+            ...(summary.checks ?? []).map((check) => `- \`${check.name}\`: \`${check.status}\``),
+          ];
+
+          fs.appendFileSync(stepSummaryPath, `${lines.join('\n')}\n`);
+          EOF
+
+      - name: Upload Trade CRM smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trade-crm-smoke-artifacts
+          path: tmp/trade-crm-smoke
+          if-no-files-found: warn
+
+  ci-trade-crm-smoke-status-check:
+    if: always() && !cancelled()
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    needs: [changed-files-check, trade-crm-smoke]
+    steps:
+      - name: Fail job if any needs failed
+        if: contains(needs.*.result, 'failure')
+        run: exit 1

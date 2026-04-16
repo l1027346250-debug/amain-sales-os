@@ -1,0 +1,9 @@
+{
+  "approved": false,
+  "approvedBy": "",
+  "approvedAt": "",
+  "changeTicket": "",
+  "activationWindow": "",
+  "rollbackPlan": "",
+  "notes": "Copy this file to trade-crm-post-launch-runtime-assignment-activation.approval.json and fill all required fields before activation."
+}

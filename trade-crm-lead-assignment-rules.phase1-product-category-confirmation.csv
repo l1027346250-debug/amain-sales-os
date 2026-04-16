@@ -1,0 +1,6 @@
+﻿productCategory,categoryEnabled,assignmentMode,targetPool,targetStaffLevel,postLaunchOwnerConfig,decisionStatus,businessNotes
+Ultrasound Machine,true,POOL,ultrasound-pool,,true,Confirmed,按 Alibaba 店铺大类；业务员上线后再指定，员工等级运行后可增删和调整。
+Operating Technology and Operating equipment,true,POOL,operating-pool,,true,Confirmed,按 Alibaba 店铺大类；业务员上线后再指定，员工等级运行后可增删和调整。
+OB/GYN and infant and gynecology,true,POOL,obgyn-pool,,true,Confirmed,按 Alibaba 店铺大类；业务员上线后再指定，员工等级运行后可增删和调整。
+Diagnostics equipment,true,POOL,diagnostics-pool,,true,Confirmed,按 Alibaba 店铺大类；业务员上线后再指定，员工等级运行后可增删和调整。
+Hospital furniture,true,POOL,furniture-pool,,true,Confirmed,按 Alibaba 店铺大类；业务员上线后再指定，员工等级运行后可增删和调整。

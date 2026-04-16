@@ -1,0 +1,27 @@
+{
+  "name": "trade-crm-integration-hub",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Integration hub for Trade CRM external system orchestration",
+  "scripts": {
+    "start": "node ../node_modules/@nestjs/cli/bin/nest.js start --watch",
+    "start:prod": "node dist/integration-hub/src/main.js",
+    "build": "node ../node_modules/@nestjs/cli/bin/nest.js build",
+    "typecheck": "node ../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+    "export:ops-report": "node scripts/export-ops-report.js",
+    "export:outbox-batch": "node scripts/export-outbox-batch.js",
+    "export:outbox-processed-batch": "node scripts/export-outbox-batch.js --status=processed",
+    "verify:first-response-flow": "node scripts/verify-first-response-flow.js",
+    "verify:first-response-escalation-flow": "node scripts/verify-first-response-escalation-flow.js",
+    "verify:first-response-pg-flow": "node scripts/verify-first-response-pg-flow.js",
+    "verify:alibaba-lead-sync": "node scripts/verify-alibaba-lead-sync.js",
+    "verify:lead-assignment-flow": "node scripts/verify-lead-assignment-flow.js",
+    "verify:lead-intake-flow": "node scripts/verify-lead-intake-flow.js",
+    "verify:quotation-followup-flow": "node scripts/verify-quotation-followup-flow.js",
+    "verify:stalled-opportunity-flow": "node scripts/verify-stalled-opportunity-flow.js",
+    "verify:retry-sweep-flow": "node scripts/verify-retry-sweep-flow.js",
+    "verify:twenty-webhook-flow": "node scripts/verify-twenty-webhook-flow.js",
+    "verify:state-persistence-flow": "node scripts/verify-state-persistence-flow.js",
+    "verify:state-persistence-pg-flow": "node scripts/verify-state-persistence-pg-flow.js"
+  }
+}

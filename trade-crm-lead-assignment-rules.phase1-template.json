@@ -1,0 +1,36 @@
+[
+  {
+    "priority": 10,
+    "source": "ALIBABA",
+    "country": "US",
+    "userEmail": "tim@apple.dev"
+  },
+  {
+    "priority": 20,
+    "source": "ALIBABA",
+    "country": "DE",
+    "userEmail": "jane.austen@apple.dev"
+  },
+  {
+    "priority": 30,
+    "source": "ALIBABA",
+    "country": "JP",
+    "userEmail": "jony.ive@apple.dev"
+  },
+  {
+    "priority": 40,
+    "source": "MANUAL",
+    "country": "US",
+    "userEmail": "jane.austen@apple.dev"
+  },
+  {
+    "priority": 50,
+    "source": "MANUAL",
+    "userEmail": "tim@apple.dev"
+  },
+  {
+    "priority": 60,
+    "source": "REFERRAL",
+    "userEmail": "jony.ive@apple.dev"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "priority": 10,
+    "source": "ALIBABA",
+    "userEmail": "tim@apple.dev"
+  },
+  {
+    "priority": 20,
+    "source": "MANUAL",
+    "userEmail": "jane.austen@apple.dev"
+  }
+]

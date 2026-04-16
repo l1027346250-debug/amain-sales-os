@@ -1,0 +1,9 @@
+priority,source,country,productCategory,userEmail,workspaceMemberId,enabled,notes
+10,ALIBABA,,Ultrasound Machine,tim@apple.dev,,true,Activated from runtime pool ultrasound-pool (L1)
+20,ALIBABA,,Operating Technology and Operating equipment,jane.austen@apple.dev,,true,Activated from runtime pool operating-pool (L1)
+30,ALIBABA,,OB/GYN and infant and gynecology,jony.ive@apple.dev,,true,Activated from runtime pool obgyn-pool (L1)
+40,ALIBABA,,Diagnostics equipment,jane.austen@apple.dev,,true,Activated from runtime pool diagnostics-pool (L1)
+50,ALIBABA,,Hospital furniture,tim@apple.dev,,true,Activated from runtime pool furniture-pool (L1)
+60,MANUAL,US,,jane.austen@apple.dev,,true,手工录入且国家为美国时优先分给 Jane
+70,MANUAL,,,tim@apple.dev,,true,其他手工录入线索默认分给 Tim
+80,REFERRAL,,,jony.ive@apple.dev,,true,转介绍线索默认分给 Jony
