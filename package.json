@@ -194,6 +194,7 @@
     "docs:generate-paths": "tsx packages/twenty-docs/scripts/generate-documentation-paths.ts",
     "verify:trade-crm-smoke:local": "powershell -ExecutionPolicy Bypass -File scripts/run-trade-crm-smoke-local.ps1",
     "serve:trade-crm-front:static": "node scripts/serve-trade-crm-front-static.js",
+    "start:trade-crm-runtime:local": "powershell -ExecutionPolicy Bypass -File scripts/start-trade-crm-runtime-local.ps1",
     "verify:trade-crm-smoke:ci:strict": "node scripts/verify-trade-crm-smoke.js --quiet --fail-on-warnings",
     "verify:trade-crm-smoke:ci": "node scripts/verify-trade-crm-smoke.js --quiet",
     "verify:trade-crm-smoke": "node scripts/verify-trade-crm-smoke.js",

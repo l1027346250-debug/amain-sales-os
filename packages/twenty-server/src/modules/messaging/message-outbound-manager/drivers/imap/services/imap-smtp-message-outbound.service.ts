@@ -3,7 +3,10 @@ import { Injectable } from '@nestjs/common';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { isDefined } from 'twenty-shared/utils';
 
-import { type MessageOutboundDriver } from 'src/modules/messaging/message-outbound-manager/interfaces/message-outbound-driver.interface';
+import {
+  type MessageOutboundDriver,
+  type MessageOutboundResult,
+} from 'src/modules/messaging/message-outbound-manager/interfaces/message-outbound-driver.interface';
 
 import { type ConnectedAccountWorkspaceEntity } from 'src/modules/connected-account/standard-objects/connected-account.workspace-entity';
 import { ImapClientProvider } from 'src/modules/messaging/message-import-manager/drivers/imap/providers/imap-client.provider';
@@ -23,7 +26,7 @@ export class ImapSmtpMessageOutboundService implements MessageOutboundDriver {
   async sendMessage(
     sendMessageInput: SendMessageInput,
     connectedAccount: ConnectedAccountWorkspaceEntity,
-  ): Promise<void> {
+  ): Promise<MessageOutboundResult> {
     const { handle, connectionParameters, messageChannels } = connectedAccount;
 
     const smtpClient =
@@ -36,7 +39,7 @@ export class ImapSmtpMessageOutboundService implements MessageOutboundDriver {
       sendMessageInput,
     );
 
-    await smtpClient.sendMail({
+    const sendResult = await smtpClient.sendMail({
       from: handle,
       to: sendMessageInput.to,
       cc: sendMessageInput.cc,
@@ -62,6 +65,10 @@ export class ImapSmtpMessageOutboundService implements MessageOutboundDriver {
 
       await this.imapClientProvider.closeClient(imapClient);
     }
+
+    return {
+      providerMessageId: sendResult.messageId ?? null,
+    };
   }
 
   async createDraft(

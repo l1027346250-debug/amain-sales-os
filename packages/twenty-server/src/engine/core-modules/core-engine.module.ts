@@ -24,6 +24,7 @@ import { CaptchaModule } from 'src/engine/core-modules/captcha/captcha.module';
 import { CloudflareModule } from 'src/engine/core-modules/cloudflare/cloudflare.module';
 import { CodeInterpreterModule } from 'src/engine/core-modules/code-interpreter/code-interpreter.module';
 import { DnsManagerModule } from 'src/engine/core-modules/dns-manager/dns-manager.module';
+import { DevelopmentEmailModule } from 'src/engine/core-modules/development-email/development-email.module';
 import { EmailModule } from 'src/engine/core-modules/email/email.module';
 import { EmailingDomainModule } from 'src/engine/core-modules/emailing-domain/emailing-domain.module';
 import { EnvironmentModule } from 'src/engine/core-modules/environment/environment.module';
@@ -108,6 +109,7 @@ import { FileModule } from './file/file.module';
     PublicDomainModule,
     CloudflareModule,
     DnsManagerModule,
+    DevelopmentEmailModule,
     PostgresCredentialsModule,
     WorkflowApiModule,
     WorkspaceEventEmitterModule,

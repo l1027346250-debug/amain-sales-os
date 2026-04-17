@@ -21,6 +21,8 @@ export const formatThreads = (
   threadVisibilityByThreadId: {
     [key: string]: MessageChannelVisibility;
   },
+  threadReadByThreadId?: Record<string, boolean>,
+  threadTagsByThreadId?: Record<string, string[]>,
 ): TimelineThreadDTO[] => {
   return threads
     .filter((thread) => isDefined(threadParticipantsByThreadId[thread.id]))
@@ -40,7 +42,8 @@ export const formatThreads = (
             : FIELD_RESTRICTED_ADDITIONAL_PERMISSIONS_REQUIRED,
         ...extractParticipantSummary(threadParticipantsByThreadId[thread.id]),
         visibility,
-        read: true,
+        read: threadReadByThreadId?.[thread.id] ?? true,
+        tags: threadTagsByThreadId?.[thread.id] ?? [],
       };
     });
 };
