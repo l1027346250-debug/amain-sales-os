@@ -58,8 +58,11 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 import { formatToHumanReadableDate } from '~/utils/date-utils';
 
 const StyledContent = styled.div`
-  background:
-    radial-gradient(circle at top left, rgba(10, 106, 255, 0.06), transparent 18%),
+  background: radial-gradient(
+      circle at top left,
+      rgba(10, 106, 255, 0.06),
+      transparent 18%
+    ),
     linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
   display: flex;
   flex-direction: column;
@@ -94,17 +97,20 @@ const StyledScopeTabs = styled.div`
   padding: 4px;
 `;
 
-const StyledScopeTab = styled(Link)<{ $active: boolean }>`
-  background: ${({ $active }) =>
-    $active ? '#0a6aff' : 'transparent'};
+const StyledScopeTab = styled(Link)`
+  background: transparent;
   border: 0;
   border-radius: 999px;
-  color: ${({ $active }) =>
-    $active ? '#ffffff' : '#1f4070'};
+  color: #1f4070;
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.semiBold};
   padding: 10px 18px;
   text-decoration: none;
+
+  &[data-active='true'] {
+    background: #0a6aff;
+    color: #ffffff;
+  }
 `;
 
 const StyledSubviewTabs = styled.div`
@@ -114,17 +120,21 @@ const StyledSubviewTabs = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledSubviewTab = styled(Link)<{ $active: boolean }>`
-  background: ${({ $active }) => ($active ? '#1e2126' : '#ffffff')};
-  border: 1px solid
-    ${({ $active }) =>
-      $active ? '#1e2126' : 'rgba(31, 64, 112, 0.10)'};
+const StyledSubviewTab = styled(Link)`
+  background: #ffffff;
+  border: 1px solid rgba(31, 64, 112, 0.1);
   border-radius: 999px;
-  color: ${({ $active }) => ($active ? '#ffffff' : '#50627a')};
+  color: #50627a;
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.medium};
   padding: 8px 14px;
   text-decoration: none;
+
+  &[data-active='true'] {
+    background: #1e2126;
+    border-color: #1e2126;
+    color: #ffffff;
+  }
 `;
 
 const StyledHeroGrid = styled.div`
@@ -267,11 +277,9 @@ const StyledComposeButton = styled(Link)`
   text-decoration: none;
 `;
 
-const StyledSidebarLink = styled(Link)<{ $active: boolean }>`
-  background: ${({ $active }) =>
-    $active ? '#eef4ff' : 'transparent'};
-  border: 1px solid
-    ${({ $active }) => ($active ? 'rgba(10, 106, 255, 0.22)' : 'transparent')};
+const StyledSidebarLink = styled(Link)`
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 12px;
   color: inherit;
   display: flex;
@@ -279,6 +287,11 @@ const StyledSidebarLink = styled(Link)<{ $active: boolean }>`
   gap: 2px;
   padding: 10px 12px;
   text-decoration: none;
+
+  &[data-active='true'] {
+    background: #eef4ff;
+    border-color: rgba(10, 106, 255, 0.22);
+  }
 `;
 
 const StyledSidebarLabelRow = styled.div`
@@ -371,8 +384,7 @@ const StyledRuntimeNotice = styled.div<{ $tone?: 'warning' | 'neutral' }>`
         ? 'rgba(255, 171, 0, 0.24)'
         : 'rgba(10, 106, 255, 0.10)'};
   border-radius: ${tradeCrmUiTheme.radius.card};
-  color: ${({ $tone }) =>
-    $tone === 'warning' ? '#935b00' : '#50627a'};
+  color: ${({ $tone }) => ($tone === 'warning' ? '#935b00' : '#50627a')};
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
@@ -589,7 +601,9 @@ const StyledMailWorkbenchChip = styled.div<{ $tone?: 'accent' | 'neutral' }>`
     $tone === 'accent' ? 'rgba(10, 106, 255, 0.10)' : '#f3f6fb'};
   border: 1px solid
     ${({ $tone }) =>
-      $tone === 'accent' ? 'rgba(10, 106, 255, 0.18)' : 'rgba(31, 64, 112, 0.08)'};
+      $tone === 'accent'
+        ? 'rgba(10, 106, 255, 0.18)'
+        : 'rgba(31, 64, 112, 0.08)'};
   border-radius: 999px;
   color: ${({ $tone }) => ($tone === 'accent' ? '#0a52cb' : '#617287')};
   font-size: ${themeCssVariables.font.size.xs};
@@ -731,7 +745,7 @@ const StyledMailAiList = styled.div`
 const StyledMailAiItem = styled.div`
   align-items: flex-start;
   background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
-  border: 1px solid rgba(10, 106, 255, 0.10);
+  border: 1px solid rgba(10, 106, 255, 0.1);
   border-radius: 12px;
   display: grid;
   gap: ${themeCssVariables.spacing[2]};
@@ -741,7 +755,7 @@ const StyledMailAiItem = styled.div`
 
 const StyledMailAiIndex = styled.div`
   align-items: center;
-  background: rgba(10, 106, 255, 0.10);
+  background: rgba(10, 106, 255, 0.1);
   border-radius: 999px;
   color: #0a52cb;
   display: inline-flex;
@@ -779,6 +793,18 @@ const StyledActionCard = styled.div`
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
   padding: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledActionTitle = styled.div`
+  color: ${tradeCrmUiTheme.colors.ink};
+  font-size: ${themeCssVariables.font.size.md};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+`;
+
+const StyledActionDescription = styled.div`
+  color: ${tradeCrmUiTheme.colors.inkMuted};
+  font-size: ${themeCssVariables.font.size.sm};
+  line-height: 1.6;
 `;
 
 const StyledFormGrid = styled.div`
@@ -872,9 +898,7 @@ const StyledFilterPresetRow = styled.div`
 
 const StyledFilterPresetButton = styled.button<{ $active: boolean }>`
   background: ${({ $active }) =>
-    $active
-      ? tradeCrmUiTheme.colors.ink
-      : tradeCrmUiTheme.colors.surface};
+    $active ? tradeCrmUiTheme.colors.ink : tradeCrmUiTheme.colors.surface};
   border: 1px solid
     ${({ $active }) =>
       $active
@@ -882,9 +906,7 @@ const StyledFilterPresetButton = styled.button<{ $active: boolean }>`
         : tradeCrmUiTheme.colors.borderStrong};
   border-radius: ${tradeCrmUiTheme.radius.control};
   color: ${({ $active }) =>
-    $active
-      ? tradeCrmUiTheme.colors.surface
-      : tradeCrmUiTheme.colors.ink};
+    $active ? tradeCrmUiTheme.colors.surface : tradeCrmUiTheme.colors.ink};
   cursor: pointer;
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.medium};
@@ -1533,14 +1555,9 @@ export const TradeCrmMailPage = () => {
       : availableSendJobs.length;
   const isMailboxWorkbenchView =
     currentScope === 'mail' &&
-    [
-      'inbox',
-      'sent',
-      'unread',
-      'pending',
-      'tagged',
-      'search',
-    ].includes(currentViewKey);
+    ['inbox', 'sent', 'unread', 'pending', 'tagged', 'search'].includes(
+      currentViewKey,
+    );
   const isCustomerWorkbenchView =
     currentScope === 'customer' &&
     [
@@ -1642,7 +1659,9 @@ export const TradeCrmMailPage = () => {
       : 'unknown';
 
     if (reasonCode === 'missing_google_refresh_token') {
-      return [{ label: tr('Reconnect Google token'), to: senderPoolAccountsPath }];
+      return [
+        { label: tr('Reconnect Google token'), to: senderPoolAccountsPath },
+      ];
     }
 
     if (reasonCode === 'missing_microsoft_access_token') {
@@ -1717,15 +1736,20 @@ export const TradeCrmMailPage = () => {
       ? filteredRenderedListItems.find(
           (item) => item.id === selectedPreviewCustomerId,
         )
-      : null) ?? (isCustomerWorkbenchView ? filteredRenderedListItems[0] : undefined);
-  const hasSelectedMailboxThread = Boolean(selectedMailboxPreviewItem?.threadId);
-  const selectedMailboxHasTags = (selectedMailboxPreviewItem?.tags?.length ?? 0) > 0;
+      : null) ??
+    (isCustomerWorkbenchView ? filteredRenderedListItems[0] : undefined);
+  const hasSelectedMailboxThread = Boolean(
+    selectedMailboxPreviewItem?.threadId,
+  );
+  const selectedMailboxHasTags =
+    (selectedMailboxPreviewItem?.tags?.length ?? 0) > 0;
   const mailboxSelectedCustomerName =
     selectedMailboxPreviewItem?.primary ?? '未识别客户';
   const mailboxSelectedThreadTitle =
     selectedMailboxPreviewItem?.secondary ?? '当前没有选中线程';
   const mailboxSelectedThreadSummary =
-    selectedMailboxPreviewItem?.tertiary ?? '当前筛选条件下没有可预览的邮件线程。';
+    selectedMailboxPreviewItem?.tertiary ??
+    '当前筛选条件下没有可预览的邮件线程。';
   const mailboxSelectedThreadMeta =
     selectedMailboxPreviewItem?.meta ?? '暂无往来记录';
   const mailboxSelectedAssistantSuggestions = hasSelectedMailboxThread
@@ -2501,7 +2525,7 @@ export const TradeCrmMailPage = () => {
                       scope: scopeKey,
                       view: scopeWorkspace.defaultViewKey,
                     })}
-                    $active={scopeKey === currentScope}
+                    data-active={scopeKey === currentScope ? 'true' : 'false'}
                   >
                     {tr(scopeWorkspace.label)}
                   </StyledScopeTab>
@@ -2516,7 +2540,7 @@ export const TradeCrmMailPage = () => {
                     scope: currentScope,
                     item,
                   })}
-                  $active={item.key === currentViewKey}
+                  data-active={item.key === currentViewKey ? 'true' : 'false'}
                 >
                   {tr(item.label)}
                 </StyledSubviewTab>
@@ -2561,7 +2585,7 @@ export const TradeCrmMailPage = () => {
                       scope: currentScope,
                       item,
                     })}
-                    $active={item.key === currentViewKey}
+                    data-active={item.key === currentViewKey ? 'true' : 'false'}
                   >
                     <StyledSidebarLabelRow>
                       <StyledSidebarLabel>{tr(item.label)}</StyledSidebarLabel>
@@ -2603,9 +2627,7 @@ export const TradeCrmMailPage = () => {
                           onChange={(event) =>
                             handleMailSearchChange(event.target.value)
                           }
-                          placeholder={tr(
-                            '搜索发件人、主题、正文或标签',
-                          )}
+                          placeholder={tr('搜索发件人、主题、正文或标签')}
                           value={mailSearchQuery}
                         />
                       </StyledFormField>
@@ -2653,7 +2675,8 @@ export const TradeCrmMailPage = () => {
                         </>
                       ) : null}
                     </StyledFormGrid>
-                  ) : currentScope === 'campaign' && currentViewKey === 'jobs' ? (
+                  ) : currentScope === 'campaign' &&
+                    currentViewKey === 'jobs' ? (
                     <StyledFormGrid>
                       <StyledFormField>
                         {tr('Sender pool mode')}
@@ -2693,16 +2716,17 @@ export const TradeCrmMailPage = () => {
                     </StyledFormGrid>
                   ) : (
                     <StyledSearchInput>
-                      {tr(
-                        '搜索发件人、主题、客户、商机、活动、标签或时间范围',
-                      )}
+                      {tr('搜索发件人、主题、客户、商机、活动、标签或时间范围')}
                     </StyledSearchInput>
                   )}
                   <StyledToolbarMeta>
                     <StyledBadge>{tr(workspace.label)}</StyledBadge>
                     <StyledBadge>{tr(currentViewItem.label)}</StyledBadge>
-                    {currentScope === 'campaign' && currentViewKey === 'jobs' ? (
-                      <StyledBadge>{tr(`当前作业 ${filteredSendJobCount}`)}</StyledBadge>
+                    {currentScope === 'campaign' &&
+                    currentViewKey === 'jobs' ? (
+                      <StyledBadge>
+                        {tr(`当前作业 ${filteredSendJobCount}`)}
+                      </StyledBadge>
                     ) : null}
                     <StyledBadge>{tr('CRM 与 AI 联动')}</StyledBadge>
                   </StyledToolbarMeta>
@@ -2765,13 +2789,18 @@ export const TradeCrmMailPage = () => {
                       <StyledSecondaryButton
                         onClick={() =>
                           handleUpdateThreadPendingState({
-                            threadId: selectedMailboxPreviewItem?.threadId ?? '',
+                            threadId:
+                              selectedMailboxPreviewItem?.threadId ?? '',
                             isPending: currentViewKey !== 'pending',
                           })
                         }
                         type="button"
                       >
-                        {tr(currentViewKey === 'pending' ? '清除待处理' : '标记待处理')}
+                        {tr(
+                          currentViewKey === 'pending'
+                            ? '清除待处理'
+                            : '标记待处理',
+                        )}
                       </StyledSecondaryButton>
                     ) : null}
                     {hasSelectedMailboxThread ? (
@@ -2779,7 +2808,8 @@ export const TradeCrmMailPage = () => {
                         onClick={() => {
                           if (selectedMailboxHasTags) {
                             void handleUpdateThreadTag({
-                              threadId: selectedMailboxPreviewItem?.threadId ?? '',
+                              threadId:
+                                selectedMailboxPreviewItem?.threadId ?? '',
                               mode: 'CLEAR_ALL',
                             });
 
@@ -3295,9 +3325,7 @@ export const TradeCrmMailPage = () => {
                       {tr('Selected Job Summary')}
                     </StyledSectionTitle>
                     <StyledListMeta>
-                      {tr(
-                        `Execution path: ${selectedSendJobExecutionMode}`,
-                      )}
+                      {tr(`Execution path: ${selectedSendJobExecutionMode}`)}
                     </StyledListMeta>
                     <StyledToolbarMeta>
                       <StyledBadge>
@@ -3825,7 +3853,8 @@ export const TradeCrmMailPage = () => {
                     </StyledListMeta>
                   </StyledRuntimeNotice>
                 ) : null}
-                {currentScope === 'campaign' && currentViewKey === 'sender-pool' ? (
+                {currentScope === 'campaign' &&
+                currentViewKey === 'sender-pool' ? (
                   <>
                     <StyledRuntimeNotice
                       $tone={
@@ -3862,12 +3891,16 @@ export const TradeCrmMailPage = () => {
                     </StyledButtonRow>
                     {campaignWorkspacePrimaryItems.length > 0 ? (
                       <>
-                        <StyledSectionTitle>{tr('Related Campaigns')}</StyledSectionTitle>
+                        <StyledSectionTitle>
+                          {tr('Related Campaigns')}
+                        </StyledSectionTitle>
                         <StyledList>
                           {campaignWorkspacePrimaryItems.map((item) => (
                             <StyledListItem key={item.id}>
                               <StyledListCopy>
-                                <StyledListPrimary>{tr(item.primary)}</StyledListPrimary>
+                                <StyledListPrimary>
+                                  {tr(item.primary)}
+                                </StyledListPrimary>
                                 <StyledListSecondary>
                                   {tr(item.secondary)}
                                 </StyledListSecondary>
@@ -3884,21 +3917,24 @@ export const TradeCrmMailPage = () => {
                     ) : null}
                     {senderHealthGroups.length > 0 ? (
                       <>
-                        <StyledSectionTitle>{tr('Providers')}</StyledSectionTitle>
+                        <StyledSectionTitle>
+                          {tr('Providers')}
+                        </StyledSectionTitle>
                         {senderHealthGroups.map(([provider, items]) => (
                           <StyledList key={provider}>
                             <StyledSubsectionTitle>
                               {tr(`Provider ${provider} (${items.length})`)}
                             </StyledSubsectionTitle>
                             {items.map((item) => {
-                              const senderHealthReason = getSenderHealthReasonParts(
-                                item.tertiary,
-                              );
+                              const senderHealthReason =
+                                getSenderHealthReasonParts(item.tertiary);
 
                               return (
                                 <StyledListItem key={item.id}>
                                   <StyledListCopy>
-                                    <StyledListPrimary>{tr(item.primary)}</StyledListPrimary>
+                                    <StyledListPrimary>
+                                      {tr(item.primary)}
+                                    </StyledListPrimary>
                                     <StyledListSecondary>
                                       {tr(item.secondary)}
                                     </StyledListSecondary>
@@ -3910,23 +3946,25 @@ export const TradeCrmMailPage = () => {
                                         {tr(senderHealthReason.code)}
                                       </StyledListMeta>
                                     ) : null}
-                                    <StyledListMeta>{tr(item.meta)}</StyledListMeta>
+                                    <StyledListMeta>
+                                      {tr(item.meta)}
+                                    </StyledListMeta>
                                   </StyledListCopy>
                                   <StyledListActions>
-                                    <StyledStatus>{tr(item.status)}</StyledStatus>
+                                    <StyledStatus>
+                                      {tr(item.status)}
+                                    </StyledStatus>
                                     {getSenderHealthActions({
                                       secondary: item.secondary,
                                       reasonCode: senderHealthReason.code,
-                                    }).map(
-                                      (action) => (
-                                        <StyledActionLink
-                                          key={`${item.id}-${action.label}`}
-                                          to={action.to}
-                                        >
-                                          {action.label}
-                                        </StyledActionLink>
-                                      ),
-                                    )}
+                                    }).map((action) => (
+                                      <StyledActionLink
+                                        key={`${item.id}-${action.label}`}
+                                        to={action.to}
+                                      >
+                                        {action.label}
+                                      </StyledActionLink>
+                                    ))}
                                   </StyledListActions>
                                 </StyledListItem>
                               );
@@ -3941,7 +3979,9 @@ export const TradeCrmMailPage = () => {
                 currentViewKey === 'overview' &&
                 campaignWorkspaceHealthItems.length > 0 ? (
                   <>
-                    <StyledSectionTitle>{tr('Sender Health')}</StyledSectionTitle>
+                    <StyledSectionTitle>
+                      {tr('Sender Health')}
+                    </StyledSectionTitle>
                     <StyledRuntimeNotice $tone="warning">
                       <StyledListPrimary>
                         {tr('Credential blockers are isolated here')}
@@ -3965,7 +4005,9 @@ export const TradeCrmMailPage = () => {
                           return (
                             <StyledListItem key={item.id}>
                               <StyledListCopy>
-                                <StyledListPrimary>{tr(item.primary)}</StyledListPrimary>
+                                <StyledListPrimary>
+                                  {tr(item.primary)}
+                                </StyledListPrimary>
                                 <StyledListSecondary>
                                   {tr(item.secondary)}
                                 </StyledListSecondary>
@@ -3984,16 +4026,14 @@ export const TradeCrmMailPage = () => {
                                 {getSenderHealthActions({
                                   secondary: item.secondary,
                                   reasonCode: senderHealthReason.code,
-                                }).map(
-                                  (action) => (
-                                    <StyledActionLink
-                                      key={`${item.id}-${action.label}`}
-                                      to={action.to}
-                                    >
-                                      {action.label}
-                                    </StyledActionLink>
-                                  ),
-                                )}
+                                }).map((action) => (
+                                  <StyledActionLink
+                                    key={`${item.id}-${action.label}`}
+                                    to={action.to}
+                                  >
+                                    {action.label}
+                                  </StyledActionLink>
+                                ))}
                               </StyledListActions>
                             </StyledListItem>
                           );
@@ -4013,7 +4053,8 @@ export const TradeCrmMailPage = () => {
                       {filteredRenderedListItems.map((item) => (
                         <StyledMailWorkbenchItem
                           $active={
-                            item.threadId === selectedMailboxPreviewItem?.threadId
+                            item.threadId ===
+                            selectedMailboxPreviewItem?.threadId
                           }
                           key={item.id}
                           onClick={() =>
@@ -4217,7 +4258,9 @@ export const TradeCrmMailPage = () => {
                         <StyledMailWorkbenchItem
                           $active={item.id === selectedCustomerPreviewItem?.id}
                           key={item.id}
-                          onClick={() => handlePreviewCustomerSelection(item.id)}
+                          onClick={() =>
+                            handlePreviewCustomerSelection(item.id)
+                          }
                           type="button"
                         >
                           <StyledMailWorkbenchRow>
@@ -4272,7 +4315,9 @@ export const TradeCrmMailPage = () => {
                             <StyledMailPreviewTitle>
                               {tr(customerSelectedLatestThread)}
                             </StyledMailPreviewTitle>
-                            <StyledListMeta>{tr(customerSelectedMeta)}</StyledListMeta>
+                            <StyledListMeta>
+                              {tr(customerSelectedMeta)}
+                            </StyledListMeta>
                           </StyledMailPreviewBlock>
                           <StyledMailPreviewBlock>
                             <StyledMailPreviewLabel>
@@ -4348,7 +4393,9 @@ export const TradeCrmMailPage = () => {
                             <StyledActionLink to={tradeCrmRouteMap.customers}>
                               {tr('打开客户详情')}
                             </StyledActionLink>
-                            <StyledActionLink to={tradeCrmRouteMap.opportunities}>
+                            <StyledActionLink
+                              to={tradeCrmRouteMap.opportunities}
+                            >
                               {tr('进入商机处理')}
                             </StyledActionLink>
                             <StyledActionLink
@@ -4373,8 +4420,10 @@ export const TradeCrmMailPage = () => {
                       )}
                     </StyledMailWorkbenchPreview>
                   </StyledMailWorkbench>
-                ) : !(currentScope === 'campaign' &&
-                  currentViewKey === 'sender-pool') ? (
+                ) : !(
+                    currentScope === 'campaign' &&
+                    currentViewKey === 'sender-pool'
+                  ) ? (
                   <StyledList>
                     {filteredRenderedListItems.map((item) =>
                       item.threadId &&

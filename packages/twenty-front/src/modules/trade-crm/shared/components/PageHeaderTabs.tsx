@@ -20,21 +20,11 @@ const StyledTabs = styled.div`
   padding: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledTabLink = styled(Link)<{ $active: boolean }>`
-  background: ${({ $active }) =>
-      $active
-      ? tradeCrmUiTheme.colors.ink
-      : tradeCrmUiTheme.colors.surface};
-  border: 1px solid
-    ${({ $active }) =>
-      $active
-        ? tradeCrmUiTheme.colors.ink
-        : tradeCrmUiTheme.colors.border};
+const StyledTabLink = styled(Link)`
+  background: ${tradeCrmUiTheme.colors.surface};
+  border: 1px solid ${tradeCrmUiTheme.colors.border};
   border-radius: ${tradeCrmUiTheme.radius.pill};
-  color: ${({ $active }) =>
-    $active
-      ? tradeCrmUiTheme.colors.inverted
-      : tradeCrmUiTheme.colors.inkMuted};
+  color: ${tradeCrmUiTheme.colors.inkMuted};
   display: inline-flex;
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.medium};
@@ -57,28 +47,30 @@ const StyledTabLink = styled(Link)<{ $active: boolean }>`
     outline: 2px solid ${tradeCrmUiTheme.colors.focusRing};
     outline-offset: 2px;
   }
+
+  &[data-active='true'] {
+    background: ${tradeCrmUiTheme.colors.ink};
+    border-color: ${tradeCrmUiTheme.colors.ink};
+    color: ${tradeCrmUiTheme.colors.inverted};
+  }
 `;
 
-const StyledStaticTab = styled.div<{ $active: boolean }>`
-  background: ${({ $active }) =>
-      $active
-      ? tradeCrmUiTheme.colors.ink
-      : tradeCrmUiTheme.colors.surface};
-  border: 1px solid
-    ${({ $active }) =>
-      $active
-        ? tradeCrmUiTheme.colors.ink
-        : tradeCrmUiTheme.colors.border};
+const StyledStaticTab = styled.div`
+  background: ${tradeCrmUiTheme.colors.surface};
+  border: 1px solid ${tradeCrmUiTheme.colors.border};
   border-radius: ${tradeCrmUiTheme.radius.pill};
-  color: ${({ $active }) =>
-    $active
-      ? tradeCrmUiTheme.colors.inverted
-      : tradeCrmUiTheme.colors.inkMuted};
+  color: ${tradeCrmUiTheme.colors.inkMuted};
   display: inline-flex;
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.medium};
   line-height: 1;
   padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+
+  &[data-active='true'] {
+    background: ${tradeCrmUiTheme.colors.ink};
+    border-color: ${tradeCrmUiTheme.colors.ink};
+    color: ${tradeCrmUiTheme.colors.inverted};
+  }
 `;
 
 export const PageHeaderTabs = ({ tabs }: { tabs: PageHeaderTab[] }) => {
@@ -86,11 +78,18 @@ export const PageHeaderTabs = ({ tabs }: { tabs: PageHeaderTab[] }) => {
     <StyledTabs>
       {tabs.map((tab) =>
         tab.to ? (
-          <StyledTabLink key={tab.label} to={tab.to} $active={Boolean(tab.isActive)}>
+          <StyledTabLink
+            key={tab.label}
+            to={tab.to}
+            data-active={tab.isActive ? 'true' : 'false'}
+          >
             {tab.label}
           </StyledTabLink>
         ) : (
-          <StyledStaticTab key={tab.label} $active={Boolean(tab.isActive)}>
+          <StyledStaticTab
+            key={tab.label}
+            data-active={tab.isActive ? 'true' : 'false'}
+          >
             {tab.label}
           </StyledStaticTab>
         ),
