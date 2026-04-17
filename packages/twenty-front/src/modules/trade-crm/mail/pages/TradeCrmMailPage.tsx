@@ -58,58 +58,60 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 import { formatToHumanReadableDate } from '~/utils/date-utils';
 
 const StyledContent = styled.div`
-  background: ${tradeCrmUiTheme.colors.page};
+  background:
+    radial-gradient(circle at top left, rgba(10, 106, 255, 0.06), transparent 18%),
+    linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[4]};
   min-height: 100%;
-  padding: ${themeCssVariables.spacing[4]};
+  padding: ${themeCssVariables.spacing[3]};
 `;
 
 const StyledHero = styled.section`
-  background: radial-gradient(
-      circle at top right,
-      rgba(28, 28, 28, 0.04),
-      transparent 26%
-    ),
-    linear-gradient(
-      180deg,
-      ${tradeCrmUiTheme.colors.surface},
-      ${tradeCrmUiTheme.colors.page}
-    );
-  border: 1px solid ${tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.panel};
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 20px 44px rgba(31, 64, 112, 0.08);
   display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing[4]};
-  padding: ${themeCssVariables.spacing[5]};
+  gap: ${themeCssVariables.spacing[3]};
+  justify-content: space-between;
+  padding: ${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]};
+
+  @media (max-width: 1080px) {
+    align-items: stretch;
+    flex-direction: column;
+  }
 `;
 
 const StyledScopeTabs = styled.div`
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 999px;
   display: flex;
-  flex-wrap: wrap;
-  gap: ${themeCssVariables.spacing[2]};
+  gap: ${themeCssVariables.spacing[1]};
+  padding: 4px;
 `;
 
 const StyledScopeTab = styled(Link)<{ $active: boolean }>`
   background: ${({ $active }) =>
-    $active ? tradeCrmUiTheme.colors.ink : tradeCrmUiTheme.colors.surface};
-  border: 1px solid
-    ${({ $active }) =>
-      $active ? tradeCrmUiTheme.colors.ink : tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.pill};
+    $active ? '#0a6aff' : 'transparent'};
+  border: 0;
+  border-radius: 999px;
   color: ${({ $active }) =>
-    $active ? tradeCrmUiTheme.colors.surface : tradeCrmUiTheme.colors.inkMuted};
+    $active ? '#ffffff' : '#1f4070'};
   font-size: ${themeCssVariables.font.size.sm};
-  font-weight: ${themeCssVariables.font.weight.medium};
-  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[4]};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  padding: 10px 18px;
   text-decoration: none;
 `;
 
 const StyledHeroGrid = styled.div`
+  align-items: center;
   display: grid;
-  gap: ${themeCssVariables.spacing[4]};
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.62fr);
 
   @media (max-width: 1080px) {
     grid-template-columns: 1fr;
@@ -123,7 +125,7 @@ const StyledHeroCopy = styled.div`
 `;
 
 const StyledEyebrow = styled.div`
-  color: ${tradeCrmUiTheme.colors.inkSoft};
+  color: #0a6aff;
   font-size: ${themeCssVariables.font.size.xs};
   font-weight: ${themeCssVariables.font.weight.medium};
   letter-spacing: 0.12em;
@@ -131,34 +133,36 @@ const StyledEyebrow = styled.div`
 `;
 
 const StyledHeroTitle = styled.h2`
-  color: ${tradeCrmUiTheme.colors.ink};
+  color: #1e2126;
   font-family: ${tradeCrmUiTheme.typography.display};
-  font-size: 34px;
+  font-size: 26px;
   font-weight: 600;
-  letter-spacing: -0.04em;
-  line-height: 1.08;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
   margin: 0;
 `;
 
 const StyledHeroDescription = styled.p`
-  color: ${tradeCrmUiTheme.colors.inkMuted};
-  line-height: 1.7;
+  color: #76839b;
+  font-size: ${themeCssVariables.font.size.sm};
+  line-height: 1.55;
   margin: 0;
-  max-width: 840px;
+  max-width: 760px;
 `;
 
 const StyledHeroSummary = styled.div`
-  background: ${tradeCrmUiTheme.colors.surface};
-  border: 1px solid ${tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.card};
+  background: linear-gradient(135deg, #0a6aff 0%, #2f87ff 100%);
+  border: 0;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
-  padding: ${themeCssVariables.spacing[4]};
+  min-width: 220px;
+  padding: ${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]};
 `;
 
 const StyledHeroSummaryTitle = styled.div`
-  color: ${tradeCrmUiTheme.colors.inkMuted};
+  color: rgba(255, 255, 255, 0.76);
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.semiBold};
   letter-spacing: 0.08em;
@@ -166,21 +170,21 @@ const StyledHeroSummaryTitle = styled.div`
 `;
 
 const StyledHeroSummaryValue = styled.div`
-  color: ${tradeCrmUiTheme.colors.ink};
-  font-size: 28px;
+  color: #ffffff;
+  font-size: 24px;
   font-weight: ${themeCssVariables.font.weight.semiBold};
 `;
 
 const StyledHeroSummaryText = styled.div`
-  color: ${tradeCrmUiTheme.colors.inkSoft};
+  color: rgba(255, 255, 255, 0.84);
   font-size: ${themeCssVariables.font.size.sm};
   line-height: 1.6;
 `;
 
 const StyledWorkspace = styled.div`
   display: grid;
-  gap: ${themeCssVariables.spacing[4]};
-  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: 260px minmax(0, 1fr) 340px;
 
   @media (max-width: 1220px) {
     grid-template-columns: 1fr;
@@ -188,22 +192,23 @@ const StyledWorkspace = styled.div`
 `;
 
 const StyledSidebar = styled.aside`
-  background: ${tradeCrmUiTheme.colors.surface};
-  border: 1px solid ${tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.panel};
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 18px 36px rgba(31, 64, 112, 0.08);
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[3]};
-  padding: ${themeCssVariables.spacing[4]};
+  padding: ${themeCssVariables.spacing[3]};
   position: sticky;
   top: ${themeCssVariables.spacing[4]};
 `;
 
 const StyledSidebarTitle = styled.div`
-  color: ${tradeCrmUiTheme.colors.inkMuted};
-  font-size: ${themeCssVariables.font.size.sm};
+  color: #1f4070;
+  font-size: ${themeCssVariables.font.size.md};
   font-weight: ${themeCssVariables.font.weight.semiBold};
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 `;
 
 const StyledSidebarList = styled.div`
@@ -213,7 +218,7 @@ const StyledSidebarList = styled.div`
 `;
 
 const StyledSidebarSection = styled.div`
-  border-top: 1px solid ${tradeCrmUiTheme.colors.border};
+  border-top: 1px solid rgba(31, 64, 112, 0.08);
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
@@ -221,29 +226,38 @@ const StyledSidebarSection = styled.div`
 `;
 
 const StyledSidebarSectionLabel = styled.div`
-  color: ${tradeCrmUiTheme.colors.inkSoft};
+  color: #76839b;
   font-size: ${themeCssVariables.font.size.xs};
   font-weight: ${themeCssVariables.font.weight.medium};
   letter-spacing: 0.08em;
   text-transform: uppercase;
 `;
 
+const StyledComposeButton = styled(Link)`
+  align-items: center;
+  background: linear-gradient(135deg, #0a6aff 0%, #2f87ff 100%);
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 ${themeCssVariables.spacing[4]};
+  text-decoration: none;
+`;
+
 const StyledSidebarLink = styled(Link)<{ $active: boolean }>`
   background: ${({ $active }) =>
-    $active
-      ? tradeCrmUiTheme.colors.surfaceMuted
-      : tradeCrmUiTheme.colors.surface};
+    $active ? '#eef4ff' : 'transparent'};
   border: 1px solid
-    ${({ $active }) =>
-      $active
-        ? tradeCrmUiTheme.colors.borderStrong
-        : tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.control};
+    ${({ $active }) => ($active ? 'rgba(10, 106, 255, 0.22)' : 'transparent')};
+  border-radius: 12px;
   color: inherit;
   display: flex;
   flex-direction: column;
-  gap: ${themeCssVariables.spacing[1]};
-  padding: ${themeCssVariables.spacing[3]};
+  gap: 2px;
+  padding: 10px 12px;
   text-decoration: none;
 `;
 
@@ -255,20 +269,21 @@ const StyledSidebarLabelRow = styled.div`
 `;
 
 const StyledSidebarLabel = styled.div`
-  color: ${tradeCrmUiTheme.colors.ink};
+  color: #1e2126;
   font-size: ${themeCssVariables.font.size.sm};
-  font-weight: ${themeCssVariables.font.weight.medium};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
 `;
 
 const StyledSidebarCount = styled.div`
-  color: ${tradeCrmUiTheme.colors.inkFaint};
-  font-size: ${themeCssVariables.font.size.sm};
+  color: #76839b;
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.medium};
 `;
 
 const StyledSidebarHint = styled.div`
-  color: ${tradeCrmUiTheme.colors.inkSoft};
-  font-size: ${themeCssVariables.font.size.sm};
-  line-height: 1.5;
+  color: #98a2b3;
+  font-size: ${themeCssVariables.font.size.xs};
+  line-height: 1.45;
 `;
 
 const StyledMainColumn = styled.div`
@@ -278,19 +293,23 @@ const StyledMainColumn = styled.div`
 `;
 
 const StyledPanel = styled.section`
-  background: ${tradeCrmUiTheme.colors.surface};
-  border: 1px solid ${tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.panel};
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 18px 36px rgba(31, 64, 112, 0.08);
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[3]};
-  padding: ${themeCssVariables.spacing[4]};
+  padding: ${themeCssVariables.spacing[3]};
 `;
 
 const StyledToolbar = styled.div`
+  align-items: center;
+  border-bottom: 1px solid rgba(31, 64, 112, 0.08);
   display: grid;
   gap: ${themeCssVariables.spacing[3]};
   grid-template-columns: minmax(0, 1fr) auto;
+  padding-bottom: ${themeCssVariables.spacing[3]};
 
   @media (max-width: 960px) {
     grid-template-columns: 1fr;
@@ -298,10 +317,10 @@ const StyledToolbar = styled.div`
 `;
 
 const StyledSearchInput = styled.div`
-  background: ${tradeCrmUiTheme.colors.page};
-  border: 1px solid ${tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.control};
-  color: ${tradeCrmUiTheme.colors.inkSoft};
+  background: #f8fbff;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 12px;
+  color: #76839b;
   font-size: ${themeCssVariables.font.size.sm};
   padding: ${themeCssVariables.spacing[3]};
 `;
@@ -315,27 +334,25 @@ const StyledToolbarMeta = styled.div`
 `;
 
 const StyledBadge = styled.div`
-  background: ${tradeCrmUiTheme.colors.surfaceMuted};
-  border: 1px solid ${tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.pill};
-  color: ${tradeCrmUiTheme.colors.inkMuted};
+  background: #f3f6fb;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 999px;
+  color: #50627a;
   font-size: ${themeCssVariables.font.size.sm};
   padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
 `;
 
 const StyledRuntimeNotice = styled.div<{ $tone?: 'warning' | 'neutral' }>`
   background: ${({ $tone }) =>
-    $tone === 'warning'
-      ? 'rgba(180, 35, 24, 0.06)'
-      : tradeCrmUiTheme.colors.surfaceMuted};
+    $tone === 'warning' ? 'rgba(255, 171, 0, 0.10)' : '#f5f9ff'};
   border: 1px solid
     ${({ $tone }) =>
       $tone === 'warning'
-        ? 'rgba(180, 35, 24, 0.18)'
-        : tradeCrmUiTheme.colors.border};
+        ? 'rgba(255, 171, 0, 0.24)'
+        : 'rgba(10, 106, 255, 0.10)'};
   border-radius: ${tradeCrmUiTheme.radius.card};
   color: ${({ $tone }) =>
-    $tone === 'warning' ? '#7a271a' : tradeCrmUiTheme.colors.inkMuted};
+    $tone === 'warning' ? '#935b00' : '#50627a'};
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
@@ -353,9 +370,9 @@ const StyledMetrics = styled.div`
 `;
 
 const StyledMetricCard = styled.div`
-  background: ${tradeCrmUiTheme.colors.page};
-  border: 1px solid ${tradeCrmUiTheme.colors.border};
-  border-radius: ${tradeCrmUiTheme.radius.card};
+  background: #f8fbff;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
@@ -481,6 +498,93 @@ const StyledListActions = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
+const StyledMailWorkbench = styled.div`
+  display: grid;
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.9fr);
+
+  @media (max-width: 1180px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StyledMailWorkbenchList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledMailWorkbenchItem = styled.button<{ $active: boolean }>`
+  align-items: stretch;
+  background: ${({ $active }) => ($active ? '#eef4ff' : '#ffffff')};
+  border: 1px solid
+    ${({ $active }) =>
+      $active ? 'rgba(10, 106, 255, 0.24)' : 'rgba(31, 64, 112, 0.08)'};
+  border-radius: 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+  padding: ${themeCssVariables.spacing[3]};
+  text-align: left;
+`;
+
+const StyledMailWorkbenchHeader = styled.div`
+  align-items: flex-start;
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: space-between;
+`;
+
+const StyledMailWorkbenchTitle = styled.div`
+  color: #1e2126;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  line-height: 1.5;
+`;
+
+const StyledMailWorkbenchMeta = styled.div`
+  color: #98a2b3;
+  font-size: ${themeCssVariables.font.size.xs};
+  line-height: 1.45;
+`;
+
+const StyledMailWorkbenchPreview = styled.div`
+  background: #fbfdff;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[3]};
+  min-height: 100%;
+  padding: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMailPreviewTitle = styled.div`
+  color: #1e2126;
+  font-size: 20px;
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  line-height: 1.35;
+`;
+
+const StyledMailPreviewBlock = styled.div`
+  background: #ffffff;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+  padding: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMailPreviewLabel = styled.div`
+  color: #76839b;
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+`;
+
 const StyledInlineActionForm = styled.div`
   align-items: stretch;
   display: flex;
@@ -587,6 +691,33 @@ const StyledSecondaryButton = styled.button`
   border: 1px solid ${tradeCrmUiTheme.colors.borderStrong};
   border-radius: ${tradeCrmUiTheme.radius.control};
   color: ${tradeCrmUiTheme.colors.ink};
+  cursor: pointer;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.medium};
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+`;
+
+const StyledFilterPresetRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledFilterPresetButton = styled.button<{ $active: boolean }>`
+  background: ${({ $active }) =>
+    $active
+      ? tradeCrmUiTheme.colors.ink
+      : tradeCrmUiTheme.colors.surface};
+  border: 1px solid
+    ${({ $active }) =>
+      $active
+        ? tradeCrmUiTheme.colors.ink
+        : tradeCrmUiTheme.colors.borderStrong};
+  border-radius: ${tradeCrmUiTheme.radius.control};
+  color: ${({ $active }) =>
+    $active
+      ? tradeCrmUiTheme.colors.surface
+      : tradeCrmUiTheme.colors.ink};
   cursor: pointer;
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.medium};
@@ -751,6 +882,8 @@ export const TradeCrmMailPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedSendJobId = searchParams.get('jobId') ?? undefined;
   const selectedSendTaskId = searchParams.get('taskId') ?? undefined;
+  const selectedPreviewThreadId =
+    searchParams.get('previewThreadId') ?? undefined;
   const sendJobModeFilter = searchParams.get('jobMode') ?? 'all';
   const sendJobStatusFilter = searchParams.get('jobStatus') ?? 'all';
   const mailSearchQuery = searchParams.get('q') ?? '';
@@ -1185,6 +1318,16 @@ export const TradeCrmMailPage = () => {
     currentScope === 'campaign' && currentViewKey === 'jobs'
       ? filteredAvailableSendJobs.length
       : availableSendJobs.length;
+  const isMailboxWorkbenchView =
+    currentScope === 'mail' &&
+    [
+      'inbox',
+      'sent',
+      'unread',
+      'pending',
+      'tagged',
+      'search',
+    ].includes(currentViewKey);
   const hasNoFilteredSendJobs =
     currentScope === 'campaign' &&
     currentViewKey === 'jobs' &&
@@ -1256,6 +1399,12 @@ export const TradeCrmMailPage = () => {
     scope: 'campaign',
     view: 'jobs',
   });
+  const composeEntryPath =
+    currentScope === 'campaign'
+      ? getTradeCrmMailPath({ scope: 'campaign', view: 'templates' })
+      : getTradeCrmMailPath({ scope: 'mail', view: 'drafts' });
+  const composeEntryLabel =
+    currentScope === 'campaign' ? tr('新建开发信') : tr('写信');
   const getSenderHealthActions = ({
     secondary,
     reasonCode,
@@ -1331,6 +1480,15 @@ export const TradeCrmMailPage = () => {
   const selectedSendTask =
     sendTasks.find((sendTask) => sendTask.id === selectedSendTaskId) ??
     sendTasks[0];
+  const selectedMailboxPreviewItem =
+    (isMailboxWorkbenchView
+      ? filteredRenderedListItems.find(
+          (item) => item.threadId === selectedPreviewThreadId,
+        )
+      : null) ??
+    (isMailboxWorkbenchView ? filteredRenderedListItems[0] : undefined);
+  const hasSelectedMailboxThread = Boolean(selectedMailboxPreviewItem?.threadId);
+  const selectedMailboxHasTags = (selectedMailboxPreviewItem?.tags?.length ?? 0) > 0;
   const selectedSendTaskExecutionMode =
     typeof selectedSendTask?.trackingSnapshot?.executionMode === 'string'
       ? selectedSendTask.trackingSnapshot.executionMode
@@ -1968,6 +2126,13 @@ export const TradeCrmMailPage = () => {
     setSearchParams(nextSearchParams);
   };
 
+  const handlePreviewThreadSelection = (threadId: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.set('previewThreadId', threadId);
+    setSearchParams(nextSearchParams);
+  };
+
   const handleSendJobModeFilterChange = (value: string) => {
     const nextSearchParams = new URLSearchParams(searchParams);
 
@@ -1992,9 +2157,60 @@ export const TradeCrmMailPage = () => {
     setSearchParams(nextSearchParams);
   };
 
+  const handleSendJobPresetChange = ({
+    mode,
+    status,
+  }: {
+    mode: string;
+    status: string;
+  }) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (mode === 'all') {
+      nextSearchParams.delete('jobMode');
+    } else {
+      nextSearchParams.set('jobMode', mode);
+    }
+
+    if (status === 'all') {
+      nextSearchParams.delete('jobStatus');
+    } else {
+      nextSearchParams.set('jobStatus', status);
+    }
+
+    setSearchParams(nextSearchParams);
+  };
+
+  const sendJobPresets = [
+    {
+      key: 'all-jobs',
+      label: tr('All jobs'),
+      mode: 'all',
+      status: 'all',
+    },
+    {
+      key: 'live-failures',
+      label: tr('Live failures'),
+      mode: 'live-capable',
+      status: 'completed_with_failures',
+    },
+    {
+      key: 'fallback-completed',
+      label: tr('Fallback completed'),
+      mode: 'fallback-only',
+      status: 'completed',
+    },
+    {
+      key: 'queued-jobs',
+      label: tr('Queued jobs'),
+      mode: 'all',
+      status: 'queued',
+    },
+  ];
+
   return (
     <PageContainer>
-      <PageHeader title={tr('Mail')}>
+      <PageHeader title={tr(workspace.label)}>
         <TradeCrmLocaleSwitch />
       </PageHeader>
       <MainContainerLayoutWithSidePanel>
@@ -2046,6 +2262,9 @@ export const TradeCrmMailPage = () => {
               <StyledSidebarTitle>
                 {tr(workspace.sidebarTitle)}
               </StyledSidebarTitle>
+              <StyledComposeButton to={composeEntryPath}>
+                {composeEntryLabel}
+              </StyledComposeButton>
               <StyledSidebarList>
                 {workspace.sidebarItems.map((item) => (
                   <StyledSidebarLink
@@ -2091,13 +2310,13 @@ export const TradeCrmMailPage = () => {
                   {currentScope === 'mail' ? (
                     <StyledFormGrid>
                       <StyledFormField>
-                        {tr('Keyword')}
+                        {tr('关键词')}
                         <StyledInput
                           onChange={(event) =>
                             handleMailSearchChange(event.target.value)
                           }
                           placeholder={tr(
-                            'Search sender, subject, body text, or tag',
+                            '搜索发件人、主题、正文或标签',
                           )}
                           value={mailSearchQuery}
                         />
@@ -2105,7 +2324,7 @@ export const TradeCrmMailPage = () => {
                       {currentViewKey === 'search' ? (
                         <>
                           <StyledFormField>
-                            {tr('Tag')}
+                            {tr('标签')}
                             <StyledInput
                               onChange={(event) =>
                                 handleMailSearchFilterChange({
@@ -2113,12 +2332,12 @@ export const TradeCrmMailPage = () => {
                                   value: event.target.value,
                                 })
                               }
-                              placeholder={tr('important-customer')}
+                              placeholder={tr('重点客户')}
                               value={mailTagFilter}
                             />
                           </StyledFormField>
                           <StyledFormField>
-                            {tr('From')}
+                            {tr('开始时间')}
                             <StyledInput
                               onChange={(event) =>
                                 handleMailSearchFilterChange({
@@ -2131,7 +2350,7 @@ export const TradeCrmMailPage = () => {
                             />
                           </StyledFormField>
                           <StyledFormField>
-                            {tr('To')}
+                            {tr('结束时间')}
                             <StyledInput
                               onChange={(event) =>
                                 handleMailSearchFilterChange({
@@ -2187,7 +2406,7 @@ export const TradeCrmMailPage = () => {
                   ) : (
                     <StyledSearchInput>
                       {tr(
-                        'Search sender, subject, customer, opportunity, activity, tag, or time range',
+                        '搜索发件人、主题、客户、商机、活动、标签或时间范围',
                       )}
                     </StyledSearchInput>
                   )}
@@ -2195,11 +2414,126 @@ export const TradeCrmMailPage = () => {
                     <StyledBadge>{tr(workspace.label)}</StyledBadge>
                     <StyledBadge>{tr(currentViewItem.label)}</StyledBadge>
                     {currentScope === 'campaign' && currentViewKey === 'jobs' ? (
-                      <StyledBadge>{tr(`Visible jobs ${filteredSendJobCount}`)}</StyledBadge>
+                      <StyledBadge>{tr(`当前作业 ${filteredSendJobCount}`)}</StyledBadge>
                     ) : null}
-                    <StyledBadge>{tr('CRM + AI linkage')}</StyledBadge>
+                    <StyledBadge>{tr('CRM 与 AI 联动')}</StyledBadge>
                   </StyledToolbarMeta>
                 </StyledToolbar>
+                {currentScope === 'mail' ? (
+                  <StyledFilterPresetRow>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'mail',
+                        view: 'inbox',
+                      })}
+                    >
+                      {tr('全部邮件')}
+                    </StyledActionLink>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'mail',
+                        view: 'pending',
+                      })}
+                    >
+                      {tr('待处理')}
+                    </StyledActionLink>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'mail',
+                        view: 'unread',
+                      })}
+                    >
+                      {tr('未读')}
+                    </StyledActionLink>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'mail',
+                        view: 'sent',
+                      })}
+                    >
+                      {tr('已发送')}
+                    </StyledActionLink>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'mail',
+                        view: 'search',
+                      })}
+                    >
+                      {tr('高级搜索')}
+                    </StyledActionLink>
+                    {hasSelectedMailboxThread ? (
+                      <StyledSecondaryButton
+                        onClick={() =>
+                          openEmailThreadInSidePanel(
+                            selectedMailboxPreviewItem?.threadId ?? '',
+                          )
+                        }
+                        type="button"
+                      >
+                        {tr('打开线程')}
+                      </StyledSecondaryButton>
+                    ) : null}
+                    {hasSelectedMailboxThread ? (
+                      <StyledSecondaryButton
+                        onClick={() =>
+                          handleUpdateThreadPendingState({
+                            threadId: selectedMailboxPreviewItem?.threadId ?? '',
+                            isPending: currentViewKey !== 'pending',
+                          })
+                        }
+                        type="button"
+                      >
+                        {tr(currentViewKey === 'pending' ? '清除待处理' : '标记待处理')}
+                      </StyledSecondaryButton>
+                    ) : null}
+                    {hasSelectedMailboxThread ? (
+                      <StyledSecondaryButton
+                        onClick={() => {
+                          if (selectedMailboxHasTags) {
+                            void handleUpdateThreadTag({
+                              threadId: selectedMailboxPreviewItem?.threadId ?? '',
+                              mode: 'CLEAR_ALL',
+                            });
+
+                            return;
+                          }
+
+                          handleOpenThreadTagEditor(
+                            selectedMailboxPreviewItem?.threadId ?? '',
+                          );
+                        }}
+                        type="button"
+                      >
+                        {tr(selectedMailboxHasTags ? '清空标签' : '添加标签')}
+                      </StyledSecondaryButton>
+                    ) : null}
+                  </StyledFilterPresetRow>
+                ) : null}
+                {currentScope === 'campaign' && currentViewKey === 'jobs' ? (
+                  <StyledFilterPresetRow>
+                    {sendJobPresets.map((preset) => {
+                      const isActive =
+                        sendJobModeFilter === preset.mode &&
+                        sendJobStatusFilter === preset.status;
+
+                      return (
+                        <StyledFilterPresetButton
+                          $active={isActive}
+                          key={preset.key}
+                          onClick={() =>
+                            handleSendJobPresetChange({
+                              mode: preset.mode,
+                              status: preset.status,
+                            })
+                          }
+                          type="button"
+                        >
+                          {preset.label}
+                        </StyledFilterPresetButton>
+                      );
+                    })}
+                  </StyledFilterPresetRow>
+                ) : null}
                 <StyledMetrics>
                   {renderedMetrics.map((metric) => (
                     <StyledMetricCard key={metric.label}>
@@ -3339,7 +3673,127 @@ export const TradeCrmMailPage = () => {
                     ))}
                   </>
                 ) : null}
-                {!(currentScope === 'campaign' &&
+                {isMailboxWorkbenchView ? (
+                  <StyledMailWorkbench>
+                    <StyledMailWorkbenchList>
+                      {filteredRenderedListItems.map((item) => (
+                        <StyledMailWorkbenchItem
+                          $active={
+                            item.threadId === selectedMailboxPreviewItem?.threadId
+                          }
+                          key={item.id}
+                          onClick={() =>
+                            item.threadId
+                              ? handlePreviewThreadSelection(item.threadId)
+                              : undefined
+                          }
+                          type="button"
+                        >
+                          <StyledMailWorkbenchHeader>
+                            <StyledMailWorkbenchTitle>
+                              {tr(item.primary)}
+                            </StyledMailWorkbenchTitle>
+                            <StyledStatus>{tr(item.status)}</StyledStatus>
+                          </StyledMailWorkbenchHeader>
+                          <StyledListSecondary>
+                            {tr(item.secondary)}
+                          </StyledListSecondary>
+                          <StyledListTertiary>
+                            {tr(item.tertiary)}
+                          </StyledListTertiary>
+                          <StyledMailWorkbenchMeta>
+                            {tr(item.meta)}
+                          </StyledMailWorkbenchMeta>
+                        </StyledMailWorkbenchItem>
+                      ))}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      {selectedMailboxPreviewItem ? (
+                        <>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('当前线程')}
+                            </StyledMailPreviewLabel>
+                            <StyledMailPreviewTitle>
+                              {tr(selectedMailboxPreviewItem.secondary)}
+                            </StyledMailPreviewTitle>
+                            <StyledListPrimary>
+                              {tr(selectedMailboxPreviewItem.primary)}
+                            </StyledListPrimary>
+                            <StyledListMeta>
+                              {tr(selectedMailboxPreviewItem.meta)}
+                            </StyledListMeta>
+                          </StyledMailPreviewBlock>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('邮件摘要')}
+                            </StyledMailPreviewLabel>
+                            <StyledListTertiary>
+                              {tr(selectedMailboxPreviewItem.tertiary)}
+                            </StyledListTertiary>
+                          </StyledMailPreviewBlock>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('CRM 上下文')}
+                            </StyledMailPreviewLabel>
+                            <StyledListSecondary>
+                              {tr(
+                                selectedMailboxPreviewItem.status ===
+                                  'Create customer'
+                                  ? '当前线程尚未建立客户档案，建议先创建客户并补齐负责人。'
+                                  : selectedMailboxPreviewItem.status ===
+                                      'Reply needed'
+                                    ? '当前线程需要销售回复，建议保留在客户和商机关联链路内。'
+                                    : '当前线程更适合通过规则、标签或归档动作进行处理。',
+                              )}
+                            </StyledListSecondary>
+                          </StyledMailPreviewBlock>
+                          <StyledButtonRow>
+                            {selectedMailboxPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  openEmailThreadInSidePanel(
+                                    selectedMailboxPreviewItem.threadId ?? '',
+                                  )
+                                }
+                                type="button"
+                              >
+                                {tr('打开线程')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedMailboxPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  handleUpdateThreadPendingState({
+                                    threadId:
+                                      selectedMailboxPreviewItem.threadId ?? '',
+                                    isPending: currentViewKey !== 'pending',
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr(
+                                  currentViewKey === 'pending'
+                                    ? '清除待处理'
+                                    : '标记待处理',
+                                )}
+                              </StyledSecondaryButton>
+                            ) : null}
+                          </StyledButtonRow>
+                        </>
+                      ) : (
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('当前线程')}
+                          </StyledMailPreviewLabel>
+                          <StyledListMeta>
+                            {tr('当前筛选条件下没有可预览的邮件线程。')}
+                          </StyledListMeta>
+                        </StyledMailPreviewBlock>
+                      )}
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : !(currentScope === 'campaign' &&
                   currentViewKey === 'sender-pool') ? (
                   <StyledList>
                     {filteredRenderedListItems.map((item) =>
@@ -3371,7 +3825,7 @@ export const TradeCrmMailPage = () => {
                               }
                               type="button"
                             >
-                              {tr('Open thread')}
+                              {tr('打开线程')}
                             </StyledSecondaryButton>
                             <StyledSecondaryButton
                               onClick={() =>
@@ -3384,10 +3838,10 @@ export const TradeCrmMailPage = () => {
                             >
                               {tr(
                                 updatingTradeCrmMailThreadState
-                                  ? 'Updating...'
+                                  ? '更新中...'
                                   : currentViewKey === 'pending'
-                                    ? 'Clear pending'
-                                    : 'Mark pending',
+                                    ? '清除待处理'
+                                    : '标记待处理',
                               )}
                             </StyledSecondaryButton>
                             <StyledSecondaryButton
@@ -3410,11 +3864,11 @@ export const TradeCrmMailPage = () => {
                             >
                               {tr(
                                 updatingTradeCrmMailThreadTag
-                                  ? 'Updating tags...'
+                                  ? '更新标签中...'
                                   : currentViewKey === 'tagged' ||
                                       (item.tags?.length ?? 0) > 0
-                                    ? 'Clear tags'
-                                    : 'Add tag',
+                                    ? '清空标签'
+                                    : '添加标签',
                               )}
                             </StyledSecondaryButton>
                             {activeTagEditorThreadId === item.threadId ? (
