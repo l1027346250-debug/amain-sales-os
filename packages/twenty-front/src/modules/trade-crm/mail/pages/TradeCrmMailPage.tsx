@@ -514,6 +514,69 @@ const StyledMailWorkbenchList = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
+const StyledMailWorkbenchListHeader = styled.div`
+  align-items: center;
+  color: #7a8799;
+  display: grid;
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  gap: ${themeCssVariables.spacing[2]};
+  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr) 96px;
+  letter-spacing: 0.08em;
+  padding: 0 ${themeCssVariables.spacing[3]};
+  text-transform: uppercase;
+`;
+
+const StyledMailWorkbenchRow = styled.div`
+  align-items: flex-start;
+  display: grid;
+  gap: ${themeCssVariables.spacing[2]};
+  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr) 96px;
+`;
+
+const StyledMailSenderCell = styled.div`
+  color: #1e2126;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  line-height: 1.4;
+`;
+
+const StyledMailSubjectCell = styled.div`
+  color: #465469;
+  display: flex;
+  flex-direction: column;
+  font-size: ${themeCssVariables.font.size.sm};
+  gap: 6px;
+  min-width: 0;
+`;
+
+const StyledMailTimeCell = styled.div`
+  color: #7a8799;
+  font-size: ${themeCssVariables.font.size.xs};
+  line-height: 1.5;
+  text-align: right;
+`;
+
+const StyledMailWorkbenchSummaryRow = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledMailWorkbenchChip = styled.div<{ $tone?: 'accent' | 'neutral' }>`
+  background: ${({ $tone }) =>
+    $tone === 'accent' ? 'rgba(10, 106, 255, 0.10)' : '#f3f6fb'};
+  border: 1px solid
+    ${({ $tone }) =>
+      $tone === 'accent' ? 'rgba(10, 106, 255, 0.18)' : 'rgba(31, 64, 112, 0.08)'};
+  border-radius: 999px;
+  color: ${({ $tone }) => ($tone === 'accent' ? '#0a52cb' : '#617287')};
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.medium};
+  padding: 6px 10px;
+`;
+
 const StyledMailWorkbenchItem = styled.button<{ $active: boolean }>`
   align-items: stretch;
   background: ${({ $active }) => ($active ? '#eef4ff' : '#ffffff')};
@@ -560,6 +623,60 @@ const StyledMailWorkbenchPreview = styled.div`
   padding: ${themeCssVariables.spacing[3]};
 `;
 
+const StyledMailPreviewTopbar = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: space-between;
+`;
+
+const StyledMailPreviewTopbarCopy = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const StyledMailPreviewSideStack = styled.div`
+  display: grid;
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: minmax(0, 1fr);
+`;
+
+const StyledMailProfileGrid = styled.div`
+  display: grid;
+  gap: ${themeCssVariables.spacing[2]};
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StyledMailProfileItem = styled.div`
+  background: #f8fbff;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMailProfileLabel = styled.div`
+  color: #8a95a8;
+  font-size: ${themeCssVariables.font.size.xs};
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+`;
+
+const StyledMailProfileValue = styled.div`
+  color: #1e2126;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.medium};
+  line-height: 1.5;
+`;
+
 const StyledMailPreviewTitle = styled.div`
   color: #1e2126;
   font-size: 20px;
@@ -583,6 +700,36 @@ const StyledMailPreviewLabel = styled.div`
   font-weight: ${themeCssVariables.font.weight.semiBold};
   letter-spacing: 0.06em;
   text-transform: uppercase;
+`;
+
+const StyledMailAiList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledMailAiItem = styled.div`
+  align-items: flex-start;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border: 1px solid rgba(10, 106, 255, 0.10);
+  border-radius: 12px;
+  display: grid;
+  gap: ${themeCssVariables.spacing[2]};
+  grid-template-columns: 22px minmax(0, 1fr);
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMailAiIndex = styled.div`
+  align-items: center;
+  background: rgba(10, 106, 255, 0.10);
+  border-radius: 999px;
+  color: #0a52cb;
+  display: inline-flex;
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  height: 22px;
+  justify-content: center;
+  width: 22px;
 `;
 
 const StyledInlineActionForm = styled.div`
@@ -884,6 +1031,8 @@ export const TradeCrmMailPage = () => {
   const selectedSendTaskId = searchParams.get('taskId') ?? undefined;
   const selectedPreviewThreadId =
     searchParams.get('previewThreadId') ?? undefined;
+  const selectedPreviewCustomerId =
+    searchParams.get('previewCustomerId') ?? undefined;
   const sendJobModeFilter = searchParams.get('jobMode') ?? 'all';
   const sendJobStatusFilter = searchParams.get('jobStatus') ?? 'all';
   const mailSearchQuery = searchParams.get('q') ?? '';
@@ -1328,6 +1477,18 @@ export const TradeCrmMailPage = () => {
       'tagged',
       'search',
     ].includes(currentViewKey);
+  const isCustomerWorkbenchView =
+    currentScope === 'customer' &&
+    [
+      'recent',
+      'focus',
+      'cooperating',
+      'potential',
+      'intent',
+      'key',
+      'normal',
+      'long-tail',
+    ].includes(currentViewKey);
   const hasNoFilteredSendJobs =
     currentScope === 'campaign' &&
     currentViewKey === 'jobs' &&
@@ -1487,8 +1648,50 @@ export const TradeCrmMailPage = () => {
         )
       : null) ??
     (isMailboxWorkbenchView ? filteredRenderedListItems[0] : undefined);
+  const selectedCustomerPreviewItem =
+    (isCustomerWorkbenchView
+      ? filteredRenderedListItems.find(
+          (item) => item.id === selectedPreviewCustomerId,
+        )
+      : null) ?? (isCustomerWorkbenchView ? filteredRenderedListItems[0] : undefined);
   const hasSelectedMailboxThread = Boolean(selectedMailboxPreviewItem?.threadId);
   const selectedMailboxHasTags = (selectedMailboxPreviewItem?.tags?.length ?? 0) > 0;
+  const mailboxSelectedCustomerName =
+    selectedMailboxPreviewItem?.primary ?? '未识别客户';
+  const mailboxSelectedThreadTitle =
+    selectedMailboxPreviewItem?.secondary ?? '当前没有选中线程';
+  const mailboxSelectedThreadSummary =
+    selectedMailboxPreviewItem?.tertiary ?? '当前筛选条件下没有可预览的邮件线程。';
+  const mailboxSelectedThreadMeta =
+    selectedMailboxPreviewItem?.meta ?? '暂无往来记录';
+  const mailboxSelectedAssistantSuggestions = hasSelectedMailboxThread
+    ? [
+        selectedMailboxPreviewItem?.status === 'Create customer'
+          ? '当前线程未形成客户档案，建议优先创建客户并补齐负责人。'
+          : '当前线程已有 CRM 上下文，可以直接回到客户或商机链路处理。',
+        currentViewKey === 'pending'
+          ? '该线程已经进入待处理池，下一步适合补标签、分配负责人或完成回复。'
+          : '建议先判断是否需要进入待处理池，再决定回复、归档或转标签。',
+        selectedMailboxHasTags
+          ? '线程已有标签，适合继续做规则归档和客户分层。'
+          : '线程尚未添加标签，建议补充业务标签以便后续搜索和自动化。',
+      ]
+    : ['当前没有可操作线程，请先从左侧列表选择一封邮件。'];
+  const customerSelectedName =
+    selectedCustomerPreviewItem?.primary ?? '当前没有选中客户';
+  const customerSelectedLatestThread =
+    selectedCustomerPreviewItem?.secondary ?? '暂无往来线程';
+  const customerSelectedSummary =
+    selectedCustomerPreviewItem?.tertiary ?? '当前分组下没有可预览的客户邮件。';
+  const customerSelectedMeta =
+    selectedCustomerPreviewItem?.meta ?? '暂无最近活动';
+  const customerSelectedSuggestions = selectedCustomerPreviewItem
+    ? [
+        '优先判断当前客户是否需要回到商机、报价或样品推进链路。',
+        '结合最近一封邮件和客户分组，决定是否要立即提醒销售跟进。',
+        '如果客户持续活跃但未推进，建议补任务、负责人和标签。',
+      ]
+    : ['当前没有可操作客户，请先从列表选择一个客户。'];
   const selectedSendTaskExecutionMode =
     typeof selectedSendTask?.trackingSnapshot?.executionMode === 'string'
       ? selectedSendTask.trackingSnapshot.executionMode
@@ -2133,6 +2336,13 @@ export const TradeCrmMailPage = () => {
     setSearchParams(nextSearchParams);
   };
 
+  const handlePreviewCustomerSelection = (customerId: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.set('previewCustomerId', customerId);
+    setSearchParams(nextSearchParams);
+  };
+
   const handleSendJobModeFilterChange = (value: string) => {
     const nextSearchParams = new URLSearchParams(searchParams);
 
@@ -2507,6 +2717,47 @@ export const TradeCrmMailPage = () => {
                         {tr(selectedMailboxHasTags ? '清空标签' : '添加标签')}
                       </StyledSecondaryButton>
                     ) : null}
+                  </StyledFilterPresetRow>
+                ) : currentScope === 'customer' ? (
+                  <StyledFilterPresetRow>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'customer',
+                        view: 'recent',
+                      })}
+                    >
+                      {tr('最近往来')}
+                    </StyledActionLink>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'customer',
+                        view: 'focus',
+                      })}
+                    >
+                      {tr('关注客户')}
+                    </StyledActionLink>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'customer',
+                        view: 'cooperating',
+                      })}
+                    >
+                      {tr('合作客户')}
+                    </StyledActionLink>
+                    <StyledActionLink to={tradeCrmRouteMap.customers}>
+                      {tr('打开客户工作台')}
+                    </StyledActionLink>
+                    <StyledActionLink to={tradeCrmRouteMap.opportunities}>
+                      {tr('打开商机工作台')}
+                    </StyledActionLink>
+                    <StyledActionLink
+                      to={getTradeCrmMailPath({
+                        scope: 'mail',
+                        view: 'search',
+                      })}
+                    >
+                      {tr('搜索邮件')}
+                    </StyledActionLink>
                   </StyledFilterPresetRow>
                 ) : null}
                 {currentScope === 'campaign' && currentViewKey === 'jobs' ? (
@@ -3676,6 +3927,11 @@ export const TradeCrmMailPage = () => {
                 {isMailboxWorkbenchView ? (
                   <StyledMailWorkbench>
                     <StyledMailWorkbenchList>
+                      <StyledMailWorkbenchListHeader>
+                        <div>{tr('发件人')}</div>
+                        <div>{tr('主题与摘要')}</div>
+                        <div>{tr('时间 / 状态')}</div>
+                      </StyledMailWorkbenchListHeader>
                       {filteredRenderedListItems.map((item) => (
                         <StyledMailWorkbenchItem
                           $active={
@@ -3689,39 +3945,71 @@ export const TradeCrmMailPage = () => {
                           }
                           type="button"
                         >
-                          <StyledMailWorkbenchHeader>
-                            <StyledMailWorkbenchTitle>
+                          <StyledMailWorkbenchRow>
+                            <StyledMailSenderCell>
                               {tr(item.primary)}
-                            </StyledMailWorkbenchTitle>
-                            <StyledStatus>{tr(item.status)}</StyledStatus>
-                          </StyledMailWorkbenchHeader>
-                          <StyledListSecondary>
-                            {tr(item.secondary)}
-                          </StyledListSecondary>
-                          <StyledListTertiary>
-                            {tr(item.tertiary)}
-                          </StyledListTertiary>
-                          <StyledMailWorkbenchMeta>
-                            {tr(item.meta)}
-                          </StyledMailWorkbenchMeta>
+                            </StyledMailSenderCell>
+                            <StyledMailSubjectCell>
+                              <StyledMailWorkbenchTitle>
+                                {tr(item.secondary)}
+                              </StyledMailWorkbenchTitle>
+                              <StyledListTertiary>
+                                {tr(item.tertiary)}
+                              </StyledListTertiary>
+                            </StyledMailSubjectCell>
+                            <StyledMailTimeCell>
+                              <div>{tr(item.meta)}</div>
+                              <StyledMailWorkbenchSummaryRow>
+                                <StyledMailWorkbenchChip $tone="accent">
+                                  {tr(item.status)}
+                                </StyledMailWorkbenchChip>
+                                {item.tags?.length ? (
+                                  <StyledMailWorkbenchChip>
+                                    {tr(`标签 ${item.tags.length}`)}
+                                  </StyledMailWorkbenchChip>
+                                ) : null}
+                              </StyledMailWorkbenchSummaryRow>
+                            </StyledMailTimeCell>
+                          </StyledMailWorkbenchRow>
                         </StyledMailWorkbenchItem>
                       ))}
                     </StyledMailWorkbenchList>
                     <StyledMailWorkbenchPreview>
                       {selectedMailboxPreviewItem ? (
                         <>
+                          <StyledMailPreviewTopbar>
+                            <StyledMailPreviewTopbarCopy>
+                              <StyledMailPreviewLabel>
+                                {tr('线程面板')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailPreviewTitle>
+                                {tr(mailboxSelectedThreadTitle)}
+                              </StyledMailPreviewTitle>
+                            </StyledMailPreviewTopbarCopy>
+                            <StyledMailWorkbenchSummaryRow>
+                              <StyledMailWorkbenchChip $tone="accent">
+                                {tr(selectedMailboxPreviewItem.status)}
+                              </StyledMailWorkbenchChip>
+                              {selectedMailboxHasTags ? (
+                                <StyledMailWorkbenchChip>
+                                  {tr('已打标签')}
+                                </StyledMailWorkbenchChip>
+                              ) : (
+                                <StyledMailWorkbenchChip>
+                                  {tr('待补标签')}
+                                </StyledMailWorkbenchChip>
+                              )}
+                            </StyledMailWorkbenchSummaryRow>
+                          </StyledMailPreviewTopbar>
                           <StyledMailPreviewBlock>
                             <StyledMailPreviewLabel>
                               {tr('当前线程')}
                             </StyledMailPreviewLabel>
-                            <StyledMailPreviewTitle>
-                              {tr(selectedMailboxPreviewItem.secondary)}
-                            </StyledMailPreviewTitle>
                             <StyledListPrimary>
-                              {tr(selectedMailboxPreviewItem.primary)}
+                              {tr(mailboxSelectedCustomerName)}
                             </StyledListPrimary>
                             <StyledListMeta>
-                              {tr(selectedMailboxPreviewItem.meta)}
+                              {tr(mailboxSelectedThreadMeta)}
                             </StyledListMeta>
                           </StyledMailPreviewBlock>
                           <StyledMailPreviewBlock>
@@ -3729,25 +4017,71 @@ export const TradeCrmMailPage = () => {
                               {tr('邮件摘要')}
                             </StyledMailPreviewLabel>
                             <StyledListTertiary>
-                              {tr(selectedMailboxPreviewItem.tertiary)}
+                              {tr(mailboxSelectedThreadSummary)}
                             </StyledListTertiary>
                           </StyledMailPreviewBlock>
-                          <StyledMailPreviewBlock>
-                            <StyledMailPreviewLabel>
-                              {tr('CRM 上下文')}
-                            </StyledMailPreviewLabel>
-                            <StyledListSecondary>
-                              {tr(
-                                selectedMailboxPreviewItem.status ===
-                                  'Create customer'
-                                  ? '当前线程尚未建立客户档案，建议先创建客户并补齐负责人。'
-                                  : selectedMailboxPreviewItem.status ===
-                                      'Reply needed'
-                                    ? '当前线程需要销售回复，建议保留在客户和商机关联链路内。'
-                                    : '当前线程更适合通过规则、标签或归档动作进行处理。',
-                              )}
-                            </StyledListSecondary>
-                          </StyledMailPreviewBlock>
+                          <StyledMailPreviewSideStack>
+                            <StyledMailPreviewBlock>
+                              <StyledMailPreviewLabel>
+                                {tr('客户档案')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailProfileGrid>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('客户名称')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(mailboxSelectedCustomerName)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('当前分组')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(currentViewItem.label)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('处理状态')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(selectedMailboxPreviewItem.status)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('最近动作')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(mailboxSelectedThreadMeta)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                              </StyledMailProfileGrid>
+                            </StyledMailPreviewBlock>
+                            <StyledMailPreviewBlock>
+                              <StyledMailPreviewLabel>
+                                {tr('AI 处理建议')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailAiList>
+                                {mailboxSelectedAssistantSuggestions.map(
+                                  (suggestion, index) => (
+                                    <StyledMailAiItem
+                                      key={`${selectedMailboxPreviewItem.id}-${index}`}
+                                    >
+                                      <StyledMailAiIndex>
+                                        {index + 1}
+                                      </StyledMailAiIndex>
+                                      <StyledListSecondary>
+                                        {tr(suggestion)}
+                                      </StyledListSecondary>
+                                    </StyledMailAiItem>
+                                  ),
+                                )}
+                              </StyledMailAiList>
+                            </StyledMailPreviewBlock>
+                          </StyledMailPreviewSideStack>
                           <StyledButtonRow>
                             {selectedMailboxPreviewItem.threadId ? (
                               <StyledSecondaryButton
@@ -3788,6 +4122,174 @@ export const TradeCrmMailPage = () => {
                           </StyledMailPreviewLabel>
                           <StyledListMeta>
                             {tr('当前筛选条件下没有可预览的邮件线程。')}
+                          </StyledListMeta>
+                        </StyledMailPreviewBlock>
+                      )}
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : isCustomerWorkbenchView ? (
+                  <StyledMailWorkbench>
+                    <StyledMailWorkbenchList>
+                      <StyledMailWorkbenchListHeader>
+                        <div>{tr('客户')}</div>
+                        <div>{tr('最近线程与摘要')}</div>
+                        <div>{tr('分组 / 状态')}</div>
+                      </StyledMailWorkbenchListHeader>
+                      {filteredRenderedListItems.map((item) => (
+                        <StyledMailWorkbenchItem
+                          $active={item.id === selectedCustomerPreviewItem?.id}
+                          key={item.id}
+                          onClick={() => handlePreviewCustomerSelection(item.id)}
+                          type="button"
+                        >
+                          <StyledMailWorkbenchRow>
+                            <StyledMailSenderCell>
+                              {tr(item.primary)}
+                            </StyledMailSenderCell>
+                            <StyledMailSubjectCell>
+                              <StyledMailWorkbenchTitle>
+                                {tr(item.secondary)}
+                              </StyledMailWorkbenchTitle>
+                              <StyledListTertiary>
+                                {tr(item.tertiary)}
+                              </StyledListTertiary>
+                            </StyledMailSubjectCell>
+                            <StyledMailTimeCell>
+                              <div>{tr(item.meta)}</div>
+                              <StyledMailWorkbenchSummaryRow>
+                                <StyledMailWorkbenchChip $tone="accent">
+                                  {tr(item.status)}
+                                </StyledMailWorkbenchChip>
+                              </StyledMailWorkbenchSummaryRow>
+                            </StyledMailTimeCell>
+                          </StyledMailWorkbenchRow>
+                        </StyledMailWorkbenchItem>
+                      ))}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      {selectedCustomerPreviewItem ? (
+                        <>
+                          <StyledMailPreviewTopbar>
+                            <StyledMailPreviewTopbarCopy>
+                              <StyledMailPreviewLabel>
+                                {tr('客户邮件面板')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailPreviewTitle>
+                                {tr(customerSelectedName)}
+                              </StyledMailPreviewTitle>
+                            </StyledMailPreviewTopbarCopy>
+                            <StyledMailWorkbenchSummaryRow>
+                              <StyledMailWorkbenchChip $tone="accent">
+                                {tr(selectedCustomerPreviewItem.status)}
+                              </StyledMailWorkbenchChip>
+                              <StyledMailWorkbenchChip>
+                                {tr(currentViewItem.label)}
+                              </StyledMailWorkbenchChip>
+                            </StyledMailWorkbenchSummaryRow>
+                          </StyledMailPreviewTopbar>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('最近线程')}
+                            </StyledMailPreviewLabel>
+                            <StyledMailPreviewTitle>
+                              {tr(customerSelectedLatestThread)}
+                            </StyledMailPreviewTitle>
+                            <StyledListMeta>{tr(customerSelectedMeta)}</StyledListMeta>
+                          </StyledMailPreviewBlock>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('往来摘要')}
+                            </StyledMailPreviewLabel>
+                            <StyledListTertiary>
+                              {tr(customerSelectedSummary)}
+                            </StyledListTertiary>
+                          </StyledMailPreviewBlock>
+                          <StyledMailPreviewSideStack>
+                            <StyledMailPreviewBlock>
+                              <StyledMailPreviewLabel>
+                                {tr('客户档案')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailProfileGrid>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('客户名称')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(customerSelectedName)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('客户分组')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(currentViewItem.label)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('最近动作')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(customerSelectedMeta)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('跟进状态')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(selectedCustomerPreviewItem.status)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                              </StyledMailProfileGrid>
+                            </StyledMailPreviewBlock>
+                            <StyledMailPreviewBlock>
+                              <StyledMailPreviewLabel>
+                                {tr('AI 跟进建议')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailAiList>
+                                {customerSelectedSuggestions.map(
+                                  (suggestion, index) => (
+                                    <StyledMailAiItem
+                                      key={`${selectedCustomerPreviewItem.id}-${index}`}
+                                    >
+                                      <StyledMailAiIndex>
+                                        {index + 1}
+                                      </StyledMailAiIndex>
+                                      <StyledListSecondary>
+                                        {tr(suggestion)}
+                                      </StyledListSecondary>
+                                    </StyledMailAiItem>
+                                  ),
+                                )}
+                              </StyledMailAiList>
+                            </StyledMailPreviewBlock>
+                          </StyledMailPreviewSideStack>
+                          <StyledButtonRow>
+                            <StyledActionLink to={tradeCrmRouteMap.customers}>
+                              {tr('打开客户详情')}
+                            </StyledActionLink>
+                            <StyledActionLink to={tradeCrmRouteMap.opportunities}>
+                              {tr('进入商机处理')}
+                            </StyledActionLink>
+                            <StyledActionLink
+                              to={getTradeCrmMailPath({
+                                scope: 'mail',
+                                view: 'search',
+                              })}
+                            >
+                              {tr('查看相关邮件')}
+                            </StyledActionLink>
+                          </StyledButtonRow>
+                        </>
+                      ) : (
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('客户邮件面板')}
+                          </StyledMailPreviewLabel>
+                          <StyledListMeta>
+                            {tr('当前分组下没有可预览的客户。')}
                           </StyledListMeta>
                         </StyledMailPreviewBlock>
                       )}
