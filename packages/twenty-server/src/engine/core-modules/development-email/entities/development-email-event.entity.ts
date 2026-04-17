@@ -30,15 +30,15 @@ export class DevelopmentEmailEventEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'varchar', length: 64 })
   eventType: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   campaignId: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   sendJobId: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   sendTaskId: string | null;
 
@@ -46,11 +46,11 @@ export class DevelopmentEmailEventEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'varchar', length: 255 })
   email: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', length: 255, nullable: true })
   provider: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', length: 512, nullable: true })
   providerMessageId: string | null;
 

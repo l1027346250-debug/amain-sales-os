@@ -31,7 +31,7 @@ export class DevelopmentEmailTemplateEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'text' })
   bodyHtml: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'text', nullable: true })
   bodyText: string | null;
 

@@ -10,6 +10,6 @@ export class UpdateTradeCrmMailThreadStateInput {
   @Field()
   isPending: boolean;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   pendingReason?: string;
 }

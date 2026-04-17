@@ -106,6 +106,16 @@ export class MicrosoftMessageOutboundService implements MessageOutboundDriver {
       toRecipients: toMicrosoftRecipients(sendMessageInput.to),
       ccRecipients: toMicrosoftRecipients(sendMessageInput.cc),
       bccRecipients: toMicrosoftRecipients(sendMessageInput.bcc),
+      ...(sendMessageInput.headers
+        ? {
+            internetMessageHeaders: Object.entries(
+              sendMessageInput.headers,
+            ).map(([name, value]) => ({
+              name,
+              value,
+            })),
+          }
+        : {}),
       ...(sendMessageInput.attachments &&
       sendMessageInput.attachments.length > 0
         ? {

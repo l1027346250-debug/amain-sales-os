@@ -10,6 +10,6 @@ export class UpdateTradeCrmMailThreadTagInput {
   @Field()
   mode: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   tag?: string;
 }

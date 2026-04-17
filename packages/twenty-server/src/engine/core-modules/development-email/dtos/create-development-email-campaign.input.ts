@@ -5,9 +5,9 @@ export class CreateDevelopmentEmailCampaignInput {
   @Field()
   name: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   templateId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   scheduledAt?: Date;
 }

@@ -5,18 +5,18 @@ export class GenerateDevelopmentEmailTrackingLinksInput {
   @Field()
   email: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   campaignId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   sendJobId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   sendTaskId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   provider?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   targetUrl?: string;
 }

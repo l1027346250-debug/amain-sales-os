@@ -2,6 +2,8 @@
 import { styled } from '@linaria/react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { SettingsPath } from 'twenty-shared/types';
+import { getSettingsPath } from 'twenty-shared/utils';
 
 import { MainContainerLayoutWithSidePanel } from '@/object-record/components/MainContainerLayoutWithSidePanel';
 import { TradeCrmMailFolderTree } from '@/trade-crm/mail/components/TradeCrmMailFolderTree';
@@ -321,6 +323,25 @@ const StyledBadge = styled.div`
   padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
 `;
 
+const StyledRuntimeNotice = styled.div<{ $tone?: 'warning' | 'neutral' }>`
+  background: ${({ $tone }) =>
+    $tone === 'warning'
+      ? 'rgba(180, 35, 24, 0.06)'
+      : tradeCrmUiTheme.colors.surfaceMuted};
+  border: 1px solid
+    ${({ $tone }) =>
+      $tone === 'warning'
+        ? 'rgba(180, 35, 24, 0.18)'
+        : tradeCrmUiTheme.colors.border};
+  border-radius: ${tradeCrmUiTheme.radius.card};
+  color: ${({ $tone }) =>
+    $tone === 'warning' ? '#7a271a' : tradeCrmUiTheme.colors.inkMuted};
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+  padding: ${themeCssVariables.spacing[3]};
+`;
+
 const StyledMetrics = styled.div`
   display: grid;
   gap: ${themeCssVariables.spacing[3]};
@@ -364,6 +385,14 @@ const StyledSectionTitle = styled.div`
   color: ${tradeCrmUiTheme.colors.ink};
   font-size: ${themeCssVariables.font.size.md};
   font-weight: ${themeCssVariables.font.weight.semiBold};
+`;
+
+const StyledSubsectionTitle = styled.div`
+  color: ${tradeCrmUiTheme.colors.inkMuted};
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 `;
 
 const StyledList = styled.div`
@@ -531,6 +560,17 @@ const StyledButtonRow = styled.div`
   justify-content: flex-end;
 `;
 
+const StyledActionLink = styled(Link)`
+  background: ${tradeCrmUiTheme.colors.surface};
+  border: 1px solid ${tradeCrmUiTheme.colors.borderStrong};
+  border-radius: ${tradeCrmUiTheme.radius.control};
+  color: ${tradeCrmUiTheme.colors.ink};
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.medium};
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+  text-decoration: none;
+`;
+
 const StyledPrimaryButton = styled.button`
   background: ${tradeCrmUiTheme.colors.ink};
   border: 1px solid ${tradeCrmUiTheme.colors.ink};
@@ -589,6 +629,22 @@ const formatSnapshotValue = (value: unknown) => {
   }
 
   return JSON.stringify(value);
+};
+
+const getSenderHealthReasonParts = (value: string) => {
+  const [code, ...messageParts] = value.split(' · ');
+
+  if (messageParts.length === 0) {
+    return {
+      code: null,
+      message: value,
+    };
+  }
+
+  return {
+    code,
+    message: messageParts.join(' · '),
+  };
 };
 
 const getCurrentView = ({
@@ -695,6 +751,8 @@ export const TradeCrmMailPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedSendJobId = searchParams.get('jobId') ?? undefined;
   const selectedSendTaskId = searchParams.get('taskId') ?? undefined;
+  const sendJobModeFilter = searchParams.get('jobMode') ?? 'all';
+  const sendJobStatusFilter = searchParams.get('jobStatus') ?? 'all';
   const mailSearchQuery = searchParams.get('q') ?? '';
   const mailTagFilter = searchParams.get('tag') ?? '';
   const mailReceivedAtFrom = searchParams.get('from') ?? '';
@@ -923,6 +981,8 @@ export const TradeCrmMailPage = () => {
       id: string;
       campaignId: string | null;
       status: string;
+      executionMode: string | null;
+      senderPoolMode: string | null;
       queuedCount: number;
       sentCount: number;
       failedCount: number;
@@ -1074,22 +1134,99 @@ export const TradeCrmMailPage = () => {
     developmentEmailCampaignsData?.getDevelopmentEmailCampaigns ?? [];
   const availableSendJobs =
     developmentEmailSendJobsData?.getDevelopmentEmailSendJobs ?? [];
-  const { inboxMetrics, loading, recentThreads, rootFolders, sendTasks } =
-    useTradeCrmMailWorkspaceData({
-      scope: currentScope,
-      view: currentViewKey,
-      selectedSendJobId,
-      searchQuery: currentScope === 'mail' ? mailSearchQuery : undefined,
-      tagFilter: currentScope === 'mail' ? mailTagFilter : undefined,
-      receivedAtFrom: currentScope === 'mail' ? mailReceivedAtFrom : undefined,
-      receivedAtTo: currentScope === 'mail' ? mailReceivedAtTo : undefined,
-    });
+  const {
+    campaignWorkspaceHealthItems,
+    campaignWorkspacePrimaryItems,
+    inboxMetrics,
+    loading,
+    recentThreads,
+    rootFolders,
+    sendTasks,
+  } = useTradeCrmMailWorkspaceData({
+    scope: currentScope,
+    view: currentViewKey,
+    selectedSendJobId,
+    searchQuery: currentScope === 'mail' ? mailSearchQuery : undefined,
+    tagFilter: currentScope === 'mail' ? mailTagFilter : undefined,
+    receivedAtFrom: currentScope === 'mail' ? mailReceivedAtFrom : undefined,
+    receivedAtTo: currentScope === 'mail' ? mailReceivedAtTo : undefined,
+  });
   const renderedMetrics =
     inboxMetrics.length > 0 ? inboxMetrics : workspace.metrics;
   const renderedListItems =
     recentThreads.length > 0 ? recentThreads : workspace.listItems;
+  const filteredRenderedListItems =
+    currentScope === 'campaign' && currentViewKey === 'jobs'
+      ? renderedListItems.filter((item) => {
+          const matchesMode =
+            sendJobModeFilter === 'all' ||
+            item.senderPoolMode === sendJobModeFilter;
+          const matchesStatus =
+            sendJobStatusFilter === 'all' ||
+            item.status === sendJobStatusFilter;
+
+          return matchesMode && matchesStatus;
+        })
+      : renderedListItems;
+  const filteredAvailableSendJobs =
+    currentScope === 'campaign' && currentViewKey === 'jobs'
+      ? availableSendJobs.filter((sendJob) => {
+          const matchesMode =
+            sendJobModeFilter === 'all' ||
+            sendJob.senderPoolMode === sendJobModeFilter;
+          const matchesStatus =
+            sendJobStatusFilter === 'all' ||
+            sendJob.status === sendJobStatusFilter;
+
+          return matchesMode && matchesStatus;
+        })
+      : availableSendJobs;
+  const filteredSendJobCount =
+    currentScope === 'campaign' && currentViewKey === 'jobs'
+      ? filteredAvailableSendJobs.length
+      : availableSendJobs.length;
+  const hasNoFilteredSendJobs =
+    currentScope === 'campaign' &&
+    currentViewKey === 'jobs' &&
+    filteredAvailableSendJobs.length === 0;
+  const senderHealthGroups = Object.entries(
+    campaignWorkspaceHealthItems.reduce<
+      Record<string, typeof campaignWorkspaceHealthItems>
+    >((accumulator, item) => {
+      const providerLabel = item.secondary.startsWith('Provider ')
+        ? item.secondary.slice('Provider '.length)
+        : 'unknown';
+      const providerKey =
+        providerLabel.trim().length > 0 ? providerLabel.trim() : 'unknown';
+
+      accumulator[providerKey] = [...(accumulator[providerKey] ?? []), item];
+
+      return accumulator;
+    }, {}),
+  ).sort(([leftProvider], [rightProvider]) =>
+    leftProvider.localeCompare(rightProvider),
+  );
   const selectedSendJobSummary =
     developmentEmailSendJobSummaryData?.getDevelopmentEmailSendJobSummary;
+  const selectedSendJobExecutionMode =
+    selectedSendJobSummary?.metrics.find(
+      (metric) => metric.label === 'Execution mode',
+    )?.value ?? 'not recorded';
+  const selectedSendJobSenderPoolMode =
+    selectedSendJobSummary?.metrics.find(
+      (metric) => metric.label === 'Sender pool mode',
+    )?.value ?? 'not recorded';
+  const selectedSendJobExecutableSenders =
+    selectedSendJobSummary?.metrics.find(
+      (metric) => metric.label === 'Executable senders',
+    )?.value ?? '0';
+  const selectedSendJobSkippedSenders =
+    selectedSendJobSummary?.metrics.find(
+      (metric) => metric.label === 'Skipped senders',
+    )?.value ?? '0';
+  const isFallbackOnlySendJob =
+    selectedSendJobSenderPoolMode === 'fallback-only' ||
+    selectedSendJobExecutionMode === 'internal-simulation-fallback';
   const selectedSendJobSummaryText = selectedSendJobSummary
     ? [
         ...(selectedSendJobId ? [`sendJobId=${selectedSendJobId}`] : []),
@@ -1101,6 +1238,96 @@ export const TradeCrmMailPage = () => {
         ),
       ].join('\n')
     : '';
+  const senderPoolModeMetric =
+    renderedMetrics.find((metric) => metric.label === 'Sender pool mode')
+      ?.value ?? 'not recorded';
+  const executableSendersMetric =
+    renderedMetrics.find((metric) => metric.label === 'Executable senders')
+      ?.value ?? '0';
+  const skippedSendersMetric =
+    renderedMetrics.find((metric) => metric.label === 'Skipped senders')
+      ?.value ?? '0';
+  const healthySenderChannelsMetric =
+    renderedMetrics.find((metric) => metric.label === 'Healthy sender channels')
+      ?.value ?? '0/0';
+  const senderPoolAccountsPath = getSettingsPath(SettingsPath.AccountsEmails);
+  const senderPoolDomainsPath = getSettingsPath(SettingsPath.Domains);
+  const senderPoolJobsPath = getTradeCrmMailPath({
+    scope: 'campaign',
+    view: 'jobs',
+  });
+  const getSenderHealthActions = ({
+    secondary,
+    reasonCode,
+  }: {
+    secondary: string;
+    reasonCode: string | null;
+  }) => {
+    const providerLabel = secondary.startsWith('Provider ')
+      ? secondary.slice('Provider '.length).trim().toLowerCase()
+      : 'unknown';
+
+    if (reasonCode === 'missing_google_refresh_token') {
+      return [{ label: tr('Reconnect Google token'), to: senderPoolAccountsPath }];
+    }
+
+    if (reasonCode === 'missing_microsoft_access_token') {
+      return [
+        { label: tr('Reconnect Microsoft token'), to: senderPoolAccountsPath },
+      ];
+    }
+
+    if (reasonCode === 'missing_smtp_password') {
+      return [
+        { label: tr('Update SMTP password'), to: senderPoolDomainsPath },
+        { label: tr('Open email accounts'), to: senderPoolAccountsPath },
+      ];
+    }
+
+    if (reasonCode === 'missing_smtp_host') {
+      return [
+        { label: tr('Update SMTP host'), to: senderPoolDomainsPath },
+        { label: tr('Open email accounts'), to: senderPoolAccountsPath },
+      ];
+    }
+
+    if (reasonCode === 'missing_smtp_port') {
+      return [
+        { label: tr('Update SMTP port'), to: senderPoolDomainsPath },
+        { label: tr('Open email accounts'), to: senderPoolAccountsPath },
+      ];
+    }
+
+    if (reasonCode === 'missing_smtp_settings') {
+      return [
+        { label: tr('Configure SMTP settings'), to: senderPoolDomainsPath },
+        { label: tr('Open email accounts'), to: senderPoolAccountsPath },
+      ];
+    }
+
+    if (reasonCode === 'unsupported_provider_live_delivery') {
+      return [{ label: tr('Open email accounts'), to: senderPoolAccountsPath }];
+    }
+
+    if (providerLabel === 'imap_smtp_caldav') {
+      return [
+        { label: tr('Open SMTP settings'), to: senderPoolDomainsPath },
+        { label: tr('Open email accounts'), to: senderPoolAccountsPath },
+      ];
+    }
+
+    if (providerLabel === 'google') {
+      return [{ label: tr('Reauthorize Google'), to: senderPoolAccountsPath }];
+    }
+
+    if (providerLabel === 'microsoft') {
+      return [
+        { label: tr('Reauthorize Microsoft'), to: senderPoolAccountsPath },
+      ];
+    }
+
+    return [{ label: tr('Open email accounts'), to: senderPoolAccountsPath }];
+  };
   const selectedSendTask =
     sendTasks.find((sendTask) => sendTask.id === selectedSendTaskId) ??
     sendTasks[0];
@@ -1741,6 +1968,30 @@ export const TradeCrmMailPage = () => {
     setSearchParams(nextSearchParams);
   };
 
+  const handleSendJobModeFilterChange = (value: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (value === 'all') {
+      nextSearchParams.delete('jobMode');
+    } else {
+      nextSearchParams.set('jobMode', value);
+    }
+
+    setSearchParams(nextSearchParams);
+  };
+
+  const handleSendJobStatusFilterChange = (value: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (value === 'all') {
+      nextSearchParams.delete('jobStatus');
+    } else {
+      nextSearchParams.set('jobStatus', value);
+    }
+
+    setSearchParams(nextSearchParams);
+  };
+
   return (
     <PageContainer>
       <PageHeader title={tr('Mail')}>
@@ -1895,6 +2146,44 @@ export const TradeCrmMailPage = () => {
                         </>
                       ) : null}
                     </StyledFormGrid>
+                  ) : currentScope === 'campaign' && currentViewKey === 'jobs' ? (
+                    <StyledFormGrid>
+                      <StyledFormField>
+                        {tr('Sender pool mode')}
+                        <StyledSelect
+                          onChange={(event) =>
+                            handleSendJobModeFilterChange(event.target.value)
+                          }
+                          value={sendJobModeFilter}
+                        >
+                          <option value="all">{tr('All jobs')}</option>
+                          <option value="fallback-only">
+                            {tr('Fallback-only')}
+                          </option>
+                          <option value="live-capable">
+                            {tr('Live-capable')}
+                          </option>
+                        </StyledSelect>
+                      </StyledFormField>
+                      <StyledFormField>
+                        {tr('Job status')}
+                        <StyledSelect
+                          onChange={(event) =>
+                            handleSendJobStatusFilterChange(event.target.value)
+                          }
+                          value={sendJobStatusFilter}
+                        >
+                          <option value="all">{tr('All statuses')}</option>
+                          <option value="queued">{tr('Queued')}</option>
+                          <option value="completed">{tr('Completed')}</option>
+                          <option value="completed_with_failures">
+                            {tr('Completed with failures')}
+                          </option>
+                          <option value="prepared">{tr('Prepared')}</option>
+                          <option value="running">{tr('Running')}</option>
+                        </StyledSelect>
+                      </StyledFormField>
+                    </StyledFormGrid>
                   ) : (
                     <StyledSearchInput>
                       {tr(
@@ -1905,6 +2194,9 @@ export const TradeCrmMailPage = () => {
                   <StyledToolbarMeta>
                     <StyledBadge>{tr(workspace.label)}</StyledBadge>
                     <StyledBadge>{tr(currentViewItem.label)}</StyledBadge>
+                    {currentScope === 'campaign' && currentViewKey === 'jobs' ? (
+                      <StyledBadge>{tr(`Visible jobs ${filteredSendJobCount}`)}</StyledBadge>
+                    ) : null}
                     <StyledBadge>{tr('CRM + AI linkage')}</StyledBadge>
                   </StyledToolbarMeta>
                 </StyledToolbar>
@@ -2107,9 +2399,9 @@ export const TradeCrmMailPage = () => {
                           value={selectedSendJobToStartId}
                         >
                           <option value="">{tr('No send job selected')}</option>
-                          {availableSendJobs.map((sendJob) => (
+                          {filteredAvailableSendJobs.map((sendJob) => (
                             <option key={sendJob.id} value={sendJob.id}>
-                              {`Job ${sendJob.id.slice(0, 8)} - ${sendJob.status}`}
+                              {`Job ${sendJob.id.slice(0, 8)} - ${sendJob.status} - ${sendJob.senderPoolMode ?? 'not recorded'}`}
                             </option>
                           ))}
                         </StyledSelect>
@@ -2341,13 +2633,40 @@ export const TradeCrmMailPage = () => {
                     </StyledSectionTitle>
                     <StyledListMeta>
                       {tr(
-                        `Execution path: ${
-                          selectedSendJobSummary.metrics.find(
-                            (metric) => metric.label === 'Execution mode',
-                          )?.value ?? 'not recorded'
-                        }`,
+                        `Execution path: ${selectedSendJobExecutionMode}`,
                       )}
                     </StyledListMeta>
+                    <StyledToolbarMeta>
+                      <StyledBadge>
+                        {tr(`Sender pool ${selectedSendJobSenderPoolMode}`)}
+                      </StyledBadge>
+                      <StyledBadge>
+                        {tr(
+                          `Executable senders ${selectedSendJobExecutableSenders}`,
+                        )}
+                      </StyledBadge>
+                      <StyledBadge>
+                        {tr(`Skipped senders ${selectedSendJobSkippedSenders}`)}
+                      </StyledBadge>
+                    </StyledToolbarMeta>
+                    <StyledRuntimeNotice
+                      $tone={isFallbackOnlySendJob ? 'warning' : 'neutral'}
+                    >
+                      <StyledListPrimary>
+                        {tr(
+                          isFallbackOnlySendJob
+                            ? 'Simulation fallback is active'
+                            : 'Live-capable sender pool is active',
+                        )}
+                      </StyledListPrimary>
+                      <StyledListMeta>
+                        {tr(
+                          isFallbackOnlySendJob
+                            ? 'This send job completed through internal simulation because the workspace has no connected mailbox with valid live-delivery credentials.'
+                            : 'This send job had at least one connected mailbox that was ready for live delivery assignment.',
+                        )}
+                      </StyledListMeta>
+                    </StyledRuntimeNotice>
                     <StyledButtonRow>
                       <StyledSecondaryButton
                         onClick={() =>
@@ -2831,154 +3150,346 @@ export const TradeCrmMailPage = () => {
                     )}
                   </StyledListMeta>
                 ) : null}
-                <StyledList>
-                  {renderedListItems.map((item) =>
-                    item.threadId &&
-                    (currentViewKey === 'inbox' ||
-                      currentViewKey === 'sent' ||
-                      currentViewKey === 'unread' ||
-                      currentViewKey === 'pending' ||
-                      currentViewKey === 'tagged' ||
-                      currentViewKey === 'search') ? (
-                      <StyledListItem key={item.id}>
-                        <StyledListCopy>
-                          <StyledListPrimary>
-                            {tr(item.primary)}
-                          </StyledListPrimary>
-                          <StyledListSecondary>
-                            {tr(item.secondary)}
-                          </StyledListSecondary>
-                          <StyledListTertiary>
-                            {tr(item.tertiary)}
-                          </StyledListTertiary>
-                          <StyledListMeta>{tr(item.meta)}</StyledListMeta>
-                        </StyledListCopy>
-                        <StyledListActions>
-                          <StyledStatus>{tr(item.status)}</StyledStatus>
-                          <StyledSecondaryButton
-                            onClick={() =>
-                              openEmailThreadInSidePanel(item.threadId ?? '')
-                            }
-                            type="button"
-                          >
-                            {tr('Open thread')}
-                          </StyledSecondaryButton>
-                          <StyledSecondaryButton
-                            onClick={() =>
-                              handleUpdateThreadPendingState({
-                                threadId: item.threadId ?? '',
-                                isPending: currentViewKey !== 'pending',
-                              })
-                            }
-                            type="button"
-                          >
-                            {tr(
-                              updatingTradeCrmMailThreadState
-                                ? 'Updating...'
-                                : currentViewKey === 'pending'
-                                  ? 'Clear pending'
-                                  : 'Mark pending',
-                            )}
-                          </StyledSecondaryButton>
-                          <StyledSecondaryButton
-                            onClick={() => {
-                              if (
-                                currentViewKey === 'tagged' ||
-                                (item.tags?.length ?? 0) > 0
-                              ) {
-                                void handleUpdateThreadTag({
-                                  threadId: item.threadId ?? '',
-                                  mode: 'CLEAR_ALL',
-                                });
+                {hasNoFilteredSendJobs ? (
+                  <StyledRuntimeNotice $tone="warning">
+                    <StyledListPrimary>
+                      {tr('No jobs match the current filters')}
+                    </StyledListPrimary>
+                    <StyledListMeta>
+                      {tr(
+                        'Adjust sender pool mode or job status filters to inspect other send-job cohorts.',
+                      )}
+                    </StyledListMeta>
+                  </StyledRuntimeNotice>
+                ) : null}
+                {currentScope === 'campaign' && currentViewKey === 'sender-pool' ? (
+                  <>
+                    <StyledRuntimeNotice
+                      $tone={
+                        senderPoolModeMetric === 'fallback-only'
+                          ? 'warning'
+                          : 'neutral'
+                      }
+                    >
+                      <StyledListPrimary>
+                        {tr(
+                          senderPoolModeMetric === 'fallback-only'
+                            ? 'Sender pool is fallback-only'
+                            : 'Sender pool has live-ready capacity',
+                        )}
+                      </StyledListPrimary>
+                      <StyledListMeta>
+                        {tr(
+                          senderPoolModeMetric === 'fallback-only'
+                            ? `No connected sender is currently eligible for live delivery. Executable ${executableSendersMetric}, skipped ${skippedSendersMetric}, healthy channels ${healthySenderChannelsMetric}.`
+                            : `Live delivery can use ${executableSendersMetric} sender account(s). Skipped ${skippedSendersMetric}, healthy channels ${healthySenderChannelsMetric}.`,
+                        )}
+                      </StyledListMeta>
+                    </StyledRuntimeNotice>
+                    <StyledButtonRow>
+                      <StyledActionLink to={senderPoolAccountsPath}>
+                        {tr('Open email accounts')}
+                      </StyledActionLink>
+                      <StyledActionLink to={senderPoolDomainsPath}>
+                        {tr('Open domain settings')}
+                      </StyledActionLink>
+                      <StyledActionLink to={senderPoolJobsPath}>
+                        {tr('Open send queue')}
+                      </StyledActionLink>
+                    </StyledButtonRow>
+                    {campaignWorkspacePrimaryItems.length > 0 ? (
+                      <>
+                        <StyledSectionTitle>{tr('Related Campaigns')}</StyledSectionTitle>
+                        <StyledList>
+                          {campaignWorkspacePrimaryItems.map((item) => (
+                            <StyledListItem key={item.id}>
+                              <StyledListCopy>
+                                <StyledListPrimary>{tr(item.primary)}</StyledListPrimary>
+                                <StyledListSecondary>
+                                  {tr(item.secondary)}
+                                </StyledListSecondary>
+                                <StyledListTertiary>
+                                  {tr(item.tertiary)}
+                                </StyledListTertiary>
+                                <StyledListMeta>{tr(item.meta)}</StyledListMeta>
+                              </StyledListCopy>
+                              <StyledStatus>{tr(item.status)}</StyledStatus>
+                            </StyledListItem>
+                          ))}
+                        </StyledList>
+                      </>
+                    ) : null}
+                    {senderHealthGroups.length > 0 ? (
+                      <>
+                        <StyledSectionTitle>{tr('Providers')}</StyledSectionTitle>
+                        {senderHealthGroups.map(([provider, items]) => (
+                          <StyledList key={provider}>
+                            <StyledSubsectionTitle>
+                              {tr(`Provider ${provider} (${items.length})`)}
+                            </StyledSubsectionTitle>
+                            {items.map((item) => {
+                              const senderHealthReason = getSenderHealthReasonParts(
+                                item.tertiary,
+                              );
 
-                                return;
+                              return (
+                                <StyledListItem key={item.id}>
+                                  <StyledListCopy>
+                                    <StyledListPrimary>{tr(item.primary)}</StyledListPrimary>
+                                    <StyledListSecondary>
+                                      {tr(item.secondary)}
+                                    </StyledListSecondary>
+                                    <StyledListTertiary>
+                                      {tr(senderHealthReason.message)}
+                                    </StyledListTertiary>
+                                    {senderHealthReason.code ? (
+                                      <StyledListMeta>
+                                        {tr(senderHealthReason.code)}
+                                      </StyledListMeta>
+                                    ) : null}
+                                    <StyledListMeta>{tr(item.meta)}</StyledListMeta>
+                                  </StyledListCopy>
+                                  <StyledListActions>
+                                    <StyledStatus>{tr(item.status)}</StyledStatus>
+                                    {getSenderHealthActions({
+                                      secondary: item.secondary,
+                                      reasonCode: senderHealthReason.code,
+                                    }).map(
+                                      (action) => (
+                                        <StyledActionLink
+                                          key={`${item.id}-${action.label}`}
+                                          to={action.to}
+                                        >
+                                          {action.label}
+                                        </StyledActionLink>
+                                      ),
+                                    )}
+                                  </StyledListActions>
+                                </StyledListItem>
+                              );
+                            })}
+                          </StyledList>
+                        ))}
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+                {currentScope === 'campaign' &&
+                currentViewKey === 'overview' &&
+                campaignWorkspaceHealthItems.length > 0 ? (
+                  <>
+                    <StyledSectionTitle>{tr('Sender Health')}</StyledSectionTitle>
+                    <StyledRuntimeNotice $tone="warning">
+                      <StyledListPrimary>
+                        {tr('Credential blockers are isolated here')}
+                      </StyledListPrimary>
+                      <StyledListMeta>
+                        {tr(
+                          'Sender readiness rows are separated from campaign entries so mailbox credential gaps remain visible before queue execution begins.',
+                        )}
+                      </StyledListMeta>
+                    </StyledRuntimeNotice>
+                    {senderHealthGroups.map(([provider, items]) => (
+                      <StyledList key={provider}>
+                        <StyledSubsectionTitle>
+                          {tr(`Provider ${provider} (${items.length})`)}
+                        </StyledSubsectionTitle>
+                        {items.map((item) => {
+                          const senderHealthReason = getSenderHealthReasonParts(
+                            item.tertiary,
+                          );
+
+                          return (
+                            <StyledListItem key={item.id}>
+                              <StyledListCopy>
+                                <StyledListPrimary>{tr(item.primary)}</StyledListPrimary>
+                                <StyledListSecondary>
+                                  {tr(item.secondary)}
+                                </StyledListSecondary>
+                                <StyledListTertiary>
+                                  {tr(senderHealthReason.message)}
+                                </StyledListTertiary>
+                                {senderHealthReason.code ? (
+                                  <StyledListMeta>
+                                    {tr(senderHealthReason.code)}
+                                  </StyledListMeta>
+                                ) : null}
+                                <StyledListMeta>{tr(item.meta)}</StyledListMeta>
+                              </StyledListCopy>
+                              <StyledListActions>
+                                <StyledStatus>{tr(item.status)}</StyledStatus>
+                                {getSenderHealthActions({
+                                  secondary: item.secondary,
+                                  reasonCode: senderHealthReason.code,
+                                }).map(
+                                  (action) => (
+                                    <StyledActionLink
+                                      key={`${item.id}-${action.label}`}
+                                      to={action.to}
+                                    >
+                                      {action.label}
+                                    </StyledActionLink>
+                                  ),
+                                )}
+                              </StyledListActions>
+                            </StyledListItem>
+                          );
+                        })}
+                      </StyledList>
+                    ))}
+                  </>
+                ) : null}
+                {!(currentScope === 'campaign' &&
+                  currentViewKey === 'sender-pool') ? (
+                  <StyledList>
+                    {filteredRenderedListItems.map((item) =>
+                      item.threadId &&
+                      (currentViewKey === 'inbox' ||
+                        currentViewKey === 'sent' ||
+                        currentViewKey === 'unread' ||
+                        currentViewKey === 'pending' ||
+                        currentViewKey === 'tagged' ||
+                        currentViewKey === 'search') ? (
+                        <StyledListItem key={item.id}>
+                          <StyledListCopy>
+                            <StyledListPrimary>
+                              {tr(item.primary)}
+                            </StyledListPrimary>
+                            <StyledListSecondary>
+                              {tr(item.secondary)}
+                            </StyledListSecondary>
+                            <StyledListTertiary>
+                              {tr(item.tertiary)}
+                            </StyledListTertiary>
+                            <StyledListMeta>{tr(item.meta)}</StyledListMeta>
+                          </StyledListCopy>
+                          <StyledListActions>
+                            <StyledStatus>{tr(item.status)}</StyledStatus>
+                            <StyledSecondaryButton
+                              onClick={() =>
+                                openEmailThreadInSidePanel(item.threadId ?? '')
                               }
+                              type="button"
+                            >
+                              {tr('Open thread')}
+                            </StyledSecondaryButton>
+                            <StyledSecondaryButton
+                              onClick={() =>
+                                handleUpdateThreadPendingState({
+                                  threadId: item.threadId ?? '',
+                                  isPending: currentViewKey !== 'pending',
+                                })
+                              }
+                              type="button"
+                            >
+                              {tr(
+                                updatingTradeCrmMailThreadState
+                                  ? 'Updating...'
+                                  : currentViewKey === 'pending'
+                                    ? 'Clear pending'
+                                    : 'Mark pending',
+                              )}
+                            </StyledSecondaryButton>
+                            <StyledSecondaryButton
+                              onClick={() => {
+                                if (
+                                  currentViewKey === 'tagged' ||
+                                  (item.tags?.length ?? 0) > 0
+                                ) {
+                                  void handleUpdateThreadTag({
+                                    threadId: item.threadId ?? '',
+                                    mode: 'CLEAR_ALL',
+                                  });
 
-                              handleOpenThreadTagEditor(item.threadId ?? '');
-                            }}
-                            type="button"
-                          >
-                            {tr(
-                              updatingTradeCrmMailThreadTag
-                                ? 'Updating tags...'
-                                : currentViewKey === 'tagged' ||
-                                    (item.tags?.length ?? 0) > 0
-                                  ? 'Clear tags'
-                                  : 'Add tag',
-                            )}
-                          </StyledSecondaryButton>
-                          {activeTagEditorThreadId === item.threadId ? (
-                            <StyledInlineActionForm>
-                              <StyledInput
-                                onChange={(event) =>
-                                  setThreadTagDraft(event.target.value)
+                                  return;
                                 }
-                                placeholder={tr('important-customer')}
-                                value={threadTagDraft}
-                              />
-                              <StyledInlineActionRow>
-                                <StyledPrimaryButton
-                                  onClick={() =>
-                                    handleUpdateThreadTag({
-                                      threadId: item.threadId ?? '',
-                                      mode: 'ADD',
-                                      tag: threadTagDraft.trim(),
-                                    })
+
+                                handleOpenThreadTagEditor(item.threadId ?? '');
+                              }}
+                              type="button"
+                            >
+                              {tr(
+                                updatingTradeCrmMailThreadTag
+                                  ? 'Updating tags...'
+                                  : currentViewKey === 'tagged' ||
+                                      (item.tags?.length ?? 0) > 0
+                                    ? 'Clear tags'
+                                    : 'Add tag',
+                              )}
+                            </StyledSecondaryButton>
+                            {activeTagEditorThreadId === item.threadId ? (
+                              <StyledInlineActionForm>
+                                <StyledInput
+                                  onChange={(event) =>
+                                    setThreadTagDraft(event.target.value)
                                   }
-                                  type="button"
-                                >
-                                  {tr(
-                                    updatingTradeCrmMailThreadTag
-                                      ? 'Saving...'
-                                      : 'Save tag',
-                                  )}
-                                </StyledPrimaryButton>
-                                <StyledSecondaryButton
-                                  onClick={handleCancelThreadTagEditor}
-                                  type="button"
-                                >
-                                  {tr('Cancel')}
-                                </StyledSecondaryButton>
-                              </StyledInlineActionRow>
-                            </StyledInlineActionForm>
-                          ) : null}
-                        </StyledListActions>
-                      </StyledListItem>
-                    ) : item.href ? (
-                      <StyledListItemLink key={item.id} to={item.href}>
-                        <StyledListCopy>
-                          <StyledListPrimary>
-                            {tr(item.primary)}
-                          </StyledListPrimary>
-                          <StyledListSecondary>
-                            {tr(item.secondary)}
-                          </StyledListSecondary>
-                          <StyledListTertiary>
-                            {tr(item.tertiary)}
-                          </StyledListTertiary>
-                          <StyledListMeta>{tr(item.meta)}</StyledListMeta>
-                        </StyledListCopy>
-                        <StyledStatus>{tr(item.status)}</StyledStatus>
-                      </StyledListItemLink>
-                    ) : (
-                      <StyledListItem key={item.id}>
-                        <StyledListCopy>
-                          <StyledListPrimary>
-                            {tr(item.primary)}
-                          </StyledListPrimary>
-                          <StyledListSecondary>
-                            {tr(item.secondary)}
-                          </StyledListSecondary>
-                          <StyledListTertiary>
-                            {tr(item.tertiary)}
-                          </StyledListTertiary>
-                          <StyledListMeta>{tr(item.meta)}</StyledListMeta>
-                        </StyledListCopy>
-                        <StyledStatus>{tr(item.status)}</StyledStatus>
-                      </StyledListItem>
-                    ),
-                  )}
-                </StyledList>
+                                  placeholder={tr('important-customer')}
+                                  value={threadTagDraft}
+                                />
+                                <StyledInlineActionRow>
+                                  <StyledPrimaryButton
+                                    onClick={() =>
+                                      handleUpdateThreadTag({
+                                        threadId: item.threadId ?? '',
+                                        mode: 'ADD',
+                                        tag: threadTagDraft.trim(),
+                                      })
+                                    }
+                                    type="button"
+                                  >
+                                    {tr(
+                                      updatingTradeCrmMailThreadTag
+                                        ? 'Saving...'
+                                        : 'Save tag',
+                                    )}
+                                  </StyledPrimaryButton>
+                                  <StyledSecondaryButton
+                                    onClick={handleCancelThreadTagEditor}
+                                    type="button"
+                                  >
+                                    {tr('Cancel')}
+                                  </StyledSecondaryButton>
+                                </StyledInlineActionRow>
+                              </StyledInlineActionForm>
+                            ) : null}
+                          </StyledListActions>
+                        </StyledListItem>
+                      ) : item.href ? (
+                        <StyledListItemLink key={item.id} to={item.href}>
+                          <StyledListCopy>
+                            <StyledListPrimary>
+                              {tr(item.primary)}
+                            </StyledListPrimary>
+                            <StyledListSecondary>
+                              {tr(item.secondary)}
+                            </StyledListSecondary>
+                            <StyledListTertiary>
+                              {tr(item.tertiary)}
+                            </StyledListTertiary>
+                            <StyledListMeta>{tr(item.meta)}</StyledListMeta>
+                          </StyledListCopy>
+                          <StyledStatus>{tr(item.status)}</StyledStatus>
+                        </StyledListItemLink>
+                      ) : (
+                        <StyledListItem key={item.id}>
+                          <StyledListCopy>
+                            <StyledListPrimary>
+                              {tr(item.primary)}
+                            </StyledListPrimary>
+                            <StyledListSecondary>
+                              {tr(item.secondary)}
+                            </StyledListSecondary>
+                            <StyledListTertiary>
+                              {tr(item.tertiary)}
+                            </StyledListTertiary>
+                            <StyledListMeta>{tr(item.meta)}</StyledListMeta>
+                          </StyledListCopy>
+                          <StyledStatus>{tr(item.status)}</StyledStatus>
+                        </StyledListItem>
+                      ),
+                    )}
+                  </StyledList>
+                ) : null}
               </StyledPanel>
               <StyledPanel>
                 <StyledSectionTitle>{tr('Key Entries')}</StyledSectionTitle>

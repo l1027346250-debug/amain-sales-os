@@ -5,21 +5,21 @@ export class RecordDevelopmentEmailUnsubscribeInput {
   @Field()
   email: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   audienceId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   campaignId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   sendTaskId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   source?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   reason?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   occurredAt?: Date;
 }

@@ -38,7 +38,7 @@ export class TradeCrmMailThreadStateEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'boolean', default: false })
   isPending: boolean;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', length: 255, nullable: true })
   pendingReason: string | null;
 

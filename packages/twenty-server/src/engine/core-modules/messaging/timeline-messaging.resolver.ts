@@ -1,5 +1,13 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, ArgsType, Field, Int, Mutation, Query } from '@nestjs/graphql';
+import {
+  Args,
+  ArgsType,
+  Field,
+  Int,
+  Mutation,
+  Query,
+  registerEnumType,
+} from '@nestjs/graphql';
 
 import { Max } from 'class-validator';
 import { PermissionFlagType } from 'twenty-shared/constants';
@@ -26,6 +34,10 @@ import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
 import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { AccountsToReconnectService } from 'src/modules/connected-account/services/accounts-to-reconnect.service';
+
+registerEnumType(MessageDirection, {
+  name: 'MessageDirection',
+});
 
 @ArgsType()
 class GetTimelineThreadsFromPersonIdArgs {
@@ -78,19 +90,19 @@ class GetMyInboxThreadsArgs {
   @Field(() => MessageDirection, { nullable: true })
   direction?: MessageDirection;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   filter?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   search?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   tag?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   receivedAtFrom?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   receivedAtTo?: string;
 }
 

@@ -26,7 +26,7 @@ export class DevelopmentEmailCampaignEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   templateId: string | null;
 
@@ -34,15 +34,15 @@ export class DevelopmentEmailCampaignEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'varchar', length: 64, default: 'draft' })
   status: string;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   @Column({ type: 'timestamptz', nullable: true })
   scheduledAt: Date | null;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   @Column({ type: 'timestamptz', nullable: true })
   startedAt: Date | null;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   @Column({ type: 'timestamptz', nullable: true })
   completedAt: Date | null;
 

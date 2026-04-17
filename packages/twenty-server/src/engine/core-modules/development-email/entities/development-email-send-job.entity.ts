@@ -22,7 +22,7 @@ export class DevelopmentEmailSendJobEntity extends WorkspaceRelatedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   campaignId: string | null;
 
@@ -42,17 +42,44 @@ export class DevelopmentEmailSendJobEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'int', default: 0 })
   failedCount: number;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   @Column({ type: 'timestamptz', nullable: true })
   startedAt: Date | null;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   @Column({ type: 'timestamptz', nullable: true })
   completedAt: Date | null;
 
   @Field(() => String, { nullable: true })
   @Column({ type: 'jsonb', nullable: true })
   executionSummary: Record<string, unknown> | null;
+
+  @Field(() => String, { nullable: true })
+  get executionMode(): string | null {
+    const executionMode = this.executionSummary?.executionMode;
+
+    return typeof executionMode === 'string' ? executionMode : null;
+  }
+
+  @Field(() => String, { nullable: true })
+  get senderPoolMode(): string | null {
+    const senderPoolMode = this.executionSummary?.senderPoolMode;
+    const executionMode = this.executionSummary?.executionMode;
+
+    if (typeof senderPoolMode === 'string') {
+      return senderPoolMode;
+    }
+
+    if (executionMode === 'internal-simulation-fallback') {
+      return 'fallback-only';
+    }
+
+    if (typeof executionMode === 'string' && executionMode.length > 0) {
+      return 'live-capable';
+    }
+
+    return null;
+  }
 
   @Field()
   @CreateDateColumn({ type: 'timestamptz' })

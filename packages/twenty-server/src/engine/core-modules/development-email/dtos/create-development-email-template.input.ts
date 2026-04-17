@@ -11,6 +11,6 @@ export class CreateDevelopmentEmailTemplateInput {
   @Field()
   bodyHtml: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   bodyText?: string;
 }

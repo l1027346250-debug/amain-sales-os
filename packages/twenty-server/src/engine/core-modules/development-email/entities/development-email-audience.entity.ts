@@ -30,11 +30,11 @@ export class DevelopmentEmailAudienceEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'varchar', length: 255 })
   displayName: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   companyId: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'uuid', nullable: true })
   personId: string | null;
 
@@ -46,7 +46,7 @@ export class DevelopmentEmailAudienceEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'varchar', length: 64, default: 'crm' })
   source: string;
 
-  @Field(() => String, { nullable: true })
+  @Field(() => [String], { nullable: true })
   @Column({ type: 'jsonb', nullable: true })
   tags: string[] | null;
 

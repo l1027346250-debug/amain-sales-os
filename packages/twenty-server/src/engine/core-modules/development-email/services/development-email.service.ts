@@ -2,6 +2,7 @@
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { In, Repository } from 'typeorm';
+import { ConnectedAccountProvider } from 'twenty-shared/types';
 
 import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { type CreateDevelopmentEmailAudienceInput } from 'src/engine/core-modules/development-email/dtos/create-development-email-audience.input';
@@ -58,6 +59,33 @@ export class DevelopmentEmailService {
     private readonly connectedAccountRepository: Repository<ConnectedAccountEntity>,
     private readonly developmentEmailProviderExecutorService: DevelopmentEmailProviderExecutorService,
   ) {}
+
+  private canExecuteDevelopmentEmailFromConnectedAccount(
+    connectedAccount: ConnectedAccountEntity,
+  ): boolean {
+    switch (connectedAccount.provider) {
+      case ConnectedAccountProvider.GOOGLE:
+        return Boolean(connectedAccount.refreshToken);
+      case ConnectedAccountProvider.MICROSOFT:
+        return Boolean(connectedAccount.accessToken);
+      case ConnectedAccountProvider.IMAP_SMTP_CALDAV: {
+        const smtpSettings = connectedAccount.connectionParameters?.SMTP;
+
+        return Boolean(
+          smtpSettings &&
+            typeof smtpSettings === 'object' &&
+            'host' in smtpSettings &&
+            'port' in smtpSettings &&
+            'password' in smtpSettings &&
+            smtpSettings.host &&
+            smtpSettings.port &&
+            smtpSettings.password,
+        );
+      }
+      default:
+        return false;
+    }
+  }
 
   private async findAudienceByEmailOrId({
     workspaceId,
@@ -380,6 +408,18 @@ export class DevelopmentEmailService {
       typeof executionSummary.lastCallbackAt === 'string'
         ? executionSummary.lastCallbackAt
         : null;
+    const senderPoolMode =
+      typeof executionSummary.senderPoolMode === 'string'
+        ? executionSummary.senderPoolMode
+        : 'not recorded';
+    const executableSenderPoolSize = Number(
+      executionSummary.executableSenderPoolSize ??
+        executionSummary.senderPoolSize ??
+        0,
+    );
+    const skippedSenderPoolSize = Number(
+      executionSummary.skippedSenderPoolSize ?? 0,
+    );
 
     return {
       metrics: [
@@ -431,6 +471,23 @@ export class DevelopmentEmailService {
           value: `${Number(executionSummary.bouncedCount ?? 0) + Number(executionSummary.complainedCount ?? 0)}`,
           description: 'Combined negative delivery feedback for this send job.',
         },
+        {
+          label: 'Sender pool mode',
+          value: senderPoolMode,
+          description:
+            'Whether execution used live-capable mailboxes or simulation-only fallback routing.',
+        },
+        {
+          label: 'Executable senders',
+          value: `${executableSenderPoolSize}`,
+          description: 'Connected accounts ready for live delivery.',
+        },
+        {
+          label: 'Skipped senders',
+          value: `${skippedSenderPoolSize}`,
+          description:
+            'Connected accounts excluded from live delivery because credentials or SMTP settings were incomplete.',
+        },
       ],
       listItems: [
         {
@@ -463,6 +520,18 @@ export class DevelopmentEmailService {
             Number(executionSummary.bouncedCount ?? 0) > 0
               ? 'Needs review'
               : 'Healthy',
+        },
+        {
+          id: `${sendJob.id}-sender-pool`,
+          primary: `Sender pool ${senderPoolMode}`,
+          secondary: `Executable ${executableSenderPoolSize} · skipped ${skippedSenderPoolSize}`,
+          tertiary:
+            senderPoolMode === 'fallback-only'
+              ? 'Runtime used internal simulation because no live-capable mailbox was available.'
+              : 'Runtime assigned at least one live-capable mailbox.',
+          meta: `Assigned pool ${executionSummary.senderPoolSize ?? 0}`,
+          status:
+            senderPoolMode === 'fallback-only' ? 'Fallback only' : 'Live ready',
         },
         {
           id: `${sendJob.id}-engagement`,
@@ -1194,9 +1263,13 @@ export class DevelopmentEmailService {
       take: 50,
     });
 
-    if (connectedAccounts.length === 0) {
-      throw new Error('Development email sender pool is empty');
-    }
+    const executableConnectedAccounts = connectedAccounts.filter((account) =>
+      this.canExecuteDevelopmentEmailFromConnectedAccount(account),
+    );
+    const assignedConnectedAccounts =
+      executableConnectedAccounts.length > 0
+        ? executableConnectedAccounts
+        : connectedAccounts;
 
     return this.developmentEmailSendJobRepository.manager.transaction(
       async (entityManager) => {
@@ -1210,7 +1283,7 @@ export class DevelopmentEmailService {
         await Promise.all(
           queuedTasks.map((sendTask, index) => {
             const connectedAccount =
-              connectedAccounts[index % connectedAccounts.length];
+              assignedConnectedAccounts[index % assignedConnectedAccounts.length];
 
             return sendTaskRepository.update(sendTask.id, {
               connectedAccountId: connectedAccount.id,
@@ -1232,7 +1305,14 @@ export class DevelopmentEmailService {
           executionSummary: {
             ...(sendJob.executionSummary ?? {}),
             preparedTaskCount: queuedTasks.length,
-            senderPoolSize: connectedAccounts.length,
+            senderPoolSize: assignedConnectedAccounts.length,
+            executableSenderPoolSize: executableConnectedAccounts.length,
+            skippedSenderPoolSize:
+              connectedAccounts.length - executableConnectedAccounts.length,
+            senderPoolMode:
+              executableConnectedAccounts.length > 0
+                ? 'live-capable'
+                : 'fallback-only',
             startedAt: new Date().toISOString(),
           },
         });

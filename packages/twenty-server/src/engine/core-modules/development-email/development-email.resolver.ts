@@ -102,7 +102,8 @@ export class DevelopmentEmailResolver {
 
   @Query(() => [DevelopmentEmailSendTaskEntity])
   async getDevelopmentEmailSendTasks(
-    @Args('sendJobId', { nullable: true }) sendJobId: string | null,
+    @Args('sendJobId', { type: () => String, nullable: true })
+    sendJobId: string | null,
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,
   ): Promise<DevelopmentEmailSendTaskEntity[]> {
     return this.developmentEmailService.getSendTasks(

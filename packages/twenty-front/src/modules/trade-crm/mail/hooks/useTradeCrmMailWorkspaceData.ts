@@ -41,6 +41,8 @@ export type TradeCrmMailThreadListItem = {
   tertiary: string;
   meta: string;
   status: string;
+  executionMode?: string;
+  senderPoolMode?: string;
   threadId?: string;
   href?: string;
   tags?: string[];
@@ -67,6 +69,13 @@ export type TradeCrmMailSendTaskRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+const DEVELOPMENT_EMAIL_SENDER_HEALTH_STATUSES = new Set([
+  'live-ready',
+  'needs-credentials',
+  'fallback-only',
+  'live-capable',
+]);
 
 const truncate = (value: string, maxLength: number) =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
@@ -229,6 +238,8 @@ export const useTradeCrmMailWorkspaceData = ({
         id: string;
         campaignId: string | null;
         status: string;
+        executionMode: string | null;
+        senderPoolMode: string | null;
         queuedCount: number;
         sentCount: number;
         failedCount: number;
@@ -443,6 +454,24 @@ export const useTradeCrmMailWorkspaceData = ({
       status: item.status,
     }));
   }, [developmentEmailWorkspaceData]);
+  const campaignWorkspaceHealthItems = useMemo<
+    TradeCrmMailThreadListItem[]
+  >(
+    () =>
+      campaignWorkspaceListItems.filter((item) =>
+        DEVELOPMENT_EMAIL_SENDER_HEALTH_STATUSES.has(item.status),
+      ),
+    [campaignWorkspaceListItems],
+  );
+  const campaignWorkspacePrimaryItems = useMemo<
+    TradeCrmMailThreadListItem[]
+  >(
+    () =>
+      campaignWorkspaceListItems.filter(
+        (item) => !DEVELOPMENT_EMAIL_SENDER_HEALTH_STATUSES.has(item.status),
+      ),
+    [campaignWorkspaceListItems],
+  );
 
   const audienceListItems = useMemo<TradeCrmMailThreadListItem[]>(() => {
     return (
@@ -506,13 +535,15 @@ export const useTradeCrmMailWorkspaceData = ({
         sendJob.campaignId !== null
           ? `Campaign ${sendJob.campaignId.slice(0, 8)}`
           : 'No campaign linked',
-      tertiary: `Queued ${sendJob.queuedCount} · sent ${sendJob.sentCount} · failed ${sendJob.failedCount}`,
+      tertiary: `Queued ${sendJob.queuedCount} · sent ${sendJob.sentCount} · failed ${sendJob.failedCount} · pool ${sendJob.senderPoolMode ?? 'not recorded'}`,
       meta: `created ${formatToHumanReadableDate(sendJob.createdAt)} · started ${
         sendJob.startedAt !== null
           ? formatToHumanReadableDate(sendJob.startedAt)
           : 'not started'
-      }`,
+      } · path ${sendJob.executionMode ?? 'not recorded'}`,
       status: sendJob.status,
+      executionMode: sendJob.executionMode ?? undefined,
+      senderPoolMode: sendJob.senderPoolMode ?? undefined,
       href: `${tradeCrmRouteMap.mail}?scope=campaign&view=jobs&jobId=${sendJob.id}`,
     }));
   }, [developmentEmailSendJobsData]);
@@ -722,6 +753,19 @@ export const useTradeCrmMailWorkspaceData = ({
   );
 
   const campaignMetrics = useMemo(() => {
+    if (view === 'sender-pool') {
+      return (
+        developmentEmailWorkspaceData?.getDevelopmentEmailWorkspace.metrics.filter(
+          (metric) =>
+            metric.label === 'Sender pool' ||
+            metric.label === 'Sender pool mode' ||
+            metric.label === 'Executable senders' ||
+            metric.label === 'Skipped senders' ||
+            metric.label === 'Healthy sender channels',
+        ) ?? []
+      );
+    }
+
     if (view === 'analytics') {
       return (
         developmentEmailAnalyticsData?.getDevelopmentEmailAnalytics.metrics ??
@@ -767,6 +811,8 @@ export const useTradeCrmMailWorkspaceData = ({
         ? templateListItems
         : view === 'campaigns'
           ? campaignListItems
+          : view === 'sender-pool'
+            ? campaignWorkspaceHealthItems
           : view === 'jobs'
             ? selectedSendJobId
               ? sendTaskListItems
@@ -779,7 +825,7 @@ export const useTradeCrmMailWorkspaceData = ({
                   ? analyticsListItems
                   : view === 'reports'
                     ? reportListItems
-                    : campaignWorkspaceListItems;
+                    : campaignWorkspacePrimaryItems;
 
   const resolvedListItems = isCampaignScope
     ? resolvedCampaignListItems
@@ -802,6 +848,8 @@ export const useTradeCrmMailWorkspaceData = ({
     rootFolders,
     sendTasks:
       developmentEmailSendTasksData?.getDevelopmentEmailSendTasks ?? [],
+    campaignWorkspaceHealthItems,
+    campaignWorkspacePrimaryItems,
     recentThreads: resolvedListItems,
     inboxMetrics: resolvedMetrics,
     loading:

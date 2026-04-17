@@ -8,13 +8,13 @@ export class CreateDevelopmentEmailAudienceInput {
   @Field()
   displayName: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   companyId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   personId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   source?: string;
 
   @Field(() => [String], { nullable: true })

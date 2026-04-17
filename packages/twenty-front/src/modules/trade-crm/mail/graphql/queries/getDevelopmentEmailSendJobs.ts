@@ -6,6 +6,8 @@ export const GET_DEVELOPMENT_EMAIL_SEND_JOBS = gql`
       id
       campaignId
       status
+      executionMode
+      senderPoolMode
       queuedCount
       sentCount
       failedCount

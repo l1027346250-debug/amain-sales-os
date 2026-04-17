@@ -8,21 +8,21 @@ export class RecordDevelopmentEmailEventInput {
   @Field()
   email: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   campaignId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   sendJobId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   sendTaskId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   provider?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   providerMessageId?: string;
 
-  @Field({ nullable: true })
+  @Field(() => Date, { nullable: true })
   occurredAt?: Date;
 }
