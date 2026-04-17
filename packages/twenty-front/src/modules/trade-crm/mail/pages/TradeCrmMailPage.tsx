@@ -42,7 +42,7 @@ import {
   getTradeCrmMailPath,
   type TradeCrmMailScopeKey,
 } from '@/trade-crm/mail/navigation/trade-crm-mail-navigation';
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
 import { useOpenEmailThreadInSidePanel } from '@/side-panel/hooks/useOpenEmailThreadInSidePanel';
 import {
   type RecordInsightItem,
