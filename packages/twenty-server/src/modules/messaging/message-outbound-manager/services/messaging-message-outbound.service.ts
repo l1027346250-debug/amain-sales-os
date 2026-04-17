@@ -6,6 +6,7 @@ import { assertUnreachable } from 'twenty-shared/utils';
 import { type ConnectedAccountWorkspaceEntity } from 'src/modules/connected-account/standard-objects/connected-account.workspace-entity';
 import { GmailMessageOutboundService } from 'src/modules/messaging/message-outbound-manager/drivers/gmail/services/gmail-message-outbound.service';
 import { ImapSmtpMessageOutboundService } from 'src/modules/messaging/message-outbound-manager/drivers/imap/services/imap-smtp-message-outbound.service';
+import { type MessageOutboundResult } from 'src/modules/messaging/message-outbound-manager/interfaces/message-outbound-driver.interface';
 import { MicrosoftMessageOutboundService } from 'src/modules/messaging/message-outbound-manager/drivers/microsoft/services/microsoft-message-outbound.service';
 import { SendMessageInput } from 'src/modules/messaging/message-outbound-manager/types/send-message-input.type';
 
@@ -20,7 +21,7 @@ export class MessagingMessageOutboundService {
   public async sendMessage(
     sendMessageInput: SendMessageInput,
     connectedAccount: ConnectedAccountWorkspaceEntity,
-  ): Promise<void> {
+  ): Promise<MessageOutboundResult> {
     switch (connectedAccount.provider) {
       case ConnectedAccountProvider.GOOGLE:
         return this.gmailMessageOutboundService.sendMessage(

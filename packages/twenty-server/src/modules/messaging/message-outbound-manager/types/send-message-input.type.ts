@@ -7,6 +7,7 @@ export type SendMessageInput = {
   cc?: EmailAddress;
   bcc?: EmailAddress;
   html: string;
+  headers?: Record<string, string>;
   attachments?: {
     filename: string;
     content: Buffer;
