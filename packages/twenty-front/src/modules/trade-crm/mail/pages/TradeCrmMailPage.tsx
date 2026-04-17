@@ -1,6 +1,6 @@
 ﻿import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
@@ -104,6 +104,26 @@ const StyledScopeTab = styled(Link)<{ $active: boolean }>`
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.semiBold};
   padding: 10px 18px;
+  text-decoration: none;
+`;
+
+const StyledSubviewTabs = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledSubviewTab = styled(Link)<{ $active: boolean }>`
+  background: ${({ $active }) => ($active ? '#1e2126' : '#ffffff')};
+  border: 1px solid
+    ${({ $active }) =>
+      $active ? '#1e2126' : 'rgba(31, 64, 112, 0.10)'};
+  border-radius: 999px;
+  color: ${({ $active }) => ($active ? '#ffffff' : '#50627a')};
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.medium};
+  padding: 8px 14px;
   text-decoration: none;
 `;
 
@@ -883,6 +903,27 @@ const getCurrentScope = (
     ? (requestedScope as TradeCrmMailScopeKey)
     : 'mail';
 
+const getLegacyMailRouteTarget = (
+  requestedView: string | null,
+): { scope: TradeCrmMailScopeKey; view: TradeCrmMailViewKey } | null => {
+  switch (requestedView) {
+    case 'inbox':
+      return { scope: 'mail', view: 'inbox' };
+    case 'pending-replies':
+      return { scope: 'mail', view: 'pending' };
+    case 'sent':
+      return { scope: 'mail', view: 'sent' };
+    case 'templates':
+      return { scope: 'campaign', view: 'templates' };
+    case 'sequences':
+      return { scope: 'campaign', view: 'overview' };
+    case 'tracking':
+      return { scope: 'campaign', view: 'analytics' };
+    default:
+      return null;
+  }
+};
+
 const isDevelopmentEmailCreateView = (viewKey: TradeCrmMailViewKey) =>
   viewKey === 'audiences' ||
   viewKey === 'templates' ||
@@ -1027,6 +1068,10 @@ const getInsightItems = (scope: TradeCrmMailScopeKey): RecordInsightItem[] => {
 
 export const TradeCrmMailPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestedScope = searchParams.get('scope');
+  const requestedView = searchParams.get('view');
+  const legacyMailRouteTarget =
+    requestedScope === null ? getLegacyMailRouteTarget(requestedView) : null;
   const selectedSendJobId = searchParams.get('jobId') ?? undefined;
   const selectedSendTaskId = searchParams.get('taskId') ?? undefined;
   const selectedPreviewThreadId =
@@ -1082,6 +1127,19 @@ export const TradeCrmMailPage = () => {
   >(null);
   const [threadTagDraft, setThreadTagDraft] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (legacyMailRouteTarget === null) {
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.set('scope', legacyMailRouteTarget.scope);
+    nextSearchParams.set('view', legacyMailRouteTarget.view);
+
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [legacyMailRouteTarget, searchParams, setSearchParams]);
 
   const [
     createDevelopmentEmailAudienceMutation,
@@ -1229,13 +1287,19 @@ export const TradeCrmMailPage = () => {
     awaitRefetchQueries: true,
   });
 
-  const currentScope = getCurrentScope(searchParams.get('scope'));
+  const currentScope = getCurrentScope(
+    legacyMailRouteTarget?.scope ?? requestedScope,
+  );
   const workspace = getTradeCrmMailWorkspace(currentScope);
   const currentViewKey = getCurrentView({
-    requestedView: searchParams.get('view'),
+    requestedView: legacyMailRouteTarget?.view ?? requestedView,
     availableViewKeys: workspace.sidebarItems.map((item) => item.key),
     fallbackViewKey: workspace.defaultViewKey,
   });
+  const heroSubviewItems = workspace.sidebarItems.slice(
+    0,
+    currentScope === 'campaign' ? 6 : 5,
+  );
   const { data: developmentEmailTemplatesData } = useQuery<{
     getDevelopmentEmailTemplates: Array<{
       id: string;
@@ -2444,6 +2508,20 @@ export const TradeCrmMailPage = () => {
                 );
               })}
             </StyledScopeTabs>
+            <StyledSubviewTabs>
+              {heroSubviewItems.map((item) => (
+                <StyledSubviewTab
+                  key={item.key}
+                  to={getTradeCrmMailSidebarLink({
+                    scope: currentScope,
+                    item,
+                  })}
+                  $active={item.key === currentViewKey}
+                >
+                  {tr(item.label)}
+                </StyledSubviewTab>
+              ))}
+            </StyledSubviewTabs>
             <StyledHeroGrid>
               <StyledHeroCopy>
                 <StyledEyebrow>{tr(workspace.description)}</StyledEyebrow>
