@@ -10,6 +10,7 @@ import { TradeCrmMailFolderTree } from '@/trade-crm/mail/components/TradeCrmMail
 import {
   getTradeCrmMailSidebarLink,
   getTradeCrmMailWorkspace,
+  type TradeCrmMailSidebarItem,
   type TradeCrmMailViewKey,
 } from '@/trade-crm/mail/constants/trade-crm-mail-workspace';
 import { CREATE_DEVELOPMENT_EMAIL_AUDIENCE } from '@/trade-crm/mail/graphql/mutations/createDevelopmentEmailAudience';
@@ -753,6 +754,22 @@ const StyledMailAiItem = styled.div`
   padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
 `;
 
+const StyledMailAiButton = styled.button<{ $active?: boolean }>`
+  align-items: flex-start;
+  background: ${({ $active }) =>
+    $active ? '#eef4ff' : 'linear-gradient(180deg, #ffffff 0%, #f7faff 100%)'};
+  border: 1px solid
+    ${({ $active }) =>
+      $active ? 'rgba(10, 106, 255, 0.24)' : 'rgba(10, 106, 255, 0.1)'};
+  border-radius: 12px;
+  cursor: pointer;
+  display: grid;
+  gap: ${themeCssVariables.spacing[2]};
+  grid-template-columns: 22px minmax(0, 1fr);
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+  text-align: left;
+`;
+
 const StyledMailAiIndex = styled.div`
   align-items: center;
   background: rgba(10, 106, 255, 0.1);
@@ -938,7 +955,7 @@ const getLegacyMailRouteTarget = (
     case 'templates':
       return { scope: 'campaign', view: 'templates' };
     case 'sequences':
-      return { scope: 'campaign', view: 'overview' };
+      return { scope: 'campaign', view: 'campaigns' };
     case 'tracking':
       return { scope: 'campaign', view: 'analytics' };
     default:
@@ -986,6 +1003,24 @@ const getSenderHealthReasonParts = (value: string) => {
     code,
     message: messageParts.join(' · '),
   };
+};
+
+const groupSidebarItemsBySection = (
+  sidebarItems: TradeCrmMailSidebarItem[],
+) => {
+  const sectionMap = new Map<string, TradeCrmMailSidebarItem[]>();
+
+  for (const item of sidebarItems) {
+    const sectionItems = sectionMap.get(item.section) ?? [];
+
+    sectionItems.push(item);
+    sectionMap.set(item.section, sectionItems);
+  }
+
+  return Array.from(sectionMap.entries()).map(([section, items]) => ({
+    section,
+    items,
+  }));
 };
 
 const getCurrentView = ({
@@ -1389,6 +1424,7 @@ export const TradeCrmMailPage = () => {
   const currentViewItem =
     workspace.sidebarItems.find((item) => item.key === currentViewKey) ??
     workspace.sidebarItems[0];
+  const sidebarSections = groupSidebarItemsBySection(workspace.sidebarItems);
   const runtimeBaseUrl =
     typeof window !== 'undefined' ? window.location.origin : '';
   const openTrackingUrl = signedOpenTrackingUrl;
@@ -1643,7 +1679,7 @@ export const TradeCrmMailPage = () => {
   });
   const composeEntryPath =
     currentScope === 'campaign'
-      ? getTradeCrmMailPath({ scope: 'campaign', view: 'templates' })
+      ? getTradeCrmMailPath({ scope: 'campaign', view: 'campaigns' })
       : getTradeCrmMailPath({ scope: 'mail', view: 'drafts' });
   const composeEntryLabel =
     currentScope === 'campaign' ? tr('新建开发信') : tr('写信');
@@ -1780,6 +1816,39 @@ export const TradeCrmMailPage = () => {
         '如果客户持续活跃但未推进，建议补任务、负责人和标签。',
       ]
     : ['当前没有可操作客户，请先从列表选择一个客户。'];
+  const isDevelopmentEmailWorkbenchView =
+    currentScope === 'campaign' &&
+    ['campaigns', 'jobs', 'analytics'].includes(currentViewKey);
+  const selectedCampaignWorkbench =
+    currentScope === 'campaign' && currentViewKey === 'campaigns'
+      ? (availableCampaigns.find(
+          (campaign) => campaign.id === selectedCampaignToQueueId,
+        ) ?? availableCampaigns[0])
+      : undefined;
+  const selectedCampaignTemplate =
+    availableTemplates.find(
+      (template) => template.id === selectedCampaignWorkbench?.templateId,
+    ) ?? null;
+  const selectedCampaignSendJobs = selectedCampaignWorkbench
+    ? availableSendJobs.filter(
+        (sendJob) => sendJob.campaignId === selectedCampaignWorkbench.id,
+      )
+    : [];
+  const activeSendJobWorkbench =
+    currentScope === 'campaign' && currentViewKey === 'jobs'
+      ? (filteredAvailableSendJobs.find(
+          (sendJob) =>
+            sendJob.id === (selectedSendJobId ?? selectedSendJobToStartId),
+        ) ?? filteredAvailableSendJobs[0])
+      : undefined;
+  const analyticsPrimaryRecord =
+    currentScope === 'campaign' && currentViewKey === 'analytics'
+      ? filteredRenderedListItems[0]
+      : undefined;
+  const analyticsSecondaryRecords =
+    currentScope === 'campaign' && currentViewKey === 'analytics'
+      ? filteredRenderedListItems.slice(1, 4)
+      : [];
   const selectedSendTaskExecutionMode =
     typeof selectedSendTask?.trackingSnapshot?.executionMode === 'string'
       ? selectedSendTask.trackingSnapshot.executionMode
@@ -2431,6 +2500,26 @@ export const TradeCrmMailPage = () => {
     setSearchParams(nextSearchParams);
   };
 
+  const handleCampaignSelection = (campaignId: string) => {
+    setSelectedCampaignToQueueId(campaignId);
+  };
+
+  const handleSendJobSelection = (sendJobId: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.set('jobId', sendJobId);
+    nextSearchParams.delete('taskId');
+    setSelectedSendJobToStartId(sendJobId);
+    setSearchParams(nextSearchParams);
+  };
+
+  const handleSendTaskSelection = (taskId: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.set('taskId', taskId);
+    setSearchParams(nextSearchParams);
+  };
+
   const handleSendJobModeFilterChange = (value: string) => {
     const nextSearchParams = new URLSearchParams(searchParams);
 
@@ -2556,15 +2645,13 @@ export const TradeCrmMailPage = () => {
               </StyledHeroCopy>
               <StyledHeroSummary>
                 <StyledHeroSummaryTitle>
-                  {tr('Current View')}
+                  {tr(workspace.heroSummaryTitle)}
                 </StyledHeroSummaryTitle>
                 <StyledHeroSummaryValue>
                   {tr(currentViewItem.label)}
                 </StyledHeroSummaryValue>
                 <StyledHeroSummaryText>
-                  {tr(
-                    'This workspace is being rebuilt into a real operating surface. The next layers connect thread queries, customer aggregates, and development-email services.',
-                  )}
+                  {tr(workspace.heroSummaryText)}
                 </StyledHeroSummaryText>
               </StyledHeroSummary>
             </StyledHeroGrid>
@@ -2577,28 +2664,46 @@ export const TradeCrmMailPage = () => {
               <StyledComposeButton to={composeEntryPath}>
                 {composeEntryLabel}
               </StyledComposeButton>
-              <StyledSidebarList>
-                {workspace.sidebarItems.map((item) => (
-                  <StyledSidebarLink
-                    key={item.key}
-                    to={getTradeCrmMailSidebarLink({
-                      scope: currentScope,
-                      item,
-                    })}
-                    data-active={item.key === currentViewKey ? 'true' : 'false'}
-                  >
-                    <StyledSidebarLabelRow>
-                      <StyledSidebarLabel>{tr(item.label)}</StyledSidebarLabel>
-                      {item.countLabel ? (
-                        <StyledSidebarCount>
-                          {item.countLabel}
-                        </StyledSidebarCount>
-                      ) : null}
-                    </StyledSidebarLabelRow>
-                    <StyledSidebarHint>{tr(item.hint)}</StyledSidebarHint>
-                  </StyledSidebarLink>
-                ))}
-              </StyledSidebarList>
+              {sidebarSections.map(({ section, items }, index) => (
+                <StyledSidebarSection
+                  key={section}
+                  style={
+                    index === 0
+                      ? { borderTop: '0', paddingTop: '0' }
+                      : undefined
+                  }
+                >
+                  <StyledSidebarSectionLabel>
+                    {tr(section)}
+                  </StyledSidebarSectionLabel>
+                  <StyledSidebarList>
+                    {items.map((item) => (
+                      <StyledSidebarLink
+                        key={item.key}
+                        to={getTradeCrmMailSidebarLink({
+                          scope: currentScope,
+                          item,
+                        })}
+                        data-active={
+                          item.key === currentViewKey ? 'true' : 'false'
+                        }
+                      >
+                        <StyledSidebarLabelRow>
+                          <StyledSidebarLabel>
+                            {tr(item.label)}
+                          </StyledSidebarLabel>
+                          {item.countLabel ? (
+                            <StyledSidebarCount>
+                              {item.countLabel}
+                            </StyledSidebarCount>
+                          ) : null}
+                        </StyledSidebarLabelRow>
+                        <StyledSidebarHint>{tr(item.hint)}</StyledSidebarHint>
+                      </StyledSidebarLink>
+                    ))}
+                  </StyledSidebarList>
+                </StyledSidebarSection>
+              ))}
               {currentScope === 'mail' ? (
                 <StyledSidebarSection>
                   <StyledSidebarSectionLabel>
@@ -3834,6 +3939,562 @@ export const TradeCrmMailPage = () => {
                     </StyledButtonRow>
                   </>
                 ) : null}
+                {currentScope === 'campaign' &&
+                currentViewKey === 'campaigns' ? (
+                  <StyledMailWorkbench>
+                    <StyledMailWorkbenchList>
+                      <StyledMailPreviewLabel>
+                        {tr('Campaign 列表')}
+                      </StyledMailPreviewLabel>
+                      {availableCampaigns.length > 0 ? (
+                        availableCampaigns.map((campaign) => (
+                          <StyledMailWorkbenchItem
+                            $active={
+                              campaign.id === selectedCampaignWorkbench?.id
+                            }
+                            key={campaign.id}
+                            onClick={() => handleCampaignSelection(campaign.id)}
+                            type="button"
+                          >
+                            <StyledMailWorkbenchHeader>
+                              <StyledMailWorkbenchTitle>
+                                {campaign.name}
+                              </StyledMailWorkbenchTitle>
+                              <StyledMailWorkbenchChip $tone="accent">
+                                {tr(campaign.status)}
+                              </StyledMailWorkbenchChip>
+                            </StyledMailWorkbenchHeader>
+                            <StyledMailWorkbenchMeta>
+                              {tr(
+                                campaign.scheduledAt
+                                  ? `计划发送 ${formatToHumanReadableDate(campaign.scheduledAt)}`
+                                  : '未设置发送时间',
+                              )}
+                            </StyledMailWorkbenchMeta>
+                            <StyledMailWorkbenchMeta>
+                              {tr(
+                                campaign.templateId
+                                  ? `模板 ${campaign.templateId}`
+                                  : '尚未绑定模板',
+                              )}
+                            </StyledMailWorkbenchMeta>
+                          </StyledMailWorkbenchItem>
+                        ))
+                      ) : (
+                        <StyledMailPreviewBlock>
+                          <StyledListMeta>
+                            {tr(
+                              '当前还没有开发信活动。先在上方创建一条 campaign。',
+                            )}
+                          </StyledListMeta>
+                        </StyledMailPreviewBlock>
+                      )}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      <StyledMailPreviewTopbar>
+                        <StyledMailPreviewTopbarCopy>
+                          <StyledMailPreviewLabel>
+                            {tr('活动执行面板')}
+                          </StyledMailPreviewLabel>
+                          <StyledMailPreviewTitle>
+                            {selectedCampaignWorkbench?.name ??
+                              tr('尚未选择 Campaign')}
+                          </StyledMailPreviewTitle>
+                        </StyledMailPreviewTopbarCopy>
+                        {selectedCampaignWorkbench ? (
+                          <StyledMailWorkbenchChip $tone="accent">
+                            {tr(selectedCampaignWorkbench.status)}
+                          </StyledMailWorkbenchChip>
+                        ) : null}
+                      </StyledMailPreviewTopbar>
+                      <StyledMailPreviewBlock>
+                        <StyledMailPreviewLabel>
+                          {tr('活动摘要')}
+                        </StyledMailPreviewLabel>
+                        <StyledMailProfileGrid>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('发送时间')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {selectedCampaignWorkbench?.scheduledAt
+                                ? formatToHumanReadableDate(
+                                    selectedCampaignWorkbench.scheduledAt,
+                                  )
+                                : tr('未安排')}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('关联模板')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {selectedCampaignTemplate
+                                ? tr(
+                                    `${selectedCampaignTemplate.name} · v${selectedCampaignTemplate.version}`,
+                                  )
+                                : tr('未绑定模板')}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('生成作业')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {tr(
+                                `${selectedCampaignSendJobs.length} 个 send job`,
+                              )}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('当前状态')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {selectedCampaignWorkbench
+                                ? tr(selectedCampaignWorkbench.status)
+                                : tr('待创建')}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                        </StyledMailProfileGrid>
+                      </StyledMailPreviewBlock>
+                      <StyledCardGrid>
+                        {renderedMetrics.slice(0, 3).map((metric) => (
+                          <StyledActionCard key={metric.label}>
+                            <StyledActionTitle>
+                              {tr(metric.label)}
+                            </StyledActionTitle>
+                            <StyledMetricValue>
+                              {metric.value}
+                            </StyledMetricValue>
+                            <StyledActionDescription>
+                              {tr(metric.description)}
+                            </StyledActionDescription>
+                          </StyledActionCard>
+                        ))}
+                      </StyledCardGrid>
+                      <StyledMailPreviewBlock>
+                        <StyledMailPreviewLabel>
+                          {tr('最近作业')}
+                        </StyledMailPreviewLabel>
+                        {selectedCampaignSendJobs.length > 0 ? (
+                          <StyledMailAiList>
+                            {selectedCampaignSendJobs
+                              .slice(0, 3)
+                              .map((sendJob) => (
+                                <StyledMailAiItem key={sendJob.id}>
+                                  <StyledMailAiIndex>
+                                    {sendJob.sentCount}
+                                  </StyledMailAiIndex>
+                                  <div>
+                                    <StyledListSecondary>
+                                      {tr(
+                                        `Job ${sendJob.id.slice(0, 8)} · ${sendJob.status}`,
+                                      )}
+                                    </StyledListSecondary>
+                                    <StyledListMeta>
+                                      {tr(
+                                        `${sendJob.senderPoolMode ?? 'unknown mode'} · queued ${sendJob.queuedCount} · failed ${sendJob.failedCount}`,
+                                      )}
+                                    </StyledListMeta>
+                                  </div>
+                                </StyledMailAiItem>
+                              ))}
+                          </StyledMailAiList>
+                        ) : (
+                          <StyledListMeta>
+                            {tr('当前活动还没有生成发送作业。')}
+                          </StyledListMeta>
+                        )}
+                      </StyledMailPreviewBlock>
+                      <StyledMailPreviewBlock>
+                        <StyledMailPreviewLabel>
+                          {tr('发件池健康度')}
+                        </StyledMailPreviewLabel>
+                        {senderHealthGroups.length > 0 ? (
+                          <StyledMailAiList>
+                            {senderHealthGroups
+                              .slice(0, 3)
+                              .map(([provider, items]) => (
+                                <StyledMailAiItem key={provider}>
+                                  <StyledMailAiIndex>
+                                    {items.length}
+                                  </StyledMailAiIndex>
+                                  <div>
+                                    <StyledListSecondary>
+                                      {tr(`Provider ${provider}`)}
+                                    </StyledListSecondary>
+                                    <StyledListMeta>
+                                      {tr(
+                                        items[0]?.tertiary ??
+                                          'No issue recorded',
+                                      )}
+                                    </StyledListMeta>
+                                  </div>
+                                </StyledMailAiItem>
+                              ))}
+                          </StyledMailAiList>
+                        ) : (
+                          <StyledListMeta>
+                            {tr('当前没有发件健康告警。')}
+                          </StyledListMeta>
+                        )}
+                      </StyledMailPreviewBlock>
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : null}
+                {currentScope === 'campaign' && currentViewKey === 'jobs' ? (
+                  <StyledMailWorkbench>
+                    <StyledMailWorkbenchList>
+                      <StyledMailPreviewLabel>
+                        {tr('Send Queue')}
+                      </StyledMailPreviewLabel>
+                      {filteredAvailableSendJobs.map((sendJob) => (
+                        <StyledMailWorkbenchItem
+                          $active={sendJob.id === activeSendJobWorkbench?.id}
+                          key={sendJob.id}
+                          onClick={() => handleSendJobSelection(sendJob.id)}
+                          type="button"
+                        >
+                          <StyledMailWorkbenchHeader>
+                            <StyledMailWorkbenchTitle>
+                              {tr(`Job ${sendJob.id.slice(0, 8)}`)}
+                            </StyledMailWorkbenchTitle>
+                            <StyledMailWorkbenchChip $tone="accent">
+                              {tr(sendJob.status)}
+                            </StyledMailWorkbenchChip>
+                          </StyledMailWorkbenchHeader>
+                          <StyledMailWorkbenchMeta>
+                            {tr(
+                              `${sendJob.executionMode ?? 'not recorded'} · ${sendJob.senderPoolMode ?? 'unknown sender pool'}`,
+                            )}
+                          </StyledMailWorkbenchMeta>
+                          <StyledMailWorkbenchMeta>
+                            {tr(
+                              `queued ${sendJob.queuedCount} · sent ${sendJob.sentCount} · failed ${sendJob.failedCount}`,
+                            )}
+                          </StyledMailWorkbenchMeta>
+                        </StyledMailWorkbenchItem>
+                      ))}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      <StyledMailPreviewTopbar>
+                        <StyledMailPreviewTopbarCopy>
+                          <StyledMailPreviewLabel>
+                            {tr('作业详情')}
+                          </StyledMailPreviewLabel>
+                          <StyledMailPreviewTitle>
+                            {activeSendJobWorkbench
+                              ? tr(
+                                  `Job ${activeSendJobWorkbench.id.slice(0, 8)}`,
+                                )
+                              : tr('当前没有可用作业')}
+                          </StyledMailPreviewTitle>
+                        </StyledMailPreviewTopbarCopy>
+                        {activeSendJobWorkbench ? (
+                          <StyledMailWorkbenchSummaryRow>
+                            <StyledMailWorkbenchChip $tone="accent">
+                              {tr(activeSendJobWorkbench.status)}
+                            </StyledMailWorkbenchChip>
+                            <StyledMailWorkbenchChip>
+                              {tr(
+                                activeSendJobWorkbench.senderPoolMode ??
+                                  'unknown sender pool',
+                              )}
+                            </StyledMailWorkbenchChip>
+                          </StyledMailWorkbenchSummaryRow>
+                        ) : null}
+                      </StyledMailPreviewTopbar>
+                      <StyledMailPreviewBlock>
+                        <StyledMailPreviewLabel>
+                          {tr('执行摘要')}
+                        </StyledMailPreviewLabel>
+                        <StyledMailProfileGrid>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('排队中')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {activeSendJobWorkbench?.queuedCount ?? 0}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('已发送')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {activeSendJobWorkbench?.sentCount ?? 0}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('失败')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {activeSendJobWorkbench?.failedCount ?? 0}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                          <StyledMailProfileItem>
+                            <StyledMailProfileLabel>
+                              {tr('开始时间')}
+                            </StyledMailProfileLabel>
+                            <StyledMailProfileValue>
+                              {activeSendJobWorkbench?.startedAt
+                                ? formatToHumanReadableDate(
+                                    activeSendJobWorkbench.startedAt,
+                                  )
+                                : tr('未执行')}
+                            </StyledMailProfileValue>
+                          </StyledMailProfileItem>
+                        </StyledMailProfileGrid>
+                      </StyledMailPreviewBlock>
+                      <StyledButtonRow>
+                        <StyledPrimaryButton
+                          onClick={handleStartSendJob}
+                          type="button"
+                        >
+                          {tr(
+                            startingSendJob
+                              ? 'Preparing...'
+                              : 'Prepare Sender Assignments',
+                          )}
+                        </StyledPrimaryButton>
+                        <StyledPrimaryButton
+                          onClick={handleExecuteSendJob}
+                          type="button"
+                        >
+                          {tr(
+                            executingSendJob
+                              ? 'Executing...'
+                              : 'Execute Prepared Tasks',
+                          )}
+                        </StyledPrimaryButton>
+                      </StyledButtonRow>
+                      {selectedSendJobSummary ? (
+                        <>
+                          <StyledMetrics>
+                            {selectedSendJobSummary.metrics
+                              .slice(0, 4)
+                              .map((metric) => (
+                                <StyledMetricCard key={metric.label}>
+                                  <StyledMetricLabel>
+                                    {tr(metric.label)}
+                                  </StyledMetricLabel>
+                                  <StyledMetricValue>
+                                    {metric.value}
+                                  </StyledMetricValue>
+                                  <StyledMetricDescription>
+                                    {tr(metric.description)}
+                                  </StyledMetricDescription>
+                                </StyledMetricCard>
+                              ))}
+                          </StyledMetrics>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('任务样本')}
+                            </StyledMailPreviewLabel>
+                            <StyledMailAiList>
+                              {selectedSendJobSummary.listItems
+                                .slice(0, 4)
+                                .map((item) => (
+                                  <StyledMailAiItem key={item.id}>
+                                    <StyledMailAiIndex>•</StyledMailAiIndex>
+                                    <div>
+                                      <StyledListSecondary>
+                                        {tr(item.primary)}
+                                      </StyledListSecondary>
+                                      <StyledListMeta>
+                                        {tr(
+                                          `${item.secondary} · ${item.status}`,
+                                        )}
+                                      </StyledListMeta>
+                                    </div>
+                                  </StyledMailAiItem>
+                                ))}
+                            </StyledMailAiList>
+                          </StyledMailPreviewBlock>
+                        </>
+                      ) : null}
+                      {sendTasks.length > 0 ? (
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('回调任务')}
+                          </StyledMailPreviewLabel>
+                          <StyledMailAiList>
+                            {sendTasks.slice(0, 4).map((sendTask) => (
+                              <StyledMailAiButton
+                                $active={sendTask.id === selectedSendTask?.id}
+                                key={sendTask.id}
+                                onClick={() =>
+                                  handleSendTaskSelection(sendTask.id)
+                                }
+                                type="button"
+                              >
+                                <StyledMailAiIndex>
+                                  {sendTask.retryCount}
+                                </StyledMailAiIndex>
+                                <div>
+                                  <StyledListSecondary>
+                                    {tr(
+                                      `${sendTask.status} · ${sendTask.audienceId ?? 'no audience'}`,
+                                    )}
+                                  </StyledListSecondary>
+                                  <StyledListMeta>
+                                    {tr(
+                                      `callback ${selectedSendTaskLastCallbackType} · provider ${sendTask.providerMessageId ?? 'not set'}`,
+                                    )}
+                                  </StyledListMeta>
+                                </div>
+                              </StyledMailAiButton>
+                            ))}
+                          </StyledMailAiList>
+                        </StyledMailPreviewBlock>
+                      ) : null}
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : null}
+                {currentScope === 'campaign' &&
+                currentViewKey === 'analytics' ? (
+                  <StyledMailWorkbench>
+                    <StyledMailWorkbenchList>
+                      <StyledMailPreviewLabel>
+                        {tr('最近事件')}
+                      </StyledMailPreviewLabel>
+                      {filteredRenderedListItems.length > 0 ? (
+                        filteredRenderedListItems.slice(0, 6).map((item) => (
+                          <StyledMailWorkbenchItem
+                            $active={item.id === analyticsPrimaryRecord?.id}
+                            key={item.id}
+                            type="button"
+                          >
+                            <StyledMailWorkbenchHeader>
+                              <StyledMailWorkbenchTitle>
+                                {tr(item.primary)}
+                              </StyledMailWorkbenchTitle>
+                              <StyledMailWorkbenchChip $tone="accent">
+                                {tr(item.status)}
+                              </StyledMailWorkbenchChip>
+                            </StyledMailWorkbenchHeader>
+                            <StyledMailWorkbenchMeta>
+                              {tr(item.secondary)}
+                            </StyledMailWorkbenchMeta>
+                            <StyledMailWorkbenchMeta>
+                              {tr(item.meta)}
+                            </StyledMailWorkbenchMeta>
+                          </StyledMailWorkbenchItem>
+                        ))
+                      ) : (
+                        <StyledMailPreviewBlock>
+                          <StyledListMeta>
+                            {tr('当前还没有分析事件。先记录打开、点击或回复。')}
+                          </StyledListMeta>
+                        </StyledMailPreviewBlock>
+                      )}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      <StyledMailPreviewTopbar>
+                        <StyledMailPreviewTopbarCopy>
+                          <StyledMailPreviewLabel>
+                            {tr('分析概览')}
+                          </StyledMailPreviewLabel>
+                          <StyledMailPreviewTitle>
+                            {analyticsPrimaryRecord?.primary ??
+                              tr('Analytics 工作台')}
+                          </StyledMailPreviewTitle>
+                        </StyledMailPreviewTopbarCopy>
+                        <StyledMailWorkbenchChip $tone="accent">
+                          {tr('Live analytics')}
+                        </StyledMailWorkbenchChip>
+                      </StyledMailPreviewTopbar>
+                      <StyledMetrics>
+                        {renderedMetrics.slice(0, 4).map((metric) => (
+                          <StyledMetricCard key={metric.label}>
+                            <StyledMetricLabel>
+                              {tr(metric.label)}
+                            </StyledMetricLabel>
+                            <StyledMetricValue>
+                              {metric.value}
+                            </StyledMetricValue>
+                            <StyledMetricDescription>
+                              {tr(metric.description)}
+                            </StyledMetricDescription>
+                          </StyledMetricCard>
+                        ))}
+                      </StyledMetrics>
+                      <StyledMailPreviewBlock>
+                        <StyledMailPreviewLabel>
+                          {tr('当前重点事件')}
+                        </StyledMailPreviewLabel>
+                        <StyledListPrimary>
+                          {tr(
+                            analyticsPrimaryRecord?.secondary ??
+                              '等待新的送达、打开或点击事件',
+                          )}
+                        </StyledListPrimary>
+                        <StyledListTertiary>
+                          {tr(
+                            analyticsPrimaryRecord?.tertiary ??
+                              '生成签名追踪链接后，这里会优先显示关键事件摘要。',
+                          )}
+                        </StyledListTertiary>
+                        <StyledListMeta>
+                          {tr(
+                            analyticsPrimaryRecord?.meta ??
+                              '开发信分析会把打开、点击、回复、退订与投诉串回同一个活动上下文。',
+                          )}
+                        </StyledListMeta>
+                      </StyledMailPreviewBlock>
+                      {openTrackingUrl || clickTrackingUrl ? (
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('追踪链接')}
+                          </StyledMailPreviewLabel>
+                          {openTrackingUrl ? (
+                            <StyledTextArea readOnly value={openTrackingUrl} />
+                          ) : null}
+                          {clickTrackingUrl ? (
+                            <StyledTextArea readOnly value={clickTrackingUrl} />
+                          ) : null}
+                        </StyledMailPreviewBlock>
+                      ) : (
+                        <StyledRuntimeNotice $tone="neutral">
+                          <StyledListPrimary>
+                            {tr('追踪链接尚未生成')}
+                          </StyledListPrimary>
+                          <StyledListMeta>
+                            {tr(
+                              '使用上方 Analytics 表单输入收件人和目标链接后，即可生成签名追踪地址。',
+                            )}
+                          </StyledListMeta>
+                        </StyledRuntimeNotice>
+                      )}
+                      {analyticsSecondaryRecords.length > 0 ? (
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('次级事件')}
+                          </StyledMailPreviewLabel>
+                          <StyledMailAiList>
+                            {analyticsSecondaryRecords.map((item, index) => (
+                              <StyledMailAiItem key={item.id}>
+                                <StyledMailAiIndex>
+                                  {index + 1}
+                                </StyledMailAiIndex>
+                                <div>
+                                  <StyledListSecondary>
+                                    {tr(item.primary)}
+                                  </StyledListSecondary>
+                                  <StyledListMeta>
+                                    {tr(`${item.secondary} · ${item.status}`)}
+                                  </StyledListMeta>
+                                </div>
+                              </StyledMailAiItem>
+                            ))}
+                          </StyledMailAiList>
+                        </StyledMailPreviewBlock>
+                      ) : null}
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : null}
                 {loading ? (
                   <StyledListMeta>
                     {tr(
@@ -4422,7 +5083,9 @@ export const TradeCrmMailPage = () => {
                   </StyledMailWorkbench>
                 ) : !(
                     currentScope === 'campaign' &&
-                    currentViewKey === 'sender-pool'
+                    ['sender-pool', 'campaigns', 'jobs', 'analytics'].includes(
+                      currentViewKey,
+                    )
                   ) ? (
                   <StyledList>
                     {filteredRenderedListItems.map((item) =>
