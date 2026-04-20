@@ -246,6 +246,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     resolve: {
+      dedupe: ['react', 'react-dom', 'jotai', 'react-router-dom'],
       alias: {
         path: 'rollup-plugin-node-polyfills/polyfills/path',
       },
