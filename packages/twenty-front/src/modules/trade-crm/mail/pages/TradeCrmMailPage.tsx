@@ -2,6 +2,7 @@
 import { tradeCrmRouteMap } from '@/trade-crm/navigation/tradeCrmRouteMap';
 import { AppPath, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
+import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 
 import { getTradeCrmScopedViewPath } from '@/trade-crm/navigation/tradeCrmRouteMap';
 import { QueueWorkspaceLayout } from '@/trade-crm/shared/layouts/QueueWorkspaceLayout';
@@ -115,7 +116,7 @@ export const TradeCrmMailPage = () => {
           {
             label: 'Customer Context',
             hint: 'Important replies should return to the customer workspace for continued follow-up.',
-            to: tradeCrmRouteMap.customers,
+            to: getTradeCrmCustomerPath('list'),
           },
           {
             label: 'Opportunity Context',
@@ -138,7 +139,7 @@ export const TradeCrmMailPage = () => {
             {
               label: 'Customer Context',
               hint: 'Templates should serve real customer and opportunity communication, not a detached mail workflow.',
-              to: tradeCrmRouteMap.customers,
+              to: getTradeCrmCustomerPath('list'),
             },
             {
               label: 'Guardrails',
@@ -179,7 +180,7 @@ export const TradeCrmMailPage = () => {
                 {
                   label: 'Customer Follow-up',
                   hint: 'Mail quality is only useful if it improves customer follow-up quality.',
-                  to: tradeCrmRouteMap.customers,
+                  to: getTradeCrmCustomerPath('list'),
                 },
                 {
                   label: 'Opportunity Follow-up',
@@ -203,7 +204,7 @@ export const TradeCrmMailPage = () => {
                   {
                     label: 'Customer Context',
                     hint: 'Important sent mail should continue inside the customer workspace.',
-                    to: tradeCrmRouteMap.customers,
+                    to: getTradeCrmCustomerPath('list'),
                   },
                   {
                     label: 'Opportunity Context',
@@ -235,7 +236,7 @@ export const TradeCrmMailPage = () => {
                   {
                     label: 'CRM Linkage',
                     hint: 'Important threads should return to customer and opportunity context.',
-                    to: tradeCrmRouteMap.customers,
+                    to: getTradeCrmCustomerPath('list'),
                   },
                 ];
 
@@ -253,7 +254,7 @@ export const TradeCrmMailPage = () => {
             title: 'Customer-linked Replies',
             description:
               'Pending reply work should return to the customer workspace so communication turns into visible relationship follow-up.',
-            href: tradeCrmRouteMap.customers,
+            href: getTradeCrmCustomerPath('list'),
             actionLabel: 'Open customers workspace',
           },
           {
@@ -280,7 +281,7 @@ export const TradeCrmMailPage = () => {
               title: 'Customer-linked Communication',
               description:
                 'Use the customer workspace as the operating base after important outbound mail is sent.',
-              href: tradeCrmRouteMap.customers,
+              href: getTradeCrmCustomerPath('list'),
               actionLabel: 'Open customers workspace',
             },
             {
@@ -312,7 +313,7 @@ export const TradeCrmMailPage = () => {
                 title: 'Customer Context',
                 description:
                   'Template content must serve real customer communication instead of a detached marketing flow.',
-                href: tradeCrmRouteMap.customers,
+                href: getTradeCrmCustomerPath('list'),
                 actionLabel: 'Open customers workspace',
               },
               {
@@ -368,7 +369,7 @@ export const TradeCrmMailPage = () => {
                     title: 'Customer-linked Communication',
                     description:
                       'The customer workspace is the real place to confirm whether mail activity becomes customer operating progress.',
-                    href: tradeCrmRouteMap.customers,
+                    href: getTradeCrmCustomerPath('list'),
                     actionLabel: 'Open customers workspace',
                   },
                   {
@@ -405,7 +406,7 @@ export const TradeCrmMailPage = () => {
                     title: 'CRM-linked Communication',
                     description:
                       'Use customer and opportunity workspaces as the current entry points for email-thread context instead of splitting communication away from CRM records.',
-                    href: tradeCrmRouteMap.customers,
+                    href: getTradeCrmCustomerPath('list'),
                     actionLabel: 'Open customers workspace',
                   },
                   {

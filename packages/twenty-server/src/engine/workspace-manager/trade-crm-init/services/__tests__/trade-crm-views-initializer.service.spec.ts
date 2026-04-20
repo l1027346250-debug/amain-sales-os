@@ -26,9 +26,16 @@ describe('TradeCrmViewsInitializerService', () => {
   let mockCreateSortOne: jest.Mock;
 
   const workspaceId = 'workspace-id';
+  const companyId = 'company-id';
   const leadId = 'lead-id';
   const opportunityId = 'opportunity-id';
   const taskId = 'task-id';
+  const companyCustomerStageFieldId = 'company-customer-stage-field-id';
+  const companyPublicPoolStateFieldId = 'company-public-pool-state-field-id';
+  const companyPublicPoolEnteredAtFieldId =
+    'company-public-pool-entered-at-field-id';
+  const companyLastFollowUpAtFieldId = 'company-last-follow-up-at-field-id';
+  const companyUpdatedAtFieldId = 'company-updated-at-field-id';
   const leadStatusFieldId = 'lead-status-field-id';
   const stageFieldId = 'stage-field-id';
   const leadCreatedAtFieldId = 'lead-created-at-field-id';
@@ -103,6 +110,18 @@ describe('TradeCrmViewsInitializerService', () => {
     mockGetOrRecomputeManyOrAllFlatEntityMaps.mockResolvedValue({
       flatObjectMetadataMaps: {
         byUniversalIdentifier: {
+          companyUid: {
+            id: companyId,
+            universalIdentifier: 'companyUid',
+            nameSingular: 'company',
+            fieldIds: [
+              companyCustomerStageFieldId,
+              companyPublicPoolStateFieldId,
+              companyPublicPoolEnteredAtFieldId,
+              companyLastFollowUpAtFieldId,
+              companyUpdatedAtFieldId,
+            ],
+          },
           leadUid: {
             id: leadId,
             universalIdentifier: 'leadUid',
@@ -129,6 +148,7 @@ describe('TradeCrmViewsInitializerService', () => {
           },
         },
         universalIdentifierById: {
+          [companyId]: 'companyUid',
           [leadId]: 'leadUid',
           [opportunityId]: 'opportunityUid',
           [taskId]: 'taskUid',
@@ -137,6 +157,31 @@ describe('TradeCrmViewsInitializerService', () => {
       },
       flatFieldMetadataMaps: {
         byUniversalIdentifier: {
+          companyCustomerStageUid: {
+            id: companyCustomerStageFieldId,
+            universalIdentifier: 'companyCustomerStageUid',
+            name: 'customerStage',
+          },
+          companyPublicPoolStateUid: {
+            id: companyPublicPoolStateFieldId,
+            universalIdentifier: 'companyPublicPoolStateUid',
+            name: 'publicPoolState',
+          },
+          companyPublicPoolEnteredAtUid: {
+            id: companyPublicPoolEnteredAtFieldId,
+            universalIdentifier: 'companyPublicPoolEnteredAtUid',
+            name: 'publicPoolEnteredAt',
+          },
+          companyLastFollowUpAtUid: {
+            id: companyLastFollowUpAtFieldId,
+            universalIdentifier: 'companyLastFollowUpAtUid',
+            name: 'lastFollowUpAt',
+          },
+          companyUpdatedAtUid: {
+            id: companyUpdatedAtFieldId,
+            universalIdentifier: 'companyUpdatedAtUid',
+            name: 'updatedAt',
+          },
           leadStatusUid: {
             id: leadStatusFieldId,
             universalIdentifier: 'leadStatusUid',
@@ -189,6 +234,11 @@ describe('TradeCrmViewsInitializerService', () => {
           },
         },
         universalIdentifierById: {
+          [companyCustomerStageFieldId]: 'companyCustomerStageUid',
+          [companyPublicPoolStateFieldId]: 'companyPublicPoolStateUid',
+          [companyPublicPoolEnteredAtFieldId]: 'companyPublicPoolEnteredAtUid',
+          [companyLastFollowUpAtFieldId]: 'companyLastFollowUpAtUid',
+          [companyUpdatedAtFieldId]: 'companyUpdatedAtUid',
           [leadStatusFieldId]: 'leadStatusUid',
           [leadCreatedAtFieldId]: 'leadCreatedAtUid',
           [stageFieldId]: 'stageUid',
@@ -210,6 +260,9 @@ describe('TradeCrmViewsInitializerService', () => {
     });
 
     mockCreateOne
+      .mockResolvedValueOnce({ id: 'customers-view-id' })
+      .mockResolvedValueOnce({ id: 'public-pool-customers-view-id' })
+      .mockResolvedValueOnce({ id: 'customers-need-follow-up-view-id' })
       .mockResolvedValueOnce({ id: 'lead-view-id' })
       .mockResolvedValueOnce({ id: 'today-new-leads-view-id' })
       .mockResolvedValueOnce({ id: 'pipeline-view-id' })
@@ -236,8 +289,39 @@ describe('TradeCrmViewsInitializerService', () => {
       ],
     });
 
-    expect(mockCreateOne).toHaveBeenCalledTimes(6);
+    expect(mockCreateOne).toHaveBeenCalledTimes(9);
     expect(mockCreateOne).toHaveBeenNthCalledWith(1, {
+      workspaceId,
+      createViewInput: {
+        name: 'Customers (Trade CRM)',
+        objectMetadataId: companyId,
+        icon: 'IconUsers',
+        type: ViewType.TABLE,
+        visibility: ViewVisibility.WORKSPACE,
+        mainGroupByFieldMetadataId: companyCustomerStageFieldId,
+      },
+    });
+    expect(mockCreateOne).toHaveBeenNthCalledWith(2, {
+      workspaceId,
+      createViewInput: {
+        name: 'Public Pool Customers',
+        objectMetadataId: companyId,
+        icon: 'IconUsersPlus',
+        type: ViewType.TABLE,
+        visibility: ViewVisibility.WORKSPACE,
+      },
+    });
+    expect(mockCreateOne).toHaveBeenNthCalledWith(3, {
+      workspaceId,
+      createViewInput: {
+        name: 'Customers Need Follow-up',
+        objectMetadataId: companyId,
+        icon: 'IconClockHour4',
+        type: ViewType.TABLE,
+        visibility: ViewVisibility.WORKSPACE,
+      },
+    });
+    expect(mockCreateOne).toHaveBeenNthCalledWith(4, {
       workspaceId,
       createViewInput: {
         name: 'Leads (Trade CRM)',
@@ -248,7 +332,7 @@ describe('TradeCrmViewsInitializerService', () => {
         mainGroupByFieldMetadataId: leadStatusFieldId,
       },
     });
-    expect(mockCreateOne).toHaveBeenNthCalledWith(2, {
+    expect(mockCreateOne).toHaveBeenNthCalledWith(5, {
       workspaceId,
       createViewInput: {
         name: 'Today New Leads',
@@ -258,7 +342,7 @@ describe('TradeCrmViewsInitializerService', () => {
         visibility: ViewVisibility.WORKSPACE,
       },
     });
-    expect(mockCreateOne).toHaveBeenNthCalledWith(3, {
+    expect(mockCreateOne).toHaveBeenNthCalledWith(6, {
       workspaceId,
       createViewInput: {
         name: 'Pipeline (Trade CRM)',
@@ -269,7 +353,7 @@ describe('TradeCrmViewsInitializerService', () => {
         mainGroupByFieldMetadataId: stageFieldId,
       },
     });
-    expect(mockCreateOne).toHaveBeenNthCalledWith(4, {
+    expect(mockCreateOne).toHaveBeenNthCalledWith(7, {
       workspaceId,
       createViewInput: {
         name: 'Pipeline Needs Next Action',
@@ -279,7 +363,7 @@ describe('TradeCrmViewsInitializerService', () => {
         visibility: ViewVisibility.WORKSPACE,
       },
     });
-    expect(mockCreateOne).toHaveBeenNthCalledWith(5, {
+    expect(mockCreateOne).toHaveBeenNthCalledWith(8, {
       workspaceId,
       createViewInput: {
         name: 'Tasks (Trade CRM)',
@@ -289,7 +373,7 @@ describe('TradeCrmViewsInitializerService', () => {
         visibility: ViewVisibility.WORKSPACE,
       },
     });
-    expect(mockCreateOne).toHaveBeenNthCalledWith(6, {
+    expect(mockCreateOne).toHaveBeenNthCalledWith(9, {
       workspaceId,
       createViewInput: {
         name: 'Tasks Due Today',
@@ -301,13 +385,47 @@ describe('TradeCrmViewsInitializerService', () => {
     });
 
     expect(mockCreateFilterGroupOne).toHaveBeenCalledTimes(1);
-    expect(mockCreateFilterOne).toHaveBeenCalledTimes(9);
-    expect(mockCreateSortOne).toHaveBeenCalledTimes(3);
+    expect(mockCreateFilterOne).toHaveBeenCalledTimes(12);
+    expect(mockCreateSortOne).toHaveBeenCalledTimes(5);
     expect(mockCreateFilterGroupOne).toHaveBeenCalledWith({
       workspaceId,
       createViewFilterGroupInput: {
         viewId: 'pipeline-next-action-view-id',
         logicalOperator: ViewFilterGroupLogicalOperator.OR,
+      },
+    });
+    expect(mockCreateFilterOne).toHaveBeenCalledWith({
+      workspaceId,
+      createViewFilterInput: {
+        viewId: 'public-pool-customers-view-id',
+        fieldMetadataId: companyPublicPoolStateFieldId,
+        operand: ViewFilterOperand.IS,
+        value: 'PUBLIC_POOL',
+      },
+    });
+    expect(mockCreateSortOne).toHaveBeenCalledWith({
+      workspaceId,
+      createViewSortInput: {
+        viewId: 'public-pool-customers-view-id',
+        fieldMetadataId: companyPublicPoolEnteredAtFieldId,
+        direction: ViewSortDirection.DESC,
+      },
+    });
+    expect(mockCreateFilterOne).toHaveBeenCalledWith({
+      workspaceId,
+      createViewFilterInput: {
+        viewId: 'customers-need-follow-up-view-id',
+        fieldMetadataId: companyLastFollowUpAtFieldId,
+        operand: ViewFilterOperand.IS_EMPTY,
+        value: '',
+      },
+    });
+    expect(mockCreateSortOne).toHaveBeenCalledWith({
+      workspaceId,
+      createViewSortInput: {
+        viewId: 'customers-need-follow-up-view-id',
+        fieldMetadataId: companyUpdatedAtFieldId,
+        direction: ViewSortDirection.ASC,
       },
     });
     expect(mockCreateFilterOne).toHaveBeenCalledWith({

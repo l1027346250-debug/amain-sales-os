@@ -173,6 +173,7 @@ export type LeafFilter =
   | LinksFilter
   | ActorFilter
   | PhonesFilter
+  | MultiSelectFilter
   | ArrayFilter
   | RawJsonFilter
   | FilesFilter

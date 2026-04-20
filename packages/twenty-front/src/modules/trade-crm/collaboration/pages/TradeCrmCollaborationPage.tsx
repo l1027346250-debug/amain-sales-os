@@ -3,6 +3,7 @@ import { AppPath, CoreObjectNameSingular } from 'twenty-shared/types';
 
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 import {
   getTradeCrmScopedViewPath,
   tradeCrmRouteMap,
@@ -130,7 +131,7 @@ export const TradeCrmCollaborationPage = () => {
           {
             label: 'Customer Context',
             hint: 'Important meetings and check-ins should continue in the customer workspace.',
-            to: tradeCrmRouteMap.customers,
+            to: getTradeCrmCustomerPath('list'),
           },
           {
             label: 'Opportunity Context',
@@ -215,7 +216,7 @@ export const TradeCrmCollaborationPage = () => {
             title: 'Customer Coordination',
             description:
               'Customer meetings, review calls, and key touchpoints should remain visible inside the customer workspace.',
-            href: tradeCrmRouteMap.customers,
+            href: getTradeCrmCustomerPath('list'),
             actionLabel: 'Open customers workspace',
           },
           {

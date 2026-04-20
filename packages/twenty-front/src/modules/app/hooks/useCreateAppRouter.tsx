@@ -297,7 +297,7 @@ export const useCreateAppRouter = (
             }
           />
           <Route
-            path={AppPath.TradeCrmCustomers}
+            path={`${AppPath.TradeCrmCustomers}/*`}
             element={
               <LazyRoute>
                 <TradeCrmCustomersPage />

@@ -64,6 +64,7 @@ export class TradeCrmViewsInitializerService {
 
     const { idByNameSingular } = buildObjectIdByNameMaps(flatObjectMetadataMaps);
 
+    const companyObjectId = idByNameSingular['company'];
     const leadObjectId = idByNameSingular['lead'];
     const opportunityObjectId = idByNameSingular['opportunity'];
     const taskObjectId = idByNameSingular['task'];
@@ -73,6 +74,97 @@ export class TradeCrmViewsInitializerService {
         `Lead object not found for workspace ${workspaceId}, skipping views init`,
       );
       return;
+    }
+
+    if (companyObjectId) {
+      await this.ensureView({
+        workspaceId,
+        flatViewMaps,
+        objectMetadataId: companyObjectId,
+        viewName: 'Customers (Trade CRM)',
+        icon: 'IconUsers',
+        type: ViewType.TABLE,
+        mainGroupByFieldMetadataId: this.findFieldIdByName({
+          objectMetadataId: companyObjectId,
+          fieldName: 'customerStage',
+          flatObjectMetadataMaps,
+          flatFieldMetadataMaps,
+        }),
+      });
+
+      await this.ensureQueueView({
+        workspaceId,
+        flatViewMaps,
+        objectMetadataId: companyObjectId,
+        viewName: 'Public Pool Customers',
+        icon: 'IconUsersPlus',
+        type: ViewType.TABLE,
+        filters: [
+          {
+            fieldMetadataId: this.findFieldIdByName({
+              objectMetadataId: companyObjectId,
+              fieldName: 'publicPoolState',
+              flatObjectMetadataMaps,
+              flatFieldMetadataMaps,
+            }),
+            operand: ViewFilterOperand.IS,
+            value: 'PUBLIC_POOL',
+          },
+        ],
+        sorts: [
+          {
+            fieldMetadataId: this.findFieldIdByName({
+              objectMetadataId: companyObjectId,
+              fieldName: 'publicPoolEnteredAt',
+              flatObjectMetadataMaps,
+              flatFieldMetadataMaps,
+            }),
+            direction: ViewSortDirection.DESC,
+          },
+        ],
+      });
+
+      await this.ensureQueueView({
+        workspaceId,
+        flatViewMaps,
+        objectMetadataId: companyObjectId,
+        viewName: 'Customers Need Follow-up',
+        icon: 'IconClockHour4',
+        type: ViewType.TABLE,
+        filters: [
+          {
+            fieldMetadataId: this.findFieldIdByName({
+              objectMetadataId: companyObjectId,
+              fieldName: 'publicPoolState',
+              flatObjectMetadataMaps,
+              flatFieldMetadataMaps,
+            }),
+            operand: ViewFilterOperand.IS_NOT,
+            value: 'PUBLIC_POOL',
+          },
+          {
+            fieldMetadataId: this.findFieldIdByName({
+              objectMetadataId: companyObjectId,
+              fieldName: 'lastFollowUpAt',
+              flatObjectMetadataMaps,
+              flatFieldMetadataMaps,
+            }),
+            operand: ViewFilterOperand.IS_EMPTY,
+            value: '',
+          },
+        ],
+        sorts: [
+          {
+            fieldMetadataId: this.findFieldIdByName({
+              objectMetadataId: companyObjectId,
+              fieldName: 'updatedAt',
+              flatObjectMetadataMaps,
+              flatFieldMetadataMaps,
+            }),
+            direction: ViewSortDirection.ASC,
+          },
+        ],
+      });
     }
 
     await this.ensureView({

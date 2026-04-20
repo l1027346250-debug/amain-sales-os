@@ -2,6 +2,7 @@ import { useLingui } from '@lingui/react/macro';
 import { useSearchParams } from 'react-router-dom';
 
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
+import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 import {
   getTradeCrmScopedViewPath,
   tradeCrmRouteMap,
@@ -304,7 +305,7 @@ export const TradeCrmWorkbenchPage = () => {
             {
               label: 'Customer Context',
               hint: 'Follow-up should always be able to return to the customer workspace.',
-              to: tradeCrmRouteMap.customers,
+              to: getTradeCrmCustomerPath('list'),
             },
           ]
         : currentViewKey === 'overdue'
@@ -472,7 +473,7 @@ export const TradeCrmWorkbenchPage = () => {
               title: 'Customer Follow-up',
               description:
                 'Customer follow-up should continue inside the customer workspace instead of stopping inside an isolated task list.',
-              href: tradeCrmRouteMap.customers,
+              href: getTradeCrmCustomerPath('list'),
               actionLabel: 'Open customer workspace',
             },
             {

@@ -20,6 +20,7 @@ import { TRADE_CRM_COMPANY_FIELD_SEEDS } from 'src/engine/workspace-manager/trad
 import { TRADE_CRM_LEAD_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-lead-field-seeds.constant';
 import { TRADE_CRM_LEAD_OBJECT_SEED } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-lead-object-seed.constant';
 import { TRADE_CRM_OPPORTUNITY_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-opportunity-field-seeds.constant';
+import { TRADE_CRM_PERSON_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-person-field-seeds.constant';
 import { TRADE_CRM_TASK_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-task-field-seeds.constant';
 import { getWorkspaceSchemaName } from 'src/engine/workspace-datasource/utils/get-workspace-schema-name.util';
 
@@ -73,6 +74,12 @@ export class TradeCrmWorkspaceInitializerService {
       workspaceId,
       objectNameSingular: 'company',
       fieldSeeds: TRADE_CRM_COMPANY_FIELD_SEEDS,
+    });
+
+    await this.ensureCustomFields({
+      workspaceId,
+      objectNameSingular: 'person',
+      fieldSeeds: TRADE_CRM_PERSON_FIELD_SEEDS,
     });
 
     await this.ensureCustomFields({

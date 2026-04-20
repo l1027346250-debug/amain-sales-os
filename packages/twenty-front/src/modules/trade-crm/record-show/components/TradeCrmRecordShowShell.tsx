@@ -3,6 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { recordStoreFamilySelector } from '@/object-record/record-store/states/selectors/recordStoreFamilySelector';
 import {
+  buildTradeCrmCustomerRouteId,
+  getTradeCrmCustomerDetailPath,
+  getTradeCrmCustomerPath,
+} from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
+import {
   getTradeCrmScopedViewPath,
   tradeCrmRouteMap,
 } from '@/trade-crm/navigation/tradeCrmRouteMap';
@@ -1254,7 +1259,7 @@ export const TradeCrmRecordShowShell = ({
       },
       {
         label: 'Open customer workspace',
-        to: tradeCrmRouteMap.customers,
+        to: getTradeCrmCustomerPath('list'),
       },
       {
         label: 'Open task workspace',
@@ -1332,7 +1337,7 @@ export const TradeCrmRecordShowShell = ({
         ? {
             label: 'Company Candidate',
             value: getTextValue(companyName) as string,
-            to: tradeCrmRouteMap.customers,
+            to: getTradeCrmCustomerPath('dedup'),
           }
         : null,
       getTextValue(contactName)
@@ -1498,14 +1503,14 @@ export const TradeCrmRecordShowShell = ({
     const firstLinkedOpportunityId = getRelationId(firstLinkedOpportunity);
     const firstLinkedPersonName = getRelationName(firstLinkedPerson);
     const firstLinkedOpportunityName = getRelationName(firstLinkedOpportunity);
-    const customer360WorkspaceLink = getTradeCrmScopedViewPath(
-      tradeCrmRouteMap.customers,
-      'customer-360',
+    const companyCustomerDetailLink = getTradeCrmCustomerDetailPath(
+      buildTradeCrmCustomerRouteId({
+        kind: 'organization',
+        recordId,
+      }),
     );
-    const customerContactsWorkspaceLink = getTradeCrmScopedViewPath(
-      tradeCrmRouteMap.customers,
-      'contacts',
-    );
+    const customer360WorkspaceLink = companyCustomerDetailLink;
+    const customerContactsWorkspaceLink = companyCustomerDetailLink;
     const opportunityPipelineWorkspaceLink = getTradeCrmScopedViewPath(
       tradeCrmRouteMap.opportunities,
       'pipeline-board',
@@ -1556,11 +1561,11 @@ export const TradeCrmRecordShowShell = ({
           }
         : null,
       {
-        label: 'Open customer 360 workspace',
+        label: 'Open customer detail',
         to: customer360WorkspaceLink,
       },
       {
-        label: 'Open contacts view',
+        label: 'Open customer contacts',
         to: customerContactsWorkspaceLink,
       },
       {
@@ -1841,9 +1846,11 @@ export const TradeCrmRecordShowShell = ({
     const firstPointOfContactOpportunityName = getRelationName(
       firstPointOfContactOpportunity,
     );
-    const contactWorkspaceLink = getTradeCrmScopedViewPath(
-      tradeCrmRouteMap.customers,
-      'contacts',
+    const contactWorkspaceLink = getTradeCrmCustomerDetailPath(
+      buildTradeCrmCustomerRouteId({
+        kind: 'individual',
+        recordId,
+      }),
     );
   const firstPointOfContactOpportunityLink = firstPointOfContactOpportunityId
     ? getInheritedRecordLink({
@@ -1891,14 +1898,14 @@ export const TradeCrmRecordShowShell = ({
         : null,
       {
         label: 'Open customer workspace',
-        to: tradeCrmRouteMap.customers,
+        to: getTradeCrmCustomerPath('list'),
       },
       {
         label: 'Open mail workspace',
         to: tradeCrmRouteMap.mail,
       },
       {
-        label: 'Open contacts view',
+        label: 'Open customer detail',
         to: contactWorkspaceLink,
       },
       {
@@ -1914,8 +1921,8 @@ export const TradeCrmRecordShowShell = ({
         to: getTradeCrmScopedViewPath(tradeCrmRouteMap.analytics, 'mail-efficiency'),
       },
       {
-        label: 'Open customer segmentation',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.customers, 'segmentation'),
+        label: 'Open customer groups',
+        to: getTradeCrmCustomerPath('config-groups'),
       },
     ].filter((action): action is { label: string; to: string } => action !== null);
     const personSummaryText = buildSummaryText([

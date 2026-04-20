@@ -5,6 +5,7 @@ import { styled } from '@linaria/react';
 import { agentChatInputState } from '@/ai/states/agentChatInputState';
 import { shouldFocusChatEditorState } from '@/ai/states/shouldFocusChatEditorState';
 import { useOpenAskAIPageInSidePanel } from '@/side-panel/hooks/useOpenAskAIPageInSidePanel';
+import { getTradeCrmCustomerRouteContext } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 import { tradeCrmRouteMap } from '@/trade-crm/navigation/tradeCrmRouteMap';
 import { AiAssistantFab } from '@/trade-crm/shared/components/AiAssistantFab';
 import { AiSuggestionDrawer } from '@/trade-crm/shared/components/AiSuggestionDrawer';
@@ -24,10 +25,15 @@ const StyledFloatingContainer = styled.div`
 `;
 
 const routeContextByPath = (pathname: string) => {
+  const customerRouteContext = getTradeCrmCustomerRouteContext(pathname);
+
+  if (customerRouteContext) {
+    return customerRouteContext;
+  }
+
   if (pathname === tradeCrmRouteMap.workbench) return 'trade-workbench';
   if (pathname === tradeCrmRouteMap.prospecting) return 'trade-prospecting';
   if (pathname === tradeCrmRouteMap.mail) return 'trade-mail';
-  if (pathname === tradeCrmRouteMap.customers) return 'trade-customers';
   if (pathname === tradeCrmRouteMap.opportunities) {
     return 'trade-opportunities';
   }

@@ -10,6 +10,8 @@ import {
 import { type TradeWorkspaceContext } from '@/trade-crm/shared/TradeWorkspaceContext';
 import { getIntegrationHubApiBaseUrl } from '@/workbench/utils/getIntegrationHubApiBaseUrl';
 
+export type { TradeCrmAiSuggestionItem };
+
 const serializeContext = (context: TradeWorkspaceContext) =>
   JSON.stringify({
     workspace: context.workspace,

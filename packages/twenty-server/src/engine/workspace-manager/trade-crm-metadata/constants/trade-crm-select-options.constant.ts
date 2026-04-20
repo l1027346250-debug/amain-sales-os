@@ -87,6 +87,127 @@ export const TRADE_CRM_CUSTOMER_TYPE_OPTIONS = [
   { color: 'gray', label: 'Other', position: 5, value: 'OTHER' },
 ];
 
+export const TRADE_CRM_CUSTOMER_STAGE_OPTIONS = [
+  {
+    color: 'sky',
+    label: 'Potential Customer',
+    position: 0,
+    value: 'POTENTIAL_CUSTOMER',
+  },
+  {
+    color: 'blue',
+    label: 'Active Customer',
+    position: 1,
+    value: 'ACTIVE_CUSTOMER',
+  },
+  {
+    color: 'green',
+    label: 'Won Customer',
+    position: 2,
+    value: 'WON_CUSTOMER',
+  },
+  {
+    color: 'yellow',
+    label: 'At-Risk Customer',
+    position: 3,
+    value: 'AT_RISK_CUSTOMER',
+  },
+  {
+    color: 'gray',
+    label: 'Dormant Customer',
+    position: 4,
+    value: 'DORMANT_CUSTOMER',
+  },
+];
+
+export const TRADE_CRM_CUSTOMER_GROUP_OPTIONS = [
+  { color: 'red', label: 'Key Account', position: 0, value: 'KEY_ACCOUNT' },
+  {
+    color: 'orange',
+    label: 'Growth Account',
+    position: 1,
+    value: 'GROWTH_ACCOUNT',
+  },
+  {
+    color: 'yellow',
+    label: 'Needs Follow-up',
+    position: 2,
+    value: 'NEEDS_FOLLOW_UP',
+  },
+  {
+    color: 'green',
+    label: 'Reactivation',
+    position: 3,
+    value: 'REACTIVATION',
+  },
+  {
+    color: 'gray',
+    label: 'Unassigned',
+    position: 4,
+    value: 'UNASSIGNED',
+  },
+];
+
+export const TRADE_CRM_CUSTOMER_TAG_OPTIONS = [
+  { color: 'green', label: 'VIP', position: 0, value: 'VIP' },
+  {
+    color: 'sky',
+    label: 'Repeat Buyer',
+    position: 1,
+    value: 'REPEAT_BUYER',
+  },
+  {
+    color: 'yellow',
+    label: 'Needs Samples',
+    position: 2,
+    value: 'NEEDS_SAMPLES',
+  },
+  {
+    color: 'orange',
+    label: 'Negotiation',
+    position: 3,
+    value: 'NEGOTIATION',
+  },
+  { color: 'red', label: 'Dormant', position: 4, value: 'DORMANT' },
+];
+
+export const TRADE_CRM_PUBLIC_POOL_STATE_OPTIONS = [
+  { color: 'green', label: 'Private', position: 0, value: 'PRIVATE' },
+  {
+    color: 'orange',
+    label: 'Public Pool',
+    position: 1,
+    value: 'PUBLIC_POOL',
+  },
+];
+
+export const TRADE_CRM_PUBLIC_POOL_GROUP_OPTIONS = [
+  {
+    color: 'blue',
+    label: 'General Public Pool',
+    position: 0,
+    value: 'GENERAL_PUBLIC_POOL',
+  },
+  {
+    color: 'yellow',
+    label: 'Reactivation Pool',
+    position: 1,
+    value: 'REACTIVATION_POOL',
+  },
+  {
+    color: 'red',
+    label: 'Manager Review Pool',
+    position: 2,
+    value: 'MANAGER_REVIEW_POOL',
+  },
+];
+
+export const TRADE_CRM_GENDER_OPTIONS = [
+  { color: 'blue', label: 'Male', position: 0, value: 'MALE' },
+  { color: 'pink', label: 'Female', position: 1, value: 'FEMALE' },
+  { color: 'gray', label: 'Other', position: 2, value: 'OTHER' },
+];
+
 export const TRADE_CRM_INDUSTRY_OPTIONS = [
   {
     color: 'blue',
@@ -128,4 +249,3 @@ export const TRADE_CRM_LOST_REASON_OPTIONS = [
   { color: 'purple', label: 'Timing', position: 4, value: 'TIMING' },
   { color: 'gray', label: 'Other', position: 5, value: 'OTHER' },
 ];
-

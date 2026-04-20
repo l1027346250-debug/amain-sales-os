@@ -10,6 +10,7 @@ import {
   IconUsers,
 } from 'twenty-ui/display';
 
+import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 import {
   getTradeCrmScopedViewPath,
   tradeCrmRouteMap,
@@ -179,43 +180,34 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
   {
     key: 'customers',
     label: 'Customers',
-    description: 'Customer operations center, contacts, and customer 360 views.',
-    to: tradeCrmRouteMap.customers,
+    description: 'Customer operations center, public pool, dedup, and settings.',
+    to: getTradeCrmCustomerPath('list'),
     Icon: IconUsers,
     children: [
       {
-        key: 'customers.customer-list',
+        key: 'customers.list',
         label: 'Customer List',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.customers,
-          'customer-list',
-        ),
+        to: getTradeCrmCustomerPath('list'),
       },
       {
-        key: 'customers.public-pool',
+        key: 'customers.public',
         label: 'Public Pool',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.customers, 'public-pool'),
+        to: getTradeCrmCustomerPath('public'),
       },
       {
-        key: 'customers.contacts',
-        label: 'Contacts',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.customers, 'contacts'),
+        key: 'customers.dedup',
+        label: 'Customer Dedup',
+        to: getTradeCrmCustomerPath('dedup'),
       },
       {
-        key: 'customers.segmentation',
-        label: 'Segmentation',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.customers,
-          'segmentation',
-        ),
+        key: 'customers.tags',
+        label: 'Tag Settings',
+        to: getTradeCrmCustomerPath('config-tags'),
       },
       {
-        key: 'customers.customer-360',
-        label: 'Customer 360',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.customers,
-          'customer-360',
-        ),
+        key: 'customers.import',
+        label: 'Import Center',
+        to: getTradeCrmCustomerPath('config-import'),
       },
     ],
   },
