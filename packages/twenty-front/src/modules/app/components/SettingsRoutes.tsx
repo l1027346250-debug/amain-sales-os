@@ -4,7 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { SettingsProtectedRouteWrapper } from '@/settings/components/SettingsProtectedRouteWrapper';
 import { SettingsSkeletonLoader } from '@/settings/components/SettingsSkeletonLoader';
 import { SettingPublicDomain } from '@/settings/domains/components/SettingPublicDomain';
-import { SettingsPath } from 'twenty-shared/types';
+import { AppPath, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 import {
   FeatureFlagKey,
@@ -747,10 +747,7 @@ export const SettingsRoutes = ({ isAdminPageEnabled }: SettingsRoutesProps) => (
           <Route
             path={SettingsPath.Enterprise}
             element={
-              <Navigate
-                to={getSettingsPath(SettingsPath.AdminPanelEnterprise)}
-                replace
-              />
+              <Navigate to={AppPath.EnterpriseCustomFields} replace />
             }
           />
           <Route

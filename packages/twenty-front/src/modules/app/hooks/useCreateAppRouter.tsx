@@ -82,6 +82,58 @@ const TradeCrmAnalyticsPage = lazy(() =>
   ),
 );
 
+const EnterpriseCustomFieldsPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseCustomFieldsPage').then((module) => ({
+    default: module.EnterpriseCustomFieldsPage,
+  })),
+);
+
+const EnterpriseFieldLayoutPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseFieldLayoutPage').then((module) => ({
+    default: module.EnterpriseFieldLayoutPage,
+  })),
+);
+
+const EnterpriseCustomerExportPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseCustomerExportPage').then((module) => ({
+    default: module.EnterpriseCustomerExportPage,
+  })),
+);
+
+const EnterpriseRecycleBinPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseRecycleBinPage').then((module) => ({
+    default: module.EnterpriseRecycleBinPage,
+  })),
+);
+
+const EnterpriseReportTemplatesPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseReportTemplatesPage').then(
+    (module) => ({
+      default: module.EnterpriseReportTemplatesPage,
+    }),
+  ),
+);
+
+const EnterpriseSourceConvertPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseSourceConvertPage').then((module) => ({
+    default: module.EnterpriseSourceConvertPage,
+  })),
+);
+
+const EnterpriseIndependentStationPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseIndependentStationPage').then(
+    (module) => ({
+      default: module.EnterpriseIndependentStationPage,
+    }),
+  ),
+);
+
+const EnterpriseSalesPlaybookPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseSalesPlaybookPage').then((module) => ({
+    default: module.EnterpriseSalesPlaybookPage,
+  })),
+);
+
 const RecordShowPage = lazy(() =>
   import('~/pages/object-record/RecordShowPage').then((module) => ({
     default: module.RecordShowPage,
@@ -325,6 +377,70 @@ export const useCreateAppRouter = (
             element={
               <LazyRoute>
                 <TradeCrmAnalyticsPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseCustomFields}
+            element={
+              <LazyRoute>
+                <EnterpriseCustomFieldsPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseFieldDisplay}
+            element={
+              <LazyRoute>
+                <EnterpriseFieldLayoutPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseCustomerExport}
+            element={
+              <LazyRoute>
+                <EnterpriseCustomerExportPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseRecycle}
+            element={
+              <LazyRoute>
+                <EnterpriseRecycleBinPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseReportTemplates}
+            element={
+              <LazyRoute>
+                <EnterpriseReportTemplatesPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseSourceConvert}
+            element={
+              <LazyRoute>
+                <EnterpriseSourceConvertPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseIndependentStation}
+            element={
+              <LazyRoute>
+                <EnterpriseIndependentStationPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseSalesPlaybook}
+            element={
+              <LazyRoute>
+                <EnterpriseSalesPlaybookPage />
               </LazyRoute>
             }
           />

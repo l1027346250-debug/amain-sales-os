@@ -1,4 +1,5 @@
 import { NavigationDrawerOpenedSection } from '@/navigation-menu-item/display/sections/components/NavigationDrawerOpenedSection';
+import { EnterpriseNavigationSection } from '@/enterprise/navigation/EnterpriseNavigationSection';
 import { NavigationDrawerWorkspaceSectionSkeletonLoader } from '@/object-metadata/components/NavigationDrawerWorkspaceSectionSkeletonLoader';
 import { TradeCrmNavigationSection } from '@/trade-crm/navigation/TradeCrmNavigationSection';
 
@@ -35,6 +36,7 @@ export const MainNavigationDrawerScrollableItems = () => {
     <StyledScrollableItemsContainer>
       <NavigationDrawerOpenedSection />
       <TradeCrmNavigationSection />
+      <EnterpriseNavigationSection />
       <Suspense fallback={<NavigationDrawerWorkspaceSectionSkeletonLoader />}>
         <FavoritesSectionDispatcher />
         <WorkspaceSectionDispatcher />

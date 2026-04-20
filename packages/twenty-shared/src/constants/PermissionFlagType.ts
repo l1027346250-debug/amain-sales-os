@@ -1,6 +1,7 @@
 export enum PermissionFlagType {
   // Settings permissions
   API_KEYS_AND_WEBHOOKS = 'API_KEYS_AND_WEBHOOKS',
+  ENTERPRISE = 'ENTERPRISE',
   WORKSPACE = 'WORKSPACE',
   WORKSPACE_MEMBERS = 'WORKSPACE_MEMBERS',
   ROLES = 'ROLES',
