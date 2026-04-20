@@ -4,7 +4,10 @@ import { type gmail_v1, google } from 'googleapis';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { isDefined } from 'twenty-shared/utils';
 
-import { type MessageOutboundDriver } from 'src/modules/messaging/message-outbound-manager/interfaces/message-outbound-driver.interface';
+import {
+  type MessageOutboundDriver,
+  type MessageOutboundResult,
+} from 'src/modules/messaging/message-outbound-manager/interfaces/message-outbound-driver.interface';
 
 import { OAuth2ClientManagerService } from 'src/modules/connected-account/oauth2-client-manager/services/oauth2-client-manager.service';
 import { type ConnectedAccountWorkspaceEntity } from 'src/modules/connected-account/standard-objects/connected-account.workspace-entity';
@@ -21,18 +24,22 @@ export class GmailMessageOutboundService implements MessageOutboundDriver {
   async sendMessage(
     sendMessageInput: SendMessageInput,
     connectedAccount: ConnectedAccountWorkspaceEntity,
-  ): Promise<void> {
+  ): Promise<MessageOutboundResult> {
     const { gmailClient, encodedMessage } = await this.composeGmailMessage(
       connectedAccount,
       sendMessageInput,
     );
 
-    await gmailClient.users.messages.send({
+    const response = await gmailClient.users.messages.send({
       userId: 'me',
       requestBody: {
         raw: encodedMessage,
       },
     });
+
+    return {
+      providerMessageId: response.data.id ?? null,
+    };
   }
 
   async createDraft(

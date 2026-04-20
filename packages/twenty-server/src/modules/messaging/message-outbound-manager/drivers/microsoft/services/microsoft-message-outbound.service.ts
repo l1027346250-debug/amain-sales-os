@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
-import { type MessageOutboundDriver } from 'src/modules/messaging/message-outbound-manager/interfaces/message-outbound-driver.interface';
+import {
+  type MessageOutboundDriver,
+  type MessageOutboundResult,
+} from 'src/modules/messaging/message-outbound-manager/interfaces/message-outbound-driver.interface';
 
 import { OAuth2ClientManagerService } from 'src/modules/connected-account/oauth2-client-manager/services/oauth2-client-manager.service';
 import { type ConnectedAccountWorkspaceEntity } from 'src/modules/connected-account/standard-objects/connected-account.workspace-entity';
@@ -18,7 +21,7 @@ export class MicrosoftMessageOutboundService implements MessageOutboundDriver {
   async sendMessage(
     sendMessageInput: SendMessageInput,
     connectedAccount: ConnectedAccountWorkspaceEntity,
-  ): Promise<void> {
+  ): Promise<MessageOutboundResult> {
     const microsoftClient =
       await this.oAuth2ClientManagerService.getMicrosoftOAuth2Client(
         connectedAccount,
@@ -30,6 +33,10 @@ export class MicrosoftMessageOutboundService implements MessageOutboundDriver {
     );
 
     await microsoftClient.api(`/me/messages/${messageId}/send`).post({});
+
+    return {
+      providerMessageId: messageId,
+    };
   }
 
   async createDraft(
@@ -99,6 +106,16 @@ export class MicrosoftMessageOutboundService implements MessageOutboundDriver {
       toRecipients: toMicrosoftRecipients(sendMessageInput.to),
       ccRecipients: toMicrosoftRecipients(sendMessageInput.cc),
       bccRecipients: toMicrosoftRecipients(sendMessageInput.bcc),
+      ...(sendMessageInput.headers
+        ? {
+            internetMessageHeaders: Object.entries(
+              sendMessageInput.headers,
+            ).map(([name, value]) => ({
+              name,
+              value,
+            })),
+          }
+        : {}),
       ...(sendMessageInput.attachments &&
       sendMessageInput.attachments.length > 0
         ? {

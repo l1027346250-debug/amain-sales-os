@@ -218,6 +218,27 @@ current environment, use the built-in static SPA preview server:
 npm run serve:trade-crm-front:static
 ```
 
+To start the local Trade CRM runtime stack in one command (Redis + back-end +
+front-end static preview), run:
+
+```bash
+npm run start:trade-crm-runtime:local
+```
+
+This writes:
+
+- `tmp/trade-crm-runtime/runtime-state.json`
+- `tmp/trade-crm-runtime/runtime-processes.json`
+- `tmp/trade-crm-runtime/redis.out.log`
+- `tmp/trade-crm-runtime/redis.err.log`
+- `tmp/trade-crm-runtime/backend.out.log`
+- `tmp/trade-crm-runtime/backend.err.log`
+- `tmp/trade-crm-runtime/frontend.out.log`
+- `tmp/trade-crm-runtime/frontend.err.log`
+
+The runtime state file records the current URLs, PIDs, and the exact
+`Stop-Process` command for shutting the local stack down.
+
 This serves `packages/twenty-front/build` on `http://127.0.0.1:4175` with
 history fallback to `index.html`, so local routes such as `/sales-workbench`
 can still be opened and used by `scripts/verify-sales-workbench-runtime-walkthrough.js`.

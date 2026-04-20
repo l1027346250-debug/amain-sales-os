@@ -15,6 +15,7 @@ import {
   getTradeCrmScopedViewPath,
   tradeCrmRouteMap,
 } from '@/trade-crm/navigation/tradeCrmRouteMap';
+import { getTradeCrmMailPath } from '@/trade-crm/mail/navigation/trade-crm-mail-navigation';
 
 export type TradeCrmMenuKey =
   | 'workbench'
@@ -138,42 +139,35 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
   {
     key: 'mail',
     label: 'Mail',
-    description: 'Inbox routing, replies, templates, and tracking review.',
+    description:
+      'Mailbox workspace, customer communication center, and outbound campaign system.',
     to: tradeCrmRouteMap.mail,
     Icon: IconMail,
     children: [
       {
         key: 'mail.inbox',
-        label: 'Inbox',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.mail, 'inbox'),
+        label: '收件箱',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'inbox' }),
       },
       {
-        key: 'mail.pending-replies',
-        label: 'Pending Replies',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.mail,
-          'pending-replies',
-        ),
+        key: 'mail.pending',
+        label: '待处理邮件',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'pending' }),
       },
       {
-        key: 'mail.sent',
-        label: 'Sent',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.mail, 'sent'),
+        key: 'mail.customer',
+        label: '客户视角',
+        to: getTradeCrmMailPath({ scope: 'customer', view: 'recent' }),
       },
       {
-        key: 'mail.templates',
-        label: 'Templates',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.mail, 'templates'),
-      },
-      {
-        key: 'mail.sequences',
-        label: 'Sequences',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.mail, 'sequences'),
+        key: 'mail.campaign',
+        label: '开发信',
+        to: getTradeCrmMailPath({ scope: 'campaign', view: 'overview' }),
       },
       {
         key: 'mail.tracking',
-        label: 'Tracking',
-        to: getTradeCrmScopedViewPath(tradeCrmRouteMap.mail, 'tracking'),
+        label: '追踪信息',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'tracking' }),
       },
     ],
   },
@@ -214,7 +208,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
   {
     key: 'opportunities',
     label: 'Opportunities',
-    description: 'Pipeline progression, quotation follow-up, and stalled review.',
+    description:
+      'Pipeline progression, quotation follow-up, and stalled review.',
     to: tradeCrmRouteMap.opportunities,
     Icon: IconTarget,
     children: [
@@ -294,7 +289,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
   {
     key: 'analytics',
     label: 'Team Data',
-    description: 'Manager views for conversion, execution, and team operations.',
+    description:
+      'Manager views for conversion, execution, and team operations.',
     to: tradeCrmRouteMap.analytics,
     Icon: IconChartBar,
     requiresManager: true,
@@ -358,7 +354,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
   {
     key: 'settings',
     label: 'Settings',
-    description: 'Fields, stages, routing rules, AI, and integration configuration.',
+    description:
+      'Fields, stages, routing rules, AI, and integration configuration.',
     to: tradeCrmRouteMap.settings,
     Icon: IconSettings,
     requiresManager: true,
