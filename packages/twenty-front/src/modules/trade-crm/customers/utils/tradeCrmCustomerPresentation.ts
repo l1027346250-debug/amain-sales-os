@@ -446,6 +446,9 @@ export const getTradeCrmCustomerStageLabelForRecord = ({
 export const getTradeCrmCustomerStageLabel = (index: number) =>
   getArrayLabel(CUSTOMER_STAGE_LABELS, index);
 
+export const getTradeCrmCustomerStageLabelForValue = (value: string | null) =>
+  value ? CUSTOMER_STAGE_LABELS_BY_VALUE[value] ?? value : null;
+
 export const getTradeCrmCustomerStageValueForLabel = (label: string) =>
   getValueForLabel({
     label,
@@ -540,6 +543,17 @@ export const getTradeCrmPublicPoolGroupLabelForRecord = (
     value: record?.publicPoolGroup,
     labelsByValue: PUBLIC_POOL_GROUP_LABELS_BY_VALUE,
   }) ?? 'General Public Pool';
+
+export const getTradeCrmPublicPoolGroupLabelForValue = (
+  value: string | null,
+) =>
+  value ? PUBLIC_POOL_GROUP_LABELS_BY_VALUE[value] ?? value : 'General Public Pool';
+
+export const getTradeCrmPublicPoolGroupValueForLabel = (label: string) =>
+  getValueForLabel({
+    label,
+    labelsByValue: PUBLIC_POOL_GROUP_LABELS_BY_VALUE,
+  });
 
 export const getTradeCrmCustomerCodeLabelForRecord = (
   record: TradeCrmCustomerPresentationRecord | undefined,

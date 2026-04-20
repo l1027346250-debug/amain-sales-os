@@ -606,61 +606,6 @@ const buildCompanyRows = (
     }),
   }));
 
-const buildIndividualRows = (
-  peopleRecords: TradeCrmCustomerPresentationRecord[] | undefined,
-) =>
-  (peopleRecords ?? []).slice(0, 6).map((record, index) => ({
-    id: record.id,
-    cells: [
-      {
-        primary: getTradeCrmRecordName({
-          kind: 'individual',
-          record,
-        }),
-        secondary:
-          typeof record.jobTitle === 'string' ? record.jobTitle : 'Contact anchor',
-        badgeLabel: getTradeCrmCustomerSourceLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        badgeTone: 'blue' as const,
-      },
-      {
-        primary: typeof record.email === 'string' ? record.email : 'No email',
-        secondary: typeof record.phone === 'string' ? record.phone : 'No phone',
-      },
-      {
-        primary: getTradeCrmCustomerCountryLabel(record),
-        secondary: getTradeCrmCustomerOwnerLabel(record),
-      },
-      {
-        primary: getTradeCrmCustomerLastTouchLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        secondary: getTradeCrmCustomerGroupLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-      },
-      {
-        primary: getTradeCrmCustomerStageLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        secondary: `Score ${getTradeCrmCustomerScoreLabelForRecord({
-          record,
-          fallbackIndex: index,
-        })}`,
-      },
-    ],
-    actionLabel: 'Open',
-    actionTo: getTradeCrmCustomerRoutePath({
-      kind: 'individual',
-      record,
-    }),
-  }));
-
 type CustomerFilterState = {
   searchTerm: string;
   stage: string | null;
@@ -779,17 +724,24 @@ const getPublicPoolGroupLabels = (
 const useTradeCrmCustomerRuntimeConfig = (
   workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>,
 ) => {
-  const publicPoolGroupLabels = useMemo(
-    () => getPublicPoolGroupLabels(workspaceData.publicPoolRecords),
-    [workspaceData.publicPoolRecords],
-  );
   const configDraft = useTradeCrmCustomerConfigDraft({
     customerStageSummary: workspaceData.customerStageSummary,
     customerGroupSummary: workspaceData.customerGroupSummary,
     customerTagSummary: workspaceData.customerTagSummary,
     customerSourceSummary: workspaceData.customerSourceSummary,
-    publicPoolGroupLabels,
+    publicPoolGroupLabels: getPublicPoolGroupLabels(workspaceData.publicPoolRecords),
   });
+  const publicPoolGroupLabels = useMemo(
+    () =>
+      [
+        ...getPublicPoolGroupLabels(workspaceData.publicPoolRecords),
+        configDraft.draft.publicPoolRule.publicPoolGroup,
+      ].filter(
+        (label, index, labels) =>
+          label.length > 0 && labels.indexOf(label) === index,
+      ),
+    [configDraft.draft.publicPoolRule.publicPoolGroup, workspaceData.publicPoolRecords],
+  );
 
   return {
     configDraft,
@@ -1187,8 +1139,8 @@ const renderConfigContent = ({
       <StyledPanel>
         <StyledPanelTitle>Import Defaults</StyledPanelTitle>
         <StyledPanelDescription>
-          Save the destination and update strategy now so import setup survives route
-          switches before backend persistence lands.
+          Save the destination and update strategy here so import setup stays
+          consistent across customer settings and later import runs.
         </StyledPanelDescription>
         <StyledInlineComposer>
           <StyledFilterButton
@@ -1343,9 +1295,9 @@ const TradeCrmCustomerListWorkspace = () => {
       insights={[
         {
           label: 'Current anchor',
-          value: 'Company and person',
+          value: 'Company customer',
           description:
-            'Customer routing already supports organization and individual anchors before the backend aggregate lands.',
+            'This rebuild treats company records as the formal customer master while contacts stay visible as related operators.',
         },
         {
           label: 'Main risk',
@@ -1513,13 +1465,38 @@ const TradeCrmCustomerListWorkspace = () => {
             rows={buildCompanyRows(filteredCompanyRecords)}
             emptyState="No customer companies are available yet."
           />
-          <TradeCrmCustomerTable
-            title="Individual customer entry"
-            description="Use this lane for person-anchored customers and individual relationships that still need company linkage."
-            columns={['Contact', 'Reachability', 'Region', 'Latest Touch', 'Stage']}
-            rows={buildIndividualRows(filteredPeopleRecords)}
-            emptyState="No individual customer entries are available yet."
-          />
+          <StyledPanel>
+            <StyledPanelTitle>Contact Coverage</StyledPanelTitle>
+            <StyledPanelDescription>
+              Contacts stay subordinate to company customers in the first formal
+              release, but the workspace still keeps visibility on reachable people and
+              follow-up density.
+            </StyledPanelDescription>
+            <StyledMetricGrid>
+              <StyledMetricCard>
+                <StyledMetricLabel>Visible contacts</StyledMetricLabel>
+                <StyledMetricValue>{filteredPeopleRecords.length}</StyledMetricValue>
+                <StyledMetricHint>
+                  Person records remain available as customer contacts, not as a parallel
+                  customer master.
+                </StyledMetricHint>
+              </StyledMetricCard>
+              <StyledMetricCard>
+                <StyledMetricLabel>Companies with tags</StyledMetricLabel>
+                <StyledMetricValue>
+                  {
+                    filteredCompanyRecords.filter(
+                      (record) => getTradeCrmCustomerTagsForRecord({ record }).length > 0,
+                    ).length
+                  }
+                </StyledMetricValue>
+                <StyledMetricHint>
+                  Company-level segmentation stays in the primary list and config
+                  center.
+                </StyledMetricHint>
+              </StyledMetricCard>
+            </StyledMetricGrid>
+          </StyledPanel>
         </StyledStack>
       </StyledSplitGrid>
     </TradeCrmCustomerWorkspaceLayout>
@@ -1885,7 +1862,7 @@ const TradeCrmCustomerConfigWorkspace = ({
           label: 'Operational rule',
           value: 'UI first, resolver next',
           description:
-            'This round lands the page structure and route model before backend persistence is added.',
+            'Customer settings now persist in workspace records instead of browser-local drafts.',
         },
       ]}
       workspaceContext={{
@@ -1899,13 +1876,13 @@ const TradeCrmCustomerConfigWorkspace = ({
         <StyledActionMeta>
           <span>
             {configDraft.hasUnsavedChanges
-              ? 'Unsaved configuration changes in this browser'
-              : 'Configuration draft saved locally'}
+              ? 'Unsaved customer configuration changes'
+              : 'Customer configuration is synced with workspace records'}
           </span>
           <span>
             {configDraft.lastSavedAt
               ? `Last saved ${configDraft.lastSavedAt.slice(0, 16).replace('T', ' ')}`
-              : 'Save once to persist the draft across customer settings routes'}
+              : 'Save once to persist customer settings into workspace objects'}
           </span>
         </StyledActionMeta>
         <StyledActionButtons>
@@ -1917,7 +1894,7 @@ const TradeCrmCustomerConfigWorkspace = ({
             $tone="primary"
             onClick={configDraft.saveDraft}
           >
-            Save Draft
+            Save Config
           </StyledControlButton>
         </StyledActionButtons>
       </StyledActionBar>

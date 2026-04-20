@@ -17,6 +17,8 @@ import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadat
 import { type FieldMetadataSeed } from 'src/engine/workspace-manager/dev-seeder/metadata/types/field-metadata-seed.type';
 import { type ObjectMetadataSeed } from 'src/engine/workspace-manager/dev-seeder/metadata/types/object-metadata-seed.type';
 import { TRADE_CRM_COMPANY_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-company-field-seeds.constant';
+import { TRADE_CRM_CUSTOMER_OBJECT_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-customer-object-field-seeds.constant';
+import { TRADE_CRM_CUSTOMER_OBJECT_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-customer-object-seeds.constant';
 import { TRADE_CRM_LEAD_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-lead-field-seeds.constant';
 import { TRADE_CRM_LEAD_OBJECT_SEED } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-lead-object-seed.constant';
 import { TRADE_CRM_OPPORTUNITY_FIELD_SEEDS } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-opportunity-field-seeds.constant';
@@ -68,6 +70,54 @@ export class TradeCrmWorkspaceInitializerService {
         fieldName: TRADE_CRM_LEAD_OBJECT_SEED.labelIdentifierFieldName,
       });
     }
+
+    // 1b) Customer domain support objects used by the rebuilt customer module
+    const customerDomainObjectIdsByNameSingular: Record<string, string> = {};
+
+    for (const objectSeed of TRADE_CRM_CUSTOMER_OBJECT_SEEDS) {
+      const customerDomainObject = await this.ensureCustomObject({
+        workspaceId,
+        dataSourceId: dataSourceMetadata.id,
+        objectSeed,
+      });
+
+      customerDomainObjectIdsByNameSingular[objectSeed.nameSingular] =
+        customerDomainObject.id;
+    }
+
+    await Promise.all(
+      TRADE_CRM_CUSTOMER_OBJECT_SEEDS.map((objectSeed) =>
+        this.ensureCustomFields({
+          workspaceId,
+          objectNameSingular: objectSeed.nameSingular,
+          fieldSeeds:
+            TRADE_CRM_CUSTOMER_OBJECT_FIELD_SEEDS[objectSeed.nameSingular] ?? [],
+        }),
+      ),
+    );
+
+    await Promise.all(
+      TRADE_CRM_CUSTOMER_OBJECT_SEEDS
+        .filter((objectSeed) => isDefined(objectSeed.labelIdentifierFieldName))
+        .map((objectSeed) => {
+          const customerDomainObjectId =
+            customerDomainObjectIdsByNameSingular[objectSeed.nameSingular];
+
+          if (
+            !isDefined(customerDomainObjectId) ||
+            !objectSeed.labelIdentifierFieldName
+          ) {
+            return Promise.resolve();
+          }
+
+          return this.ensureLabelIdentifierField({
+            workspaceId,
+            objectMetadataId: customerDomainObjectId,
+            objectNameSingular: objectSeed.nameSingular,
+            fieldName: objectSeed.labelIdentifierFieldName,
+          });
+        }),
+    );
 
     // 2) Standard objects: only add missing trade CRM fields
     await this.ensureCustomFields({

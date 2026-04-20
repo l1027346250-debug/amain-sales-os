@@ -208,6 +208,46 @@ export const TRADE_CRM_GENDER_OPTIONS = [
   { color: 'gray', label: 'Other', position: 2, value: 'OTHER' },
 ];
 
+export const TRADE_CRM_TAG_SCOPE_OPTIONS = [
+  { color: 'blue', label: 'Company', position: 0, value: 'COMPANY' },
+  { color: 'green', label: 'Mine', position: 1, value: 'MINE' },
+  {
+    color: 'yellow',
+    label: 'Subordinate',
+    position: 2,
+    value: 'SUBORDINATE',
+  },
+];
+
+export const TRADE_CRM_TAG_OBJECT_SCOPE_OPTIONS = [
+  { color: 'blue', label: 'Customer', position: 0, value: 'CUSTOMER' },
+  { color: 'green', label: 'Lead', position: 1, value: 'LEAD' },
+  { color: 'orange', label: 'Business', position: 2, value: 'BUSINESS' },
+  { color: 'purple', label: 'Multiple', position: 3, value: 'MULTIPLE' },
+];
+
+export const TRADE_CRM_IMPORT_DESTINATION_OPTIONS = [
+  {
+    color: 'blue',
+    label: 'Customer List',
+    position: 0,
+    value: 'CUSTOMER_LIST',
+  },
+  {
+    color: 'orange',
+    label: 'Public Pool',
+    position: 1,
+    value: 'PUBLIC_POOL',
+  },
+];
+
+export const TRADE_CRM_IMPORT_JOB_STATUS_OPTIONS = [
+  { color: 'blue', label: 'Draft', position: 0, value: 'DRAFT' },
+  { color: 'yellow', label: 'Running', position: 1, value: 'RUNNING' },
+  { color: 'green', label: 'Completed', position: 2, value: 'COMPLETED' },
+  { color: 'red', label: 'Failed', position: 3, value: 'FAILED' },
+];
+
 export const TRADE_CRM_INDUSTRY_OPTIONS = [
   {
     color: 'blue',
