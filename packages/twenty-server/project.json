@@ -177,13 +177,22 @@
     },
     "lint:diff-with-main": {
       "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": ["twenty-oxlint-rules:build"],
+      "inputs": [
+        "{projectRoot}/src/**/*.{ts,tsx}",
+        "{projectRoot}/tsconfig*.json",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{projectRoot}/.oxlintrc.json",
+        "{workspaceRoot}/packages/twenty-oxlint-rules/dist/oxlint-plugin.mjs"
+      ],
       "options": {
         "cwd": "{projectRoot}",
-        "command": "FILES=$(git diff --name-only --relative --diff-filter=d main...HEAD -- src/ | grep -E '\\.(ts|tsx)$'); [ -z \"$FILES\" ] && echo 'No changed files.' || (npx oxlint --type-aware -c .oxlintrc.json $FILES && (prettier --check $FILES || (echo 'ERROR: Prettier formatting check failed! Fix with: npx nx lint:diff-with-main twenty-server --configuration=fix' && false)))"
+        "command": "node ../../scripts/run-lint-diff-with-main.cjs --project twenty-server"
       },
       "configurations": {
         "fix": {
-          "command": "FILES=$(git diff --name-only --relative --diff-filter=d main...HEAD -- src/ | grep -E '\\.(ts|tsx)$'); [ -z \"$FILES\" ] && echo 'No changed files.' || (npx oxlint --type-aware --fix -c .oxlintrc.json $FILES && prettier --write $FILES)"
+          "command": "node ../../scripts/run-lint-diff-with-main.cjs --project twenty-server --fix"
         }
       }
     },
