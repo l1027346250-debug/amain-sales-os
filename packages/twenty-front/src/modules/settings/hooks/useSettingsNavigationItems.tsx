@@ -129,6 +129,14 @@ const useSettingsNavigationItems = (): SettingsNavigationSection[] => {
           isHidden: !permissionMap[PermissionFlagType.WORKSPACE],
         },
         {
+          label: t`Enterprise`,
+          path: SettingsPath.Enterprise,
+          Icon: IconBriefcase,
+          isHidden:
+            !permissionMap[PermissionFlagType.WORKSPACE] &&
+            !permissionMap[PermissionFlagType.ENTERPRISE],
+        },
+        {
           label: t`Trade CRM`,
           path: SettingsPath.TradeCrm,
           Icon: IconBriefcase,
