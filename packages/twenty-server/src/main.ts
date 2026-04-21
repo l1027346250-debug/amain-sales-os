@@ -25,9 +25,13 @@ import { generateFrontConfig } from './utils/generate-front-config';
 // Trigger
 const bootstrap = async () => {
   setPgDateTypeParser();
+  const corsOrigin = process.env.FRONTEND_URL ?? true;
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    cors: true,
+    cors: {
+      credentials: true,
+      origin: corsOrigin,
+    },
     bufferLogs: process.env.LOGGER_IS_BUFFER_ENABLED === 'true',
     rawBody: true,
     snapshot: process.env.NODE_ENV === NodeEnvironment.DEVELOPMENT,

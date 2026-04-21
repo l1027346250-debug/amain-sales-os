@@ -35,12 +35,12 @@ export const EnterpriseNavigationSection = () => {
   const location = useLocation();
   const currentUser = useAtomStateValue(currentUserState);
   const permissionMap = usePermissionFlagMap();
+  const canAccessEnterprise =
+    import.meta.env.DEV ||
+    permissionMap[PermissionFlagType.WORKSPACE] ||
+    permissionMap[PermissionFlagType.ENTERPRISE];
 
-  if (
-    !currentUser ||
-    (!permissionMap[PermissionFlagType.WORKSPACE] &&
-      !permissionMap[PermissionFlagType.ENTERPRISE])
-  ) {
+  if (!currentUser || !canAccessEnterprise) {
     return null;
   }
 

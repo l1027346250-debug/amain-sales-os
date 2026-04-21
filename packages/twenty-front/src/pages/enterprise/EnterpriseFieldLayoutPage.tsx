@@ -6,6 +6,7 @@ import { styled } from '@linaria/react';
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
+import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { AppPath } from 'twenty-shared/types';
 import { Button } from 'twenty-ui/input';
@@ -207,6 +208,7 @@ const buildSidebar = () =>
 
 export const EnterpriseFieldLayoutPage = () => {
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
+  const enterpriseApiRequest = useEnterpriseApiRequest();
   const navigate = useNavigate();
   const { entityType: routeEntityType } = useParams<{ entityType: string }>();
   const [entities, setEntities] = useState<EnterpriseEntity[]>([]);
@@ -219,7 +221,7 @@ export const EnterpriseFieldLayoutPage = () => {
   const sidebar = useMemo(buildSidebar, []);
 
   const loadEntities = async () => {
-    const response = await fetch('/api/enterprise/entities', {
+    const response = await enterpriseApiRequest('/api/enterprise/entities', {
       credentials: 'include',
     });
 
@@ -246,10 +248,15 @@ export const EnterpriseFieldLayoutPage = () => {
 
   const loadLayout = async (nextEntityType: string, nextPageScene: string) => {
     const [fieldsResponse, layoutsResponse] = await Promise.all([
-      fetch(`/api/enterprise/fields?${new URLSearchParams({ entityType: nextEntityType })}`, {
-        credentials: 'include',
-      }),
-      fetch(
+      enterpriseApiRequest(
+        `/api/enterprise/fields?${new URLSearchParams({
+          entityType: nextEntityType,
+        })}`,
+        {
+          credentials: 'include',
+        },
+      ),
+      enterpriseApiRequest(
         `/api/enterprise/field-layouts?${new URLSearchParams({
           entityType: nextEntityType,
           pageScene: nextPageScene,
@@ -335,25 +342,28 @@ export const EnterpriseFieldLayoutPage = () => {
     setIsSaving(true);
 
     try {
-      const response = await fetch('/api/enterprise/field-layouts', {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await enterpriseApiRequest(
+        '/api/enterprise/field-layouts',
+        {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            entityType,
+            pageScene,
+            items: rows.map((row, index) => ({
+              fieldDefinitionId: row.fieldDefinitionId,
+              groupCode: row.groupCode,
+              required: row.required,
+              visible: row.visible,
+              readonly: row.readonly,
+              sortOrder: Number.isNaN(row.sortOrder) ? index : row.sortOrder,
+            })),
+          }),
         },
-        body: JSON.stringify({
-          entityType,
-          pageScene,
-          items: rows.map((row, index) => ({
-            fieldDefinitionId: row.fieldDefinitionId,
-            groupCode: row.groupCode,
-            required: row.required,
-            visible: row.visible,
-            readonly: row.readonly,
-            sortOrder: Number.isNaN(row.sortOrder) ? index : row.sortOrder,
-          })),
-        }),
-      });
+      );
 
       if (!response.ok) {
         throw new Error('Failed to save field layouts');

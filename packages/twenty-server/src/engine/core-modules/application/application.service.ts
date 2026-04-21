@@ -259,6 +259,21 @@ export class ApplicationService {
     },
     queryRunner?: QueryRunner,
   ) {
+    const existingApplication = await this.findByUniversalIdentifier({
+      universalIdentifier: TWENTY_STANDARD_APPLICATION.universalIdentifier,
+      workspaceId,
+    });
+
+    if (isDefined(existingApplication)) {
+      if (!skipCacheInvalidation) {
+        await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
+          'flatApplicationMaps',
+        ]);
+      }
+
+      return existingApplication;
+    }
+
     const defaultPackageFields = await getDefaultApplicationPackageFields();
 
     const twentyStandardApplication = await this.create(
@@ -302,6 +317,19 @@ export class ApplicationService {
     },
     queryRunner?: QueryRunner,
   ) {
+    const existingApplication = await this.findByUniversalIdentifier({
+      universalIdentifier: applicationId,
+      workspaceId,
+    });
+
+    if (isDefined(existingApplication)) {
+      await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
+        'flatApplicationMaps',
+      ]);
+
+      return existingApplication;
+    }
+
     const defaultPackageFields = await getDefaultApplicationPackageFields();
 
     const workspaceCustomApplication = await this.create(

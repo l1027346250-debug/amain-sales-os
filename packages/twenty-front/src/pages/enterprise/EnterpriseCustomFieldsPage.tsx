@@ -5,6 +5,7 @@ import { styled } from '@linaria/react';
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
+import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { Button } from 'twenty-ui/input';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
@@ -250,6 +251,7 @@ const buildSidebar = () =>
 
 export const EnterpriseCustomFieldsPage = () => {
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
+  const enterpriseApiRequest = useEnterpriseApiRequest();
   const [entities, setEntities] = useState<EnterpriseEntity[]>([]);
   const [fields, setFields] = useState<EnterpriseField[]>([]);
   const [entityType, setEntityType] = useState('lead');
@@ -268,7 +270,7 @@ export const EnterpriseCustomFieldsPage = () => {
     fieldType === 'select' || fieldType === 'multiSelect';
 
   const loadEntities = async () => {
-    const response = await fetch('/api/enterprise/entities', {
+    const response = await enterpriseApiRequest('/api/enterprise/entities', {
       credentials: 'include',
     });
 
@@ -291,9 +293,12 @@ export const EnterpriseCustomFieldsPage = () => {
 
   const loadFields = async (nextEntityType: string) => {
     const query = new URLSearchParams({ entityType: nextEntityType });
-    const response = await fetch(`/api/enterprise/fields?${query.toString()}`, {
-      credentials: 'include',
-    });
+    const response = await enterpriseApiRequest(
+      `/api/enterprise/fields?${query.toString()}`,
+      {
+        credentials: 'include',
+      },
+    );
 
     if (!response.ok) {
       throw new Error('Failed to load enterprise fields');
@@ -321,7 +326,7 @@ export const EnterpriseCustomFieldsPage = () => {
 
     try {
       const options = isSelectType ? parseOptionsInput(optionsDraft) : [];
-      const response = await fetch('/api/enterprise/fields', {
+      const response = await enterpriseApiRequest('/api/enterprise/fields', {
         method: 'POST',
         credentials: 'include',
         headers: {

@@ -5,6 +5,7 @@ import { styled } from '@linaria/react';
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
+import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { Button } from 'twenty-ui/input';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
@@ -239,13 +240,19 @@ const StyledVersionList = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledVersionItem = styled.div`
+const StyledVersionItem = styled.button<{ $active: boolean }>`
   background: ${themeCssVariables.background.secondary};
-  border: 1px solid ${themeCssVariables.border.color.light};
+  border: 1px solid
+    ${({ $active }) =>
+      $active
+        ? themeCssVariables.border.color.blue
+        : themeCssVariables.border.color.light};
   border-radius: ${themeCssVariables.border.radius.sm};
+  cursor: pointer;
   display: grid;
   gap: ${themeCssVariables.spacing[1]};
   padding: ${themeCssVariables.spacing[3]};
+  text-align: left;
 `;
 
 const StyledPreviewSection = styled.div`
@@ -260,6 +267,15 @@ const StyledEmpty = styled.div`
   font-size: ${themeCssVariables.font.size.md};
   padding: ${themeCssVariables.spacing[6]} 0;
   text-align: center;
+`;
+
+const StyledPreviewNotice = styled.div`
+  background: ${themeCssVariables.background.secondary};
+  border: 1px solid ${themeCssVariables.border.color.light};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.secondary};
+  font-size: ${themeCssVariables.font.size.sm};
+  padding: ${themeCssVariables.spacing[3]};
 `;
 
 const buildSidebar = () =>
@@ -288,10 +304,14 @@ const defaultFormState = {
 
 export const EnterpriseReportTemplatesPage = () => {
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
+  const enterpriseApiRequest = useEnterpriseApiRequest();
   const [templates, setTemplates] = useState<EnterpriseReportTemplate[]>([]);
   const [versions, setVersions] = useState<EnterpriseReportTemplateVersion[]>([]);
   const [preview, setPreview] = useState<EnterpriseReportTemplatePreview | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedVersionNumber, setSelectedVersionNumber] = useState<number | null>(
+    null,
+  );
   const [templateName, setTemplateName] = useState(defaultFormState.templateName);
   const [templateCode, setTemplateCode] = useState(defaultFormState.templateCode);
   const [reportType, setReportType] = useState(defaultFormState.reportType);
@@ -304,9 +324,18 @@ export const EnterpriseReportTemplatesPage = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const sidebar = useMemo(buildSidebar, []);
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.id === selectedTemplateId) ?? null,
+    [selectedTemplateId, templates],
+  );
+  const isViewingHistoricalVersion =
+    selectedVersionNumber !== null &&
+    selectedTemplate !== null &&
+    selectedVersionNumber !== selectedTemplate.version;
 
   const resetForm = useCallback(() => {
     setSelectedTemplateId(null);
+    setSelectedVersionNumber(null);
     setTemplateName(defaultFormState.templateName);
     setTemplateCode(defaultFormState.templateCode);
     setReportType(defaultFormState.reportType);
@@ -321,7 +350,7 @@ export const EnterpriseReportTemplatesPage = () => {
   }, []);
 
   const loadTemplates = useCallback(async () => {
-    const response = await fetch('/api/enterprise/report-templates', {
+    const response = await enterpriseApiRequest('/api/enterprise/report-templates', {
       credentials: 'include',
     });
 
@@ -337,25 +366,37 @@ export const EnterpriseReportTemplatesPage = () => {
 
   const loadTemplateDetails = useCallback(
     async (templateId: string) => {
-      const [versionsResponse, previewResponse] = await Promise.all([
-        fetch(`/api/enterprise/report-templates/${templateId}/versions`, {
+      const response = await enterpriseApiRequest(
+        `/api/enterprise/report-templates/${templateId}/versions`,
+        {
           credentials: 'include',
-        }),
-        fetch(`/api/enterprise/report-templates/${templateId}/preview`, {
-          credentials: 'include',
-        }),
-      ]);
+        },
+      );
 
-      if (!versionsResponse.ok || !previewResponse.ok) {
-        throw new Error('Failed to load report template details');
+      if (!response.ok) {
+        throw new Error('Failed to load report template versions');
       }
 
-      setVersions(
-        (await versionsResponse.json()) as EnterpriseReportTemplateVersion[],
-      );
-      setPreview(
-        (await previewResponse.json()) as EnterpriseReportTemplatePreview,
-      );
+      setVersions((await response.json()) as EnterpriseReportTemplateVersion[]);
+    },
+    [],
+  );
+
+  const loadTemplatePreview = useCallback(
+    async (templateId: string, versionNumber?: number | null) => {
+      const previewUrl =
+        versionNumber === null || versionNumber === undefined
+          ? `/api/enterprise/report-templates/${templateId}/preview`
+          : `/api/enterprise/report-templates/${templateId}/preview?version=${versionNumber}`;
+      const response = await enterpriseApiRequest(previewUrl, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load report template preview');
+      }
+
+      setPreview((await response.json()) as EnterpriseReportTemplatePreview);
     },
     [],
   );
@@ -367,9 +408,6 @@ export const EnterpriseReportTemplatesPage = () => {
   }, [enqueueErrorSnackBar, loadTemplates]);
 
   useEffect(() => {
-    const selectedTemplate =
-      templates.find((template) => template.id === selectedTemplateId) ?? null;
-
     if (!selectedTemplate) {
       return;
     }
@@ -385,9 +423,27 @@ export const EnterpriseReportTemplatesPage = () => {
     setIsDefault(selectedTemplate.isDefault);
 
     void loadTemplateDetails(selectedTemplate.id).catch(() =>
-      enqueueErrorSnackBar({ message: '无法加载模板预览和版本记录' }),
+      enqueueErrorSnackBar({ message: '无法加载模板版本记录' }),
     );
-  }, [enqueueErrorSnackBar, loadTemplateDetails, selectedTemplateId, templates]);
+  }, [enqueueErrorSnackBar, loadTemplateDetails, selectedTemplate]);
+
+  useEffect(() => {
+    if (!selectedTemplateId) {
+      return;
+    }
+
+    void loadTemplatePreview(
+      selectedTemplateId,
+      selectedVersionNumber,
+    ).catch(() =>
+      enqueueErrorSnackBar({ message: '无法加载模板预览' }),
+    );
+  }, [
+    enqueueErrorSnackBar,
+    loadTemplatePreview,
+    selectedTemplateId,
+    selectedVersionNumber,
+  ]);
 
   const saveTemplate = async () => {
     setIsSaving(true);
@@ -404,7 +460,7 @@ export const EnterpriseReportTemplatesPage = () => {
         isActive,
         isDefault,
       };
-      const response = await fetch(
+      const response = await enterpriseApiRequest(
         selectedTemplateId
           ? `/api/enterprise/report-templates/${selectedTemplateId}`
           : '/api/enterprise/report-templates',
@@ -422,10 +478,18 @@ export const EnterpriseReportTemplatesPage = () => {
         throw new Error('Failed to save enterprise report template');
       }
 
+      const savedTemplate = (await response.json()) as EnterpriseReportTemplate;
+
       enqueueSuccessSnackBar({
         message: selectedTemplateId ? '模板已更新' : '模板已创建',
       });
+      setSelectedTemplateId(savedTemplate.id);
+      setSelectedVersionNumber(null);
       await loadTemplates();
+      await Promise.all([
+        loadTemplateDetails(savedTemplate.id),
+        loadTemplatePreview(savedTemplate.id),
+      ]);
     } catch {
       enqueueErrorSnackBar({ message: '保存报告模板失败' });
     } finally {
@@ -439,7 +503,7 @@ export const EnterpriseReportTemplatesPage = () => {
     successMessage: string,
   ) => {
     try {
-      const response = await fetch(
+      const response = await enterpriseApiRequest(
         `/api/enterprise/report-templates/${templateId}/${action}`,
         {
           method: 'POST',
@@ -452,8 +516,12 @@ export const EnterpriseReportTemplatesPage = () => {
       }
 
       enqueueSuccessSnackBar({ message: successMessage });
+      setSelectedVersionNumber(null);
       await loadTemplates();
-      await loadTemplateDetails(templateId);
+      await Promise.all([
+        loadTemplateDetails(templateId),
+        loadTemplatePreview(templateId),
+      ]);
     } catch {
       enqueueErrorSnackBar({ message: '模板状态更新失败' });
     }
@@ -490,7 +558,10 @@ export const EnterpriseReportTemplatesPage = () => {
                       key={template.id}
                       type="button"
                       $active={template.id === selectedTemplateId}
-                      onClick={() => setSelectedTemplateId(template.id)}
+                      onClick={() => {
+                        setSelectedTemplateId(template.id);
+                        setSelectedVersionNumber(null);
+                      }}
                     >
                       <StyledTemplateHeader>
                         <StyledTemplateName>{template.templateName}</StyledTemplateName>
@@ -632,8 +703,18 @@ export const EnterpriseReportTemplatesPage = () => {
 
               {selectedTemplateId ? (
                 <StyledActionRow>
+                  {isViewingHistoricalVersion ? (
+                    <Button
+                      title="切回当前版本"
+                      onClick={() => setSelectedVersionNumber(null)}
+                    />
+                  ) : null}
                   <Button
                     title="设为默认"
+                    disabled={
+                      isViewingHistoricalVersion ||
+                      selectedTemplate?.isDefault === true
+                    }
                     onClick={() =>
                       void mutateTemplateState(
                         selectedTemplateId,
@@ -643,6 +724,7 @@ export const EnterpriseReportTemplatesPage = () => {
                     }
                   />
                   <Button
+                    disabled={isViewingHistoricalVersion}
                     title={isActive ? '停用' : '启用'}
                     onClick={() =>
                       void mutateTemplateState(
@@ -657,6 +739,15 @@ export const EnterpriseReportTemplatesPage = () => {
 
               {preview ? (
                 <>
+                  {isViewingHistoricalVersion ? (
+                    <StyledPreviewNotice>
+                      当前正在查看历史版本 v{selectedVersionNumber}。历史版本仅用于校对，不允许直接变更默认状态或启停。
+                    </StyledPreviewNotice>
+                  ) : (
+                    <StyledPreviewNotice>
+                      当前展示最新版本预览。模板启停和默认模板策略只对最新版本生效。
+                    </StyledPreviewNotice>
+                  )}
                   <div>
                     <StyledTitle>{preview.title}</StyledTitle>
                     <StyledDescription>{preview.subtitle}</StyledDescription>
@@ -695,10 +786,22 @@ export const EnterpriseReportTemplatesPage = () => {
               ) : (
                 <StyledVersionList>
                   {versions.map((version) => (
-                    <StyledVersionItem key={version.id}>
+                    <StyledVersionItem
+                      key={version.id}
+                      type="button"
+                      $active={
+                        selectedVersionNumber === null
+                          ? version.versionNumber === selectedTemplate?.version
+                          : version.versionNumber === selectedVersionNumber
+                      }
+                      onClick={() => setSelectedVersionNumber(version.versionNumber)}
+                    >
                       <StyledTemplateHeader>
                         <StyledTemplateName>v{version.versionNumber}</StyledTemplateName>
                         <StyledBadgeRow>
+                          {version.versionNumber === selectedTemplate?.version ? (
+                            <StyledBadge>当前</StyledBadge>
+                          ) : null}
                           {version.isDefault ? <StyledBadge>默认</StyledBadge> : null}
                           <StyledBadge $tone={version.isActive ? 'success' : 'warning'}>
                             {version.isActive ? '启用' : '停用'}

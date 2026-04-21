@@ -1,0 +1,14 @@
+[    1708ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-I476ZSYT.js?v=15a56fe8:21608
+[    2001ms] [LOG] I18nProvider rendered `null`. A call to `i18n.activate` needs to happen in order for translations to be activated and for the I18nProvider to render.This is not an error but an informational message logged only in development. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@lingui_react.js?v=04e0bba0:182
+[    2104ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=e52b929a:4435
+[    2679ms] [ERROR] CombinedGraphQLErrors: Internal Server Error
+    at http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-OLYKN2LL.js?v=15a56fe8:5162:15
+    at http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:2834:31
+    at OperatorSubscriber2._this._next (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:706:13)
+    at Subscriber2.next (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:390:16)
+    at Subscriber2._next (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:417:26)
+    at Subscriber2.next (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:390:16)
+    at http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:1001:26
+    at errorContext (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:319:5)
+    at Subject2.next (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:991:9)
+    at ReplaySubject2.next (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-BQKB4Z5O.js?v=15a56fe8:1214:31) @ http://localhost:3001/src/modules/domain-manager/hooks/useGetPublicWorkspaceDataByDomain.ts?t=1776738143353:55

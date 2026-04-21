@@ -5,6 +5,7 @@ import { styled } from '@linaria/react';
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
+import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { Button } from 'twenty-ui/input';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
@@ -228,6 +229,7 @@ const hasProcessingJobs = (jobs: EnterpriseCustomerExportJob[]) =>
 
 export const EnterpriseCustomerExportPage = () => {
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
+  const enterpriseApiRequest = useEnterpriseApiRequest();
   const [jobs, setJobs] = useState<EnterpriseCustomerExportJob[]>([]);
   const [fieldOptions, setFieldOptions] = useState(baseCustomerExportFields);
   const [taskName, setTaskName] = useState('客户导出任务');
@@ -243,9 +245,12 @@ export const EnterpriseCustomerExportPage = () => {
   const sidebar = useMemo(buildSidebar, []);
 
   const loadJobs = useCallback(async () => {
-    const response = await fetch('/api/enterprise/customer-export/jobs', {
+    const response = await enterpriseApiRequest(
+      '/api/enterprise/customer-export/jobs',
+      {
       credentials: 'include',
-    });
+      },
+    );
 
     if (!response.ok) {
       throw new Error('Failed to load customer export jobs');
@@ -257,9 +262,12 @@ export const EnterpriseCustomerExportPage = () => {
   }, []);
 
   const loadFieldOptions = useCallback(async () => {
-    const response = await fetch('/api/enterprise/fields?entityType=customer', {
-      credentials: 'include',
-    });
+    const response = await enterpriseApiRequest(
+      '/api/enterprise/fields?entityType=customer',
+      {
+        credentials: 'include',
+      },
+    );
 
     if (!response.ok) {
       throw new Error('Failed to load customer export fields');
@@ -306,7 +314,7 @@ export const EnterpriseCustomerExportPage = () => {
     setIsPreviewLoading(true);
 
     try {
-      const response = await fetch(
+      const response = await enterpriseApiRequest(
         '/api/enterprise/customer-export/preview-count',
         {
           method: 'POST',
@@ -341,7 +349,9 @@ export const EnterpriseCustomerExportPage = () => {
     setIsSaving(true);
 
     try {
-      const response = await fetch('/api/enterprise/customer-export/jobs', {
+      const response = await enterpriseApiRequest(
+        '/api/enterprise/customer-export/jobs',
+        {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -355,7 +365,8 @@ export const EnterpriseCustomerExportPage = () => {
           },
           selectedFieldCodes,
         }),
-      });
+        },
+      );
 
       if (!response.ok) {
         throw new Error('Failed to create customer export job');
@@ -372,7 +383,7 @@ export const EnterpriseCustomerExportPage = () => {
 
   const requeueExportJob = async (job: EnterpriseCustomerExportJob) => {
     try {
-      const response = await fetch(
+      const response = await enterpriseApiRequest(
         `/api/enterprise/customer-export/jobs/${job.id}/enqueue`,
         {
           method: 'POST',
@@ -393,7 +404,7 @@ export const EnterpriseCustomerExportPage = () => {
 
   const downloadExportJob = async (job: EnterpriseCustomerExportJob) => {
     try {
-      const response = await fetch(
+      const response = await enterpriseApiRequest(
         `/api/enterprise/customer-export/jobs/${job.id}/file-access`,
         {
           credentials: 'include',

@@ -1,0 +1,102 @@
+Successfully compiled: 5453 files with swc (880.64ms)
+(node:16844) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+node:net:1948
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
+               ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1948:16)
+    at listenInCluster (node:net:2005:12)
+    at Server.listen (node:net:2110:7)
+    at ExpressAdapter.listen (G:\codex\twentyCRM\amainCRM\node_modules\@nestjs\platform-express\adapters\express-adapter.js:127:32)
+    at G:\codex\twentyCRM\amainCRM\node_modules\@nestjs\core\nest-application.js:188:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (G:\codex\twentyCRM\amainCRM\node_modules\@nestjs\core\nest-application.js:178:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async bootstrap (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\main.ts:86:3) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.14.1
+'taskkill' 不是内部或外部命令，也不是可运行的程序
+或批处理文件。
+'taskkill' 不是内部或外部命令，也不是可运行的程序
+或批处理文件。
+node:child_process:1000
+    throw err;
+    ^
+
+Error: Command failed: taskkill /pid 26964 /T /F
+'taskkill' 锟斤拷锟斤拷锟节诧拷锟斤拷锟解部锟斤拷锟筋，也锟斤拷锟角匡拷锟斤拷锟叫的筹拷锟斤拷
+锟斤拷锟斤拷锟斤拷锟斤拷锟侥硷拷锟斤拷
+
+    at genericNodeError (node:internal/errors:985:15)
+    at wrappedFn (node:internal/errors:539:14)
+    at checkExecSyncError (node:child_process:925:11)
+    at execSync (node:child_process:997:15)
+    at treeKillSync (G:\codex\twentyCRM\amainCRM\node_modules\@nestjs\cli\lib\utils\tree-kill.js:7:38)
+    at Timeout._onTimeout (G:\codex\twentyCRM\amainCRM\node_modules\@nestjs\cli\actions\start.action.js:68:46)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7) {
+  status: 1,
+  signal: null,
+  output: [
+    null,
+    Buffer(0) [Uint8Array] [],
+    Buffer(67) [Uint8Array] [
+       39, 116,  97, 115, 107, 107, 105, 108, 108,  39,
+       32, 178, 187, 202, 199, 196, 218, 178, 191, 187,
+      242, 205, 226, 178, 191, 195, 252, 193, 238, 163,
+      172, 210, 178, 178, 187, 202, 199, 191, 201, 212,
+      203, 208, 208, 181, 196, 179, 204, 208, 242,  13,
+       10, 187, 242, 197, 250, 180, 166, 192, 237, 206,
+      196, 188, 254, 161, 163,  13,  10
+    ]
+  ],
+  pid: 32032,
+  stdout: Buffer(0) [Uint8Array] [],
+  stderr: Buffer(67) [Uint8Array] [
+     39, 116,  97, 115, 107, 107, 105, 108, 108,  39,
+     32, 178, 187, 202, 199, 196, 218, 178, 191, 187,
+    242, 205, 226, 178, 191, 195, 252, 193, 238, 163,
+    172, 210, 178, 178, 187, 202, 199, 191, 201, 212,
+    203, 208, 208, 181, 196, 179, 204, 208, 242,  13,
+     10, 187, 242, 197, 250, 180, 166, 192, 237, 206,
+    196, 188, 254, 161, 163,  13,  10
+  ]
+}
+
+Node.js v24.14.1
+(node:32676) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  [
+    EntityMetadataNotFoundError: No metadata for "workspaceMember" was found.
+        at GlobalWorkspaceDataSource.getMetadata (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\twenty-orm\global-workspace-datasource\global-workspace-datasource.ts:95:13)
+        at WorkspaceEntityManager.find (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\twenty-orm\entity-manager\workspace-entity-manager.ts:500:38)
+        at WorkspaceRepository.find (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\twenty-orm\repository\workspace.repository.ts:103:34)
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\core-modules\user\services\workspace-flat-workspace-member-map-cache.service.ts:35:36)
+        at async WorkspaceFlatWorkspaceMemberMapCacheService.computeForCache (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\core-modules\user\services\workspace-flat-workspace-member-map-cache.service.ts:22:7)
+        at async <anonymous> (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\workspace-cache\services\workspace-cache.service.ts:329:20)
+        at async Promise.all (index 0)
+        at async WorkspaceCacheService.recomputeDataFromProvider (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\workspace-cache\services\workspace-cache.service.ts:335:22)
+        at async <anonymous> (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\workspace-cache\services\workspace-cache.service.ts:146:32)
+  ]
+  [
+    EntityMetadataNotFoundError: No metadata for "workspaceMember" was found.
+        at GlobalWorkspaceDataSource.getMetadata (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\twenty-orm\global-workspace-datasource\global-workspace-datasource.ts:95:13)
+        at WorkspaceEntityManager.find (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\twenty-orm\entity-manager\workspace-entity-manager.ts:500:38)
+        at WorkspaceRepository.find (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\twenty-orm\repository\workspace.repository.ts:103:34)
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async <anonymous> (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\core-modules\user\services\workspace-flat-workspace-member-map-cache.service.ts:35:36)
+        at async WorkspaceFlatWorkspaceMemberMapCacheService.computeForCache (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\core-modules\user\services\workspace-flat-workspace-member-map-cache.service.ts:22:7)
+        at async <anonymous> (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\workspace-cache\services\workspace-cache.service.ts:329:20)
+        at async Promise.all (index 0)
+        at async WorkspaceCacheService.recomputeDataFromProvider (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\workspace-cache\services\workspace-cache.service.ts:335:22)
+        at async <anonymous> (G:\codex\twentyCRM\amainCRM\packages\twenty-server\src\engine\workspace-cache\services\workspace-cache.service.ts:146:32)
+  ]

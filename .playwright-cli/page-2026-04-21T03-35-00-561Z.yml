@@ -1,0 +1,287 @@
+- generic [ref=e4]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - button "A Apple" [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: A
+          - generic [ref=e15]: Apple
+          - img [ref=e18]
+      - generic [ref=e20]:
+        - button "搜索" [ref=e21]:
+          - img [ref=e22]
+        - button [ref=e27]:
+          - img [ref=e28]
+    - generic [ref=e34]:
+      - tablist "导航选项卡" [ref=e36]:
+        - tab "主页" [selected] [ref=e37] [cursor=pointer]:
+          - img [ref=e39]
+        - tab "聊天" [ref=e43] [cursor=pointer]:
+          - img [ref=e45]
+      - button "新聊天" [ref=e48] [cursor=pointer]:
+        - img [ref=e50]
+        - generic [ref=e52]: 新聊天
+    - generic [ref=e56]:
+      - generic [ref=e58]:
+        - generic [ref=e61]: Trade CRM
+        - link "Workbench" [ref=e64] [cursor=pointer]:
+          - /url: /trade-crm/workbench
+          - generic [ref=e65]:
+            - img [ref=e67]
+            - generic [ref=e73]: Workbench
+        - link "Prospecting" [ref=e76] [cursor=pointer]:
+          - /url: /trade-crm/prospecting
+          - generic [ref=e77]:
+            - img [ref=e79]
+            - generic [ref=e86]: Prospecting
+        - link "Mail" [ref=e89] [cursor=pointer]:
+          - /url: /trade-crm/mail
+          - generic [ref=e90]:
+            - img [ref=e92]
+            - generic [ref=e96]: Mail
+        - link "Customers" [ref=e99] [cursor=pointer]:
+          - /url: /trade-crm/customers/list
+          - generic [ref=e100]:
+            - img [ref=e102]
+            - generic [ref=e108]: Customers
+        - link "Opportunities" [ref=e111] [cursor=pointer]:
+          - /url: /trade-crm/opportunities
+          - generic [ref=e112]:
+            - img [ref=e114]
+            - generic [ref=e119]: Opportunities
+        - link "Collaboration" [ref=e122] [cursor=pointer]:
+          - /url: /trade-crm/collaboration
+          - generic [ref=e123]:
+            - img [ref=e125]
+            - generic [ref=e129]: Collaboration
+        - link "Team Data" [ref=e132] [cursor=pointer]:
+          - /url: /trade-crm/analytics
+          - generic [ref=e133]:
+            - img [ref=e135]
+            - generic [ref=e140]: Team Data
+        - link "Settings" [ref=e143] [cursor=pointer]:
+          - /url: /settings/trade-crm
+          - generic [ref=e144]:
+            - img [ref=e146]
+            - generic [ref=e150]: Settings
+      - generic [ref=e152]:
+        - generic [ref=e155]: 企业管理
+        - link "企业管理" [ref=e158] [cursor=pointer]:
+          - /url: /enterprise/fields/custom
+          - generic [ref=e159]:
+            - img [ref=e161]
+            - generic [ref=e166]: 企业管理
+      - generic [ref=e168]:
+        - generic [ref=e170]:
+          - generic [ref=e171]:
+            - generic [ref=e172]: Workspace
+            - img [ref=e174]
+          - button [ref=e179]:
+            - img [ref=e180]
+        - generic [ref=e184]:
+          - link "Companies" [ref=e186] [cursor=pointer]:
+            - /url: /objects/companies?viewId=2ad056d2-17c5-4141-876f-8b6d2273356f
+            - generic [ref=e187]:
+              - img [ref=e190]
+              - generic [ref=e194]: Companies
+          - link "Sales Workbench" [ref=e196] [cursor=pointer]:
+            - /url: /sales-workbench
+            - generic [ref=e197]:
+              - generic [ref=e199]:
+                - img [ref=e201]
+                - img [ref=e206]
+              - generic [ref=e211]: Sales Workbench
+          - link "People" [ref=e214] [cursor=pointer]:
+            - /url: /objects/people?viewId=cfb1a4a5-0c91-45b0-ae6f-a13da1186324
+            - generic [ref=e215]:
+              - img [ref=e218]
+              - generic [ref=e222]: People
+          - link "Opportunities" [ref=e224] [cursor=pointer]:
+            - /url: /objects/opportunities?viewId=10751b42-a9fb-4ca9-ba8d-50ee3fd4935d
+            - generic [ref=e225]:
+              - img [ref=e228]
+              - generic [ref=e235]: Opportunities
+          - link "Tasks" [ref=e237] [cursor=pointer]:
+            - /url: /objects/tasks?viewId=47d90d86-7ce3-459e-ba7b-d058d077d210
+            - generic [ref=e238]:
+              - img [ref=e241]
+              - generic [ref=e245]: Tasks
+          - link "Notes" [ref=e247] [cursor=pointer]:
+            - /url: /objects/notes?viewId=7c97606b-ccaa-4821-af51-1f6c65662162
+            - generic [ref=e248]:
+              - img [ref=e251]
+              - generic [ref=e254]: Notes
+          - link "Dashboards" [ref=e256] [cursor=pointer]:
+            - /url: /objects/dashboards?viewId=a6a918a9-74ee-444e-a4e9-2e86b156ddfc
+            - generic [ref=e257]:
+              - img [ref=e260]
+              - generic [ref=e266]: Dashboards
+          - button "Workflows" [ref=e269] [cursor=pointer]:
+            - generic [ref=e270]:
+              - img [ref=e273]
+              - generic [ref=e277]: Workflows
+              - img [ref=e281]
+      - generic [ref=e284]:
+        - generic [ref=e287]:
+          - generic [ref=e288]: Other
+          - img [ref=e290]
+        - generic [ref=e292]:
+          - button "Settings" [ref=e294] [cursor=pointer]:
+            - generic [ref=e295]:
+              - img [ref=e297]
+              - generic [ref=e301]: Settings
+          - link "Documentation" [ref=e303] [cursor=pointer]:
+            - /url: https://docs.twenty.com/user-guide/introduction
+            - generic [ref=e304]:
+              - img [ref=e306]
+              - generic [ref=e310]: Documentation
+  - generic [ref=e313]:
+    - generic [ref=e316]:
+      - img [ref=e318]
+      - generic [ref=e323]: 报告模板
+    - generic [ref=e324]:
+      - complementary [ref=e325]:
+        - generic [ref=e326]:
+          - generic [ref=e327]: 销售管理
+          - generic [ref=e328]: 自定义字段
+          - generic [ref=e329]: 字段显示
+        - generic [ref=e330]:
+          - generic [ref=e331]: 数据管理
+          - generic [ref=e332]: 客户导出
+          - generic [ref=e333]: 回收箱
+        - generic [ref=e334]:
+          - generic [ref=e335]: 流程规则管理
+          - generic [ref=e336]: 工作报告模板
+          - generic [ref=e337]: 获客来源流转配置
+        - generic [ref=e338]:
+          - generic [ref=e339]: 外部对接
+          - generic [ref=e340]: 独立站管理
+        - generic [ref=e341]:
+          - generic [ref=e342]: 销售辅助
+          - generic [ref=e343]: 销售助手管理
+      - main [ref=e344]:
+        - generic [ref=e345]:
+          - generic [ref=e346]:
+            - generic [ref=e347]: 企业管理报告模板中心
+            - paragraph [ref=e348]: 当前版本支持模板版本记录、模板预览、启停控制和默认模板策略。后续报告生成器和定时调度将直接依赖这里的结构定义。
+          - generic [ref=e349]:
+            - generic [ref=e350]:
+              - generic [ref=e351]:
+                - generic [ref=e352]: 模板列表
+                - generic [ref=e353]: 每个报告类型只保留一个默认模板。默认模板必须处于启用状态。
+              - button "新建模板 ..." [ref=e355]:
+                - generic [ref=e356]:
+                  - generic [ref=e357]: 新建模板
+                  - generic [ref=e358]: ...
+              - button "销售日报模板 启用中 默认模板 v2 daily 代码：sales-daily 更新时间：2026/4/21 11:33:48" [ref=e476] [cursor=pointer]:
+                - generic [ref=e412]:
+                  - generic [ref=e413]: 销售日报模板
+                  - generic [ref=e414]: 启用中
+                - generic [ref=e415]:
+                  - generic [ref=e416]: 默认模板
+                  - generic [ref=e417]: v2
+                  - generic [ref=e418]: daily
+                - generic [ref=e419]:
+                  - text: 代码：sales-daily
+                  - text: 更新时间：2026/4/21 11:33:48
+            - generic [ref=e360]:
+              - generic [ref=e361]:
+                - generic [ref=e362]: 编辑模板
+                - generic [ref=e363]: 这里配置模板骨架，不直接生成真实数据。版本记录会自动在每次变更时沉淀下来。
+              - generic [ref=e364]:
+                - generic [ref=e365]:
+                  - generic [ref=e366]: 模板名称
+                  - textbox "模板名称" [ref=e367]: 销售日报模板
+                - generic [ref=e368]:
+                  - generic [ref=e369]: 模板编码
+                  - textbox "模板编码" [disabled] [ref=e370]: sales-daily
+                - generic [ref=e371]:
+                  - generic [ref=e372]: 报告类型
+                  - combobox "报告类型" [ref=e373]:
+                    - option "daily" [selected]
+                    - option "weekly"
+                    - option "monthly"
+                    - option "quarterly"
+                    - option "custom"
+                - generic [ref=e374]:
+                  - generic [ref=e375]: 投递渠道
+                  - combobox "投递渠道" [ref=e376]:
+                    - option "dashboard" [selected]
+                    - option "email"
+                - generic [ref=e377]:
+                  - generic [ref=e378]: 模板说明
+                  - textbox "模板说明" [ref=e379]: 聚焦销售动作、重点客户推进和异常提醒，给管理层一个可复核的日报骨架。
+                - generic [ref=e380]:
+                  - generic [ref=e381]: 章节键（每行一个）
+                  - textbox "章节键（每行一个）" [ref=e382]: summary customer-focus follow-up-risk owner-progress
+                - generic [ref=e383]:
+                  - generic [ref=e384]: 接收角色（每行一个）
+                  - textbox "接收角色（每行一个）" [ref=e385]: sales-manager team-lead
+                - generic [ref=e386]:
+                  - checkbox "启用模板" [checked] [ref=e387]
+                  - text: 启用模板
+                - generic [ref=e388]:
+                  - checkbox "设为该报告类型默认模板" [checked] [ref=e389]
+                  - text: 设为该报告类型默认模板
+                - generic [ref=e390]:
+                  - button "保存模板 ..." [ref=e392]:
+                    - generic [ref=e393]:
+                      - generic [ref=e394]: 保存模板
+                      - generic [ref=e395]: ...
+                  - button "重置表单 ..." [ref=e397]:
+                    - generic [ref=e398]:
+                      - generic [ref=e399]: 重置表单
+                      - generic [ref=e400]: ...
+            - generic [ref=e401]:
+              - generic [ref=e402]:
+                - generic [ref=e403]: 模板预览与版本
+                - generic [ref=e404]: 这里用于校对当前模板结构，以及确认默认策略是否正确落到最新版本。
+              - generic [ref=e420]:
+                - button "设为默认 ..." [disabled] [ref=e422]:
+                  - generic [ref=e423]:
+                    - generic [ref=e424]: 设为默认
+                    - generic [ref=e425]: ...
+                - button "停用 ..." [ref=e427]:
+                  - generic [ref=e428]:
+                    - generic [ref=e429]: 停用
+                    - generic [ref=e430]: ...
+              - generic [ref=e431]: 当前展示最新版本预览。模板启停和默认模板策略只对最新版本生效。
+              - generic [ref=e432]:
+                - generic [ref=e433]: 销售日报模板 预览
+                - generic [ref=e434]: 日报 · v2 · 控制台
+              - generic [ref=e435]: 聚焦销售动作、重点客户推进和异常提醒，给管理层一个可复核的日报骨架。
+              - generic [ref=e436]:
+                - generic [ref=e437]: 启用中
+                - generic [ref=e438]: 默认模板
+                - generic [ref=e439]: 接收角色：sales-manager, team-lead
+              - generic [ref=e440]:
+                - generic [ref=e441]: 经营摘要
+                - generic [ref=e442]: 优先展示经营结论、关键异常和需要管理层确认的动作。
+              - generic [ref=e443]:
+                - generic [ref=e444]: 客户聚焦
+                - generic [ref=e445]: 这一节承接模板字段与后续生成器，输出可复核的业务摘要。
+              - generic [ref=e446]:
+                - generic [ref=e447]: 跟进风险
+                - generic [ref=e448]: 这一节承接模板字段与后续生成器，输出可复核的业务摘要。
+              - generic [ref=e449]:
+                - generic [ref=e450]: 负责人进展
+                - generic [ref=e451]: 这一节承接模板字段与后续生成器，输出可复核的业务摘要。
+              - generic [ref=e452]: 预览生成时间：2026/4/21 11:33:48
+              - generic [ref=e406]:
+                - generic [ref=e407]: 版本记录
+                - generic [ref=e408]: 当前每次保存、设为默认或启停都会生成一条新的模板快照。
+              - generic [ref=e453]:
+                - button "v2 当前 默认 启用 创建时间：2026/4/21 11:33:48" [ref=e477] [cursor=pointer]:
+                  - generic [ref=e478]:
+                    - generic [ref=e479]: v2
+                    - generic [ref=e480]:
+                      - generic [ref=e481]: 当前
+                      - generic [ref=e482]: 默认
+                      - generic [ref=e483]: 启用
+                  - generic [ref=e484]: 创建时间：2026/4/21 11:33:48
+                - button "v1 默认 启用 创建时间：2026/4/21 11:32:47" [ref=e485] [cursor=pointer]:
+                  - generic [ref=e455]:
+                    - generic [ref=e456]: v1
+                    - generic [ref=e457]:
+                      - generic [ref=e459]: 默认
+                      - generic [ref=e460]: 启用
+                  - generic [ref=e461]: 创建时间：2026/4/21 11:32:47

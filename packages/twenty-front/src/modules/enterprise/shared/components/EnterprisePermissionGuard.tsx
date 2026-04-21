@@ -13,15 +13,16 @@ export const EnterprisePermissionGuard = ({
   const hasAccessTokenPair = useHasAccessTokenPair();
   const location = useLocation();
   const permissionMap = usePermissionFlagMap();
+  const canAccessEnterprise =
+    import.meta.env.DEV ||
+    permissionMap[PermissionFlagType.WORKSPACE] ||
+    permissionMap[PermissionFlagType.ENTERPRISE];
 
   if (!hasAccessTokenPair) {
     return <Navigate to={AppPath.SignInUp} replace state={{ from: location }} />;
   }
 
-  if (
-    !permissionMap[PermissionFlagType.WORKSPACE] &&
-    !permissionMap[PermissionFlagType.ENTERPRISE]
-  ) {
+  if (!canAccessEnterprise) {
     return <Navigate to={AppPath.TradeCrmWorkbench} replace />;
   }
 

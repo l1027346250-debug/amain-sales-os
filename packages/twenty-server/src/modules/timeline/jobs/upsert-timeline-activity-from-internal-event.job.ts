@@ -1,5 +1,8 @@
+import { Logger } from '@nestjs/common';
+
 import { isDefined } from 'twenty-shared/utils';
 import { In } from 'typeorm';
+import { EntityMetadataNotFoundError } from 'typeorm/error/EntityMetadataNotFoundError';
 import { type ObjectRecordNonDestructiveEvent } from 'twenty-shared/database-events';
 
 import { Process } from 'src/engine/core-modules/message-queue/decorators/process.decorator';
@@ -14,6 +17,10 @@ import { WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/sta
 
 @Processor(MessageQueue.entityEventsToDbQueue)
 export class UpsertTimelineActivityFromInternalEvent {
+  private readonly logger = new Logger(
+    UpsertTimelineActivityFromInternalEvent.name,
+  );
+
   constructor(
     private readonly timelineActivityService: TimelineActivityService,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
@@ -39,31 +46,41 @@ export class UpsertTimelineActivityFromInternalEvent {
     const authContext = buildSystemAuthContext(workspaceEventBatch.workspaceId);
 
     await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
-      const workspaceMemberRepository =
-        await this.globalWorkspaceOrmManager.getRepository(
-          workspaceEventBatch.workspaceId,
-          WorkspaceMemberWorkspaceEntity,
-          {
-            shouldBypassPermissionChecks: true,
-          },
-        );
+      try {
+        const workspaceMemberRepository =
+          await this.globalWorkspaceOrmManager.getRepository(
+            workspaceEventBatch.workspaceId,
+            WorkspaceMemberWorkspaceEntity,
+            {
+              shouldBypassPermissionChecks: true,
+            },
+          );
 
-      const userIds = workspaceEventBatch.events
-        .map((event) => event.userId)
-        .filter(isDefined);
+        const userIds = workspaceEventBatch.events
+          .map((event) => event.userId)
+          .filter(isDefined);
 
-      const workspaceMembers = await workspaceMemberRepository.findBy({
-        userId: In(userIds),
-      });
+        const workspaceMembers = await workspaceMemberRepository.findBy({
+          userId: In(userIds),
+        });
 
-      for (const eventData of workspaceEventBatch.events) {
-        const workspaceMember = workspaceMembers.find(
-          (workspaceMember) => workspaceMember.userId === eventData.userId,
-        );
+        for (const eventData of workspaceEventBatch.events) {
+          const workspaceMember = workspaceMembers.find(
+            (workspaceMember) => workspaceMember.userId === eventData.userId,
+          );
 
-        if (eventData.userId && workspaceMember) {
-          eventData.workspaceMemberId = workspaceMember.id;
+          if (eventData.userId && workspaceMember) {
+            eventData.workspaceMemberId = workspaceMember.id;
+          }
         }
+      } catch (error) {
+        if (!(error instanceof EntityMetadataNotFoundError)) {
+          throw error;
+        }
+
+        this.logger.warn(
+          `Skipping workspaceMember enrichment for workspace ${workspaceEventBatch.workspaceId} because workspace metadata is missing`,
+        );
       }
 
       await this.timelineActivityService.upsertEvents(workspaceEventBatch);

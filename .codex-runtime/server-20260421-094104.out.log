@@ -1562,3 +1562,42 @@ Frontend build not found or not writable, assuming it is served independently
 [32m[Nest] 38720  - [39m2026/04/21 09:46:31 [32m    LOG[39m [38;5;3m[GraphQLModule] [39m[32mMapped {/metadata, POST} route[39m
 [32m[Nest] 38720  - [39m2026/04/21 09:46:31 [32m    LOG[39m [38;5;3m[GraphQLModule] [39m[32mMapped {/graphql, POST} route[39m
 [32m[Nest] 38720  - [39m2026/04/21 09:46:31 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m
+Exception Captured
+  {
+    operation: { name: 'SignUpInWorkspace', type: 'mutation' },
+    document: 'mutation SignUpInWorkspace($email: String!, $password: String!, $workspaceInviteHash: String, $workspacePersonalInviteToken: String = null, $captchaToken: String, $workspaceId: UUID, $locale: String, $verifyEmailRedirectPath: String) {\n' +
+      '  signUpInWorkspace(\n' +
+      '    email: $email\n' +
+      '    password: $password\n' +
+      '    workspaceInviteHash: $workspaceInviteHash\n' +
+      '    workspacePersonalInviteToken: $workspacePersonalInviteToken\n' +
+      '    captchaToken: $captchaToken\n' +
+      '    workspaceId: $workspaceId\n' +
+      '    locale: $locale\n' +
+      '    verifyEmailRedirectPath: $verifyEmailRedirectPath\n' +
+      '  ) {\n' +
+      '    loginToken {\n' +
+      '      ...AuthTokenFragment\n' +
+      '      __typename\n' +
+      '    }\n' +
+      '    workspace {\n' +
+      '      id\n' +
+      '      workspaceUrls {\n' +
+      '        subdomainUrl\n' +
+      '        customUrl\n' +
+      '        __typename\n' +
+      '      }\n' +
+      '      __typename\n' +
+      '    }\n' +
+      '    __typename\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'fragment AuthTokenFragment on AuthToken {\n' +
+      '  token\n' +
+      '  expiresAt\n' +
+      '  __typename\n' +
+      '}',
+    user: undefined,
+    workspace: null
+  }
