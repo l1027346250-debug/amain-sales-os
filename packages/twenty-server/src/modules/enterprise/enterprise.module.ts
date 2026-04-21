@@ -34,11 +34,31 @@ import { EnterpriseFieldLayoutService } from 'src/modules/enterprise/field-layou
 import { EnterpriseFieldValueController } from 'src/modules/enterprise/field-value/controllers/enterprise-field-value.controller';
 import { EnterpriseFieldValueEntity } from 'src/modules/enterprise/field-value/enterprise-field-value.entity';
 import { EnterpriseFieldValueService } from 'src/modules/enterprise/field-value/services/enterprise-field-value.service';
+import { EnterpriseIndependentStationController } from 'src/modules/enterprise/independent-station/controllers/enterprise-independent-station.controller';
+import { EnterpriseIndependentStationWebhookController } from 'src/modules/enterprise/independent-station/controllers/enterprise-independent-station-webhook.controller';
+import { EnterpriseInquiryAssignmentRuleEntity } from 'src/modules/enterprise/independent-station/enterprise-inquiry-assignment-rule.entity';
+import { EnterpriseInquiryFormMappingEntity } from 'src/modules/enterprise/independent-station/enterprise-inquiry-form-mapping.entity';
+import { EnterpriseWebsiteBindingEntity } from 'src/modules/enterprise/independent-station/enterprise-website-binding.entity';
+import { EnterpriseWebsiteInquiryEntity } from 'src/modules/enterprise/independent-station/enterprise-website-inquiry.entity';
+import { EnterpriseIndependentStationService } from 'src/modules/enterprise/independent-station/services/enterprise-independent-station.service';
 import { EnterpriseMetadataProjectionService } from 'src/modules/enterprise/projection/services/enterprise-metadata-projection.service';
+import { EnterpriseRecycleController } from 'src/modules/enterprise/recycle/controllers/enterprise-recycle.controller';
+import { EnterpriseRecycleRecordEntity } from 'src/modules/enterprise/recycle/enterprise-recycle-record.entity';
+import { EnterpriseRecycleService } from 'src/modules/enterprise/recycle/services/enterprise-recycle.service';
 import { EnterpriseReportTemplateController } from 'src/modules/enterprise/report-template/controllers/enterprise-report-template.controller';
 import { EnterpriseReportTemplateVersionEntity } from 'src/modules/enterprise/report-template/enterprise-report-template-version.entity';
 import { EnterpriseReportTemplateEntity } from 'src/modules/enterprise/report-template/enterprise-report-template.entity';
 import { EnterpriseReportTemplateService } from 'src/modules/enterprise/report-template/services/enterprise-report-template.service';
+import { EnterpriseSalesPlaybookController } from 'src/modules/enterprise/sales-playbook/controllers/enterprise-sales-playbook.controller';
+import { EnterpriseSalesPlaybookItemEntity } from 'src/modules/enterprise/sales-playbook/enterprise-sales-playbook-item.entity';
+import { EnterpriseSalesPlaybookStageEntity } from 'src/modules/enterprise/sales-playbook/enterprise-sales-playbook-stage.entity';
+import { EnterpriseSalesPlaybookEntity } from 'src/modules/enterprise/sales-playbook/enterprise-sales-playbook.entity';
+import { EnterpriseSalesPlaybookService } from 'src/modules/enterprise/sales-playbook/services/enterprise-sales-playbook.service';
+import { EnterpriseSourceConvertController } from 'src/modules/enterprise/source-convert/controllers/enterprise-source-convert.controller';
+import { EnterpriseSourceBlacklistRuleEntity } from 'src/modules/enterprise/source-convert/enterprise-source-blacklist-rule.entity';
+import { EnterpriseSourceChannelEntity } from 'src/modules/enterprise/source-convert/enterprise-source-channel.entity';
+import { EnterpriseSourceConvertRuleEntity } from 'src/modules/enterprise/source-convert/enterprise-source-convert-rule.entity';
+import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-convert/services/enterprise-source-convert.service';
 
 @Module({
   imports: [
@@ -57,8 +77,19 @@ import { EnterpriseReportTemplateService } from 'src/modules/enterprise/report-t
       EnterpriseFieldLayoutConfigEntity,
       EnterpriseFieldValueEntity,
       EnterpriseCustomerExportJobEntity,
+      EnterpriseRecycleRecordEntity,
       EnterpriseReportTemplateEntity,
       EnterpriseReportTemplateVersionEntity,
+      EnterpriseSourceChannelEntity,
+      EnterpriseSourceConvertRuleEntity,
+      EnterpriseSourceBlacklistRuleEntity,
+      EnterpriseWebsiteBindingEntity,
+      EnterpriseInquiryFormMappingEntity,
+      EnterpriseInquiryAssignmentRuleEntity,
+      EnterpriseWebsiteInquiryEntity,
+      EnterpriseSalesPlaybookEntity,
+      EnterpriseSalesPlaybookStageEntity,
+      EnterpriseSalesPlaybookItemEntity,
       EnterpriseConfigAuditLogEntity,
     ]),
   ],
@@ -68,7 +99,12 @@ import { EnterpriseReportTemplateService } from 'src/modules/enterprise/report-t
     EnterpriseFieldLayoutController,
     EnterpriseFieldValueController,
     EnterpriseCustomerExportController,
+    EnterpriseRecycleController,
     EnterpriseReportTemplateController,
+    EnterpriseSourceConvertController,
+    EnterpriseIndependentStationController,
+    EnterpriseIndependentStationWebhookController,
+    EnterpriseSalesPlaybookController,
   ],
   providers: [
     EnterpriseEntityBindingService,
@@ -78,12 +114,16 @@ import { EnterpriseReportTemplateService } from 'src/modules/enterprise/report-t
     EnterpriseCustomerExportExpiryCleanupCronJob,
     EnterpriseCustomerExportExpiryCleanupCronCommand,
     EnterpriseCustomerExportQueueJob,
+    EnterpriseRecycleService,
     EnterpriseFieldOptionService,
     EnterpriseMetadataProjectionService,
     EnterpriseFieldDefinitionService,
     EnterpriseFieldLayoutService,
     EnterpriseFieldValueService,
     EnterpriseReportTemplateService,
+    EnterpriseSourceConvertService,
+    EnterpriseIndependentStationService,
+    EnterpriseSalesPlaybookService,
   ],
 })
 export class EnterpriseManagementModule {}

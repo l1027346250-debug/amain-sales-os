@@ -1,0 +1,176 @@
+[    1433ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-I476ZSYT.js?v=75da7a92:21608
+[    1601ms] [LOG] I18nProvider rendered `null`. A call to `i18n.activate` needs to happen in order for translations to be activated and for the I18nProvider to render.This is not an error but an informational message logged only in development. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@lingui_react.js?v=75da7a92:182
+[    1675ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4435
+[    1833ms] [LOG] tokenPair is undefined @ http://localhost:3001/src/modules/apollo/utils/getTokenPair.ts?t=1776742292598:7
+[    2624ms] [LOG] tokenPair is undefined @ http://localhost:3001/src/modules/apollo/utils/getTokenPair.ts?t=1776742292598:7
+[    2693ms] [LOG] tokenPair is undefined @ http://localhost:3001/src/modules/apollo/utils/getTokenPair.ts?t=1776742292598:7
+[   58157ms] [LOG] tokenPair is undefined @ http://localhost:3001/src/modules/apollo/utils/getTokenPair.ts?t=1776742292598:7
+[   97191ms] [LOG] tokenPair is undefined @ http://localhost:3001/src/modules/apollo/utils/getTokenPair.ts?t=1776742292598:7
+[   97261ms] [LOG] tokenPair is undefined @ http://localhost:3001/src/modules/apollo/utils/getTokenPair.ts?t=1776742292598:7
+[   98964ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://twenty-icons.com/sales-workbench:0
+[   99600ms] [ERROR] Warning: Received `%s` for a non-boolean attribute `%s`.
+
+If you want to write it to the DOM, pass a string instead: %s="%s" or %s={value.toString()}.%s true $active $active true $active 
+    at a
+    at LinkWithRef (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:5395:5)
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at aside
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at FilterSidebar (http://localhost:3001/src/modules/trade-crm/shared/components/FilterSidebar.tsx:88:33)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at PagePanel (http://localhost:3001/src/modules/ui/layout/page/components/PagePanel.tsx:10:29)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at PageBody (http://localhost:3001/src/modules/ui/layout/page/components/PageBody.tsx:16:28)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at MainContainerLayoutWithSidePanel (http://localhost:3001/src/modules/object-record/components/MainContainerLayoutWithSidePanel.tsx:34:52)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at QueueWorkspaceLayout (http://localhost:3001/src/modules/trade-crm/shared/layouts/QueueWorkspaceLayout.tsx:135:40)
+    at TradeCrmWorkbenchPage (http://localhost:3001/src/modules/trade-crm/workbench/pages/TradeCrmWorkbenchPage.tsx:65:28)
+    at Suspense
+    at LazyRoute (http://localhost:3001/src/modules/app/components/LazyRoute.tsx:17:29)
+    at RenderedRoute (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4131:5)
+    at Outlet (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4537:26)
+    at ErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-error-boundary.js?v=75da7a92:18:5)
+    at AppErrorBoundary (http://localhost:3001/src/modules/error-handler/components/AppErrorBoundary.tsx?t=1776742292598:9:36)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at PageDragDropProvider (http://localhost:3001/src/modules/navigation-menu-item/display/dnd/providers/PageDragDropProvider.tsx?t=1776742292598:10:40)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at MotionComponent (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/framer-motion.js?v=75da7a92:942:40)
+    at ErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-error-boundary.js?v=75da7a92:18:5)
+    at AppErrorBoundary (http://localhost:3001/src/modules/error-handler/components/AppErrorBoundary.tsx?t=1776742292598:9:36)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at FileUploadProvider (http://localhost:3001/src/modules/file-upload/components/FileUploadProvider.tsx?t=1776742292598:13:38)
+    at DefaultLayout (http://localhost:3001/src/modules/ui/layout/page/components/DefaultLayout.tsx?t=1776742292598:58:22)
+    at RenderedRoute (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4131:5)
+    at Outlet (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4537:26)
+    at DialogManager (http://localhost:3001/src/modules/ui/feedback/dialog-manager/components/DialogManager.tsx?t=1776742292598:8:33)
+    at Suspense
+    at AgentChatProviderContent (http://localhost:3001/src/modules/ai/components/AgentChatProviderContent.tsx?t=1776742292598:10:44)
+    at AgentChatProvider (http://localhost:3001/src/modules/ai/components/AgentChatProvider.tsx?t=1776742292598:6:37)
+    at SnackBarProvider (http://localhost:3001/src/modules/ui/feedback/snack-bar-manager/components/SnackBarProvider.tsx?t=1776742292598:16:36)
+    at PreComputedChipGeneratorsProvider (http://localhost:3001/src/modules/object-metadata/components/PreComputedChipGeneratorsProvider.tsx?t=1776742292598:9:53)
+    at SSEProvider (http://localhost:3001/src/modules/sse-db-event/components/SSEProvider.tsx?t=1776742292598:6:31)
+    at ApolloCoreProvider (http://localhost:3001/src/modules/object-metadata/components/ApolloCoreProvider.tsx?t=1776742292598:5:38)
+    at AuthProvider (http://localhost:3001/src/modules/auth/components/AuthProvider.tsx?t=1776742292598:8:32)
+    at MinimalMetadataGater (http://localhost:3001/src/modules/metadata-store/components/MinimalMetadataGater.tsx?t=1776742292598:12:40)
+    at http://localhost:3001/src/modules/captcha/components/CaptchaProvider.tsx?t=1776742292598:7:71
+    at ClientConfigProvider (http://localhost:3001/src/modules/client-config/components/ClientConfigProvider.tsx?t=1776742292598:7:40)
+    at T (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/packages/twenty-ui/dist/ThemeProvider-DptT960o.js:29:13)
+    at BaseThemeProvider (http://localhost:3001/src/modules/ui/theme/components/BaseThemeProvider.tsx?t=1776742292598:10:37)
+    at ApolloProvider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@apollo_client_react.js?v=75da7a92:72:25)
+    at ApolloProvider (http://localhost:3001/src/modules/apollo/components/ApolloProvider.tsx?t=1776742292598:8:34)
+    at AppRouterProviders (http://localhost:3001/src/modules/app/components/AppRouterProviders.tsx?t=1776742292598:40:26)
+    at RenderedRoute (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4131:5)
+    at RenderErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4091:5)
+    at DataRoutes (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:5282:5)
+    at Router (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4544:15)
+    at RouterProvider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:5096:5)
+    at AppRouter (http://localhost:3001/src/modules/app/components/AppRouter.tsx?t=1776745684877:11:25)
+    at r2 (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-helmet-async.js?v=75da7a92:388:21)
+    at ExceptionHandlerProvider (http://localhost:3001/src/modules/error-handler/components/ExceptionHandlerProvider.tsx?t=1776742292598:3:44)
+    at y8 (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/packages/twenty-ui/dist/display.mjs:3528:22)
+    at I18nProvider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@lingui_react.js?v=75da7a92:157:3)
+    at ErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-error-boundary.js?v=75da7a92:18:5)
+    at AppErrorBoundary (http://localhost:3001/src/modules/error-handler/components/AppErrorBoundary.tsx?t=1776742292598:9:36)
+    at Provider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-UECHKH5G.js?v=75da7a92:716:3)
+    at App @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-I476ZSYT.js?v=75da7a92:520
+[   99600ms] [ERROR] Warning: Invalid attribute name: `%s`%s $active 
+    at a
+    at LinkWithRef (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:5395:5)
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at aside
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at FilterSidebar (http://localhost:3001/src/modules/trade-crm/shared/components/FilterSidebar.tsx:88:33)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at PagePanel (http://localhost:3001/src/modules/ui/layout/page/components/PagePanel.tsx:10:29)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at PageBody (http://localhost:3001/src/modules/ui/layout/page/components/PageBody.tsx:16:28)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at MainContainerLayoutWithSidePanel (http://localhost:3001/src/modules/object-record/components/MainContainerLayoutWithSidePanel.tsx:34:52)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at QueueWorkspaceLayout (http://localhost:3001/src/modules/trade-crm/shared/layouts/QueueWorkspaceLayout.tsx:135:40)
+    at TradeCrmWorkbenchPage (http://localhost:3001/src/modules/trade-crm/workbench/pages/TradeCrmWorkbenchPage.tsx:65:28)
+    at Suspense
+    at LazyRoute (http://localhost:3001/src/modules/app/components/LazyRoute.tsx:17:29)
+    at RenderedRoute (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4131:5)
+    at Outlet (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4537:26)
+    at ErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-error-boundary.js?v=75da7a92:18:5)
+    at AppErrorBoundary (http://localhost:3001/src/modules/error-handler/components/AppErrorBoundary.tsx?t=1776742292598:9:36)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at PageDragDropProvider (http://localhost:3001/src/modules/navigation-menu-item/display/dnd/providers/PageDragDropProvider.tsx?t=1776742292598:10:40)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at MotionComponent (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/framer-motion.js?v=75da7a92:942:40)
+    at ErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-error-boundary.js?v=75da7a92:18:5)
+    at AppErrorBoundary (http://localhost:3001/src/modules/error-handler/components/AppErrorBoundary.tsx?t=1776742292598:9:36)
+    at div
+    at render (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@linaria_react.js?v=75da7a92:68:19)
+    at FileUploadProvider (http://localhost:3001/src/modules/file-upload/components/FileUploadProvider.tsx?t=1776742292598:13:38)
+    at DefaultLayout (http://localhost:3001/src/modules/ui/layout/page/components/DefaultLayout.tsx?t=1776742292598:58:22)
+    at RenderedRoute (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4131:5)
+    at Outlet (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4537:26)
+    at DialogManager (http://localhost:3001/src/modules/ui/feedback/dialog-manager/components/DialogManager.tsx?t=1776742292598:8:33)
+    at Suspense
+    at AgentChatProviderContent (http://localhost:3001/src/modules/ai/components/AgentChatProviderContent.tsx?t=1776742292598:10:44)
+    at AgentChatProvider (http://localhost:3001/src/modules/ai/components/AgentChatProvider.tsx?t=1776742292598:6:37)
+    at SnackBarProvider (http://localhost:3001/src/modules/ui/feedback/snack-bar-manager/components/SnackBarProvider.tsx?t=1776742292598:16:36)
+    at PreComputedChipGeneratorsProvider (http://localhost:3001/src/modules/object-metadata/components/PreComputedChipGeneratorsProvider.tsx?t=1776742292598:9:53)
+    at SSEProvider (http://localhost:3001/src/modules/sse-db-event/components/SSEProvider.tsx?t=1776742292598:6:31)
+    at ApolloCoreProvider (http://localhost:3001/src/modules/object-metadata/components/ApolloCoreProvider.tsx?t=1776742292598:5:38)
+    at AuthProvider (http://localhost:3001/src/modules/auth/components/AuthProvider.tsx?t=1776742292598:8:32)
+    at MinimalMetadataGater (http://localhost:3001/src/modules/metadata-store/components/MinimalMetadataGater.tsx?t=1776742292598:12:40)
+    at http://localhost:3001/src/modules/captcha/components/CaptchaProvider.tsx?t=1776742292598:7:71
+    at ClientConfigProvider (http://localhost:3001/src/modules/client-config/components/ClientConfigProvider.tsx?t=1776742292598:7:40)
+    at T (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/packages/twenty-ui/dist/ThemeProvider-DptT960o.js:29:13)
+    at BaseThemeProvider (http://localhost:3001/src/modules/ui/theme/components/BaseThemeProvider.tsx?t=1776742292598:10:37)
+    at ApolloProvider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@apollo_client_react.js?v=75da7a92:72:25)
+    at ApolloProvider (http://localhost:3001/src/modules/apollo/components/ApolloProvider.tsx?t=1776742292598:8:34)
+    at AppRouterProviders (http://localhost:3001/src/modules/app/components/AppRouterProviders.tsx?t=1776742292598:40:26)
+    at RenderedRoute (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4131:5)
+    at RenderErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4091:5)
+    at DataRoutes (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:5282:5)
+    at Router (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4544:15)
+    at RouterProvider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:5096:5)
+    at AppRouter (http://localhost:3001/src/modules/app/components/AppRouter.tsx?t=1776745684877:11:25)
+    at r2 (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-helmet-async.js?v=75da7a92:388:21)
+    at ExceptionHandlerProvider (http://localhost:3001/src/modules/error-handler/components/ExceptionHandlerProvider.tsx?t=1776742292598:3:44)
+    at y8 (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/packages/twenty-ui/dist/display.mjs:3528:22)
+    at I18nProvider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@lingui_react.js?v=75da7a92:157:3)
+    at ErrorBoundary (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-error-boundary.js?v=75da7a92:18:5)
+    at AppErrorBoundary (http://localhost:3001/src/modules/error-handler/components/AppErrorBoundary.tsx?t=1776742292598:9:36)
+    at Provider (http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-UECHKH5G.js?v=75da7a92:716:3)
+    at App @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-I476ZSYT.js?v=75da7a92:520
+[  102042ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0
+[  102042ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0

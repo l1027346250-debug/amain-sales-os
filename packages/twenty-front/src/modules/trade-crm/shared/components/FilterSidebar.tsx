@@ -37,16 +37,9 @@ const StyledList = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledItem = styled.div<{ $active: boolean }>`
-  background: ${({ $active }) =>
-    $active
-      ? tradeCrmUiTheme.colors.surfaceMuted
-      : tradeCrmUiTheme.colors.surface};
-  border: 1px solid
-    ${({ $active }) =>
-      $active
-        ? tradeCrmUiTheme.colors.borderStrong
-        : tradeCrmUiTheme.colors.border};
+const StyledItem = styled.div`
+  background: ${tradeCrmUiTheme.colors.surface};
+  border: 1px solid ${tradeCrmUiTheme.colors.border};
   border-radius: ${tradeCrmUiTheme.radius.control};
   display: flex;
   flex-direction: column;
@@ -61,10 +54,7 @@ const StyledItem = styled.div<{ $active: boolean }>`
     box-shadow 160ms ease;
 
   &::before {
-    background: ${({ $active }) =>
-      $active
-        ? tradeCrmUiTheme.colors.ink
-        : tradeCrmUiTheme.colors.borderInteractive};
+    background: ${tradeCrmUiTheme.colors.borderInteractive};
     border-radius: ${themeCssVariables.border.radius.rounded};
     content: '';
     height: 8px;
@@ -79,18 +69,20 @@ const StyledItem = styled.div<{ $active: boolean }>`
     border-color: ${tradeCrmUiTheme.colors.borderStrong};
     transform: translateY(-1px);
   }
+
+  &[data-active='true'] {
+    background: ${tradeCrmUiTheme.colors.surfaceMuted};
+    border-color: ${tradeCrmUiTheme.colors.borderStrong};
+  }
+
+  &[data-active='true']::before {
+    background: ${tradeCrmUiTheme.colors.ink};
+  }
 `;
 
-const StyledItemLink = styled(Link)<{ $active: boolean }>`
-  background: ${({ $active }) =>
-    $active
-      ? tradeCrmUiTheme.colors.surfaceMuted
-      : tradeCrmUiTheme.colors.surface};
-  border: 1px solid
-    ${({ $active }) =>
-      $active
-        ? tradeCrmUiTheme.colors.borderStrong
-        : tradeCrmUiTheme.colors.border};
+const StyledItemLink = styled(Link)`
+  background: ${tradeCrmUiTheme.colors.surface};
+  border: 1px solid ${tradeCrmUiTheme.colors.border};
   border-radius: ${tradeCrmUiTheme.radius.control};
   color: inherit;
   display: flex;
@@ -107,10 +99,7 @@ const StyledItemLink = styled(Link)<{ $active: boolean }>`
     box-shadow 160ms ease;
 
   &::before {
-    background: ${({ $active }) =>
-      $active
-        ? tradeCrmUiTheme.colors.ink
-        : tradeCrmUiTheme.colors.borderInteractive};
+    background: ${tradeCrmUiTheme.colors.borderInteractive};
     border-radius: ${themeCssVariables.border.radius.rounded};
     content: '';
     height: 8px;
@@ -124,6 +113,15 @@ const StyledItemLink = styled(Link)<{ $active: boolean }>`
     background: ${tradeCrmUiTheme.colors.surfaceMuted};
     border-color: ${tradeCrmUiTheme.colors.borderStrong};
     transform: translateY(-1px);
+  }
+
+  &[data-active='true'] {
+    background: ${tradeCrmUiTheme.colors.surfaceMuted};
+    border-color: ${tradeCrmUiTheme.colors.borderStrong};
+  }
+
+  &[data-active='true']::before {
+    background: ${tradeCrmUiTheme.colors.ink};
   }
 `;
 
@@ -167,9 +165,9 @@ export const FilterSidebar = ({
         {items.map((item) => (
           item.to ? (
             <StyledItemLink
+              data-active={item.isActive ? 'true' : 'false'}
               key={item.label}
               to={item.to}
-              $active={Boolean(item.isActive)}
             >
               <StyledLabelRow>
                 <StyledLabel>{item.label}</StyledLabel>
@@ -178,7 +176,10 @@ export const FilterSidebar = ({
               <StyledHint>{item.hint}</StyledHint>
             </StyledItemLink>
           ) : (
-            <StyledItem key={item.label} $active={Boolean(item.isActive)}>
+            <StyledItem
+              data-active={item.isActive ? 'true' : 'false'}
+              key={item.label}
+            >
               <StyledLabelRow>
                 <StyledLabel>{item.label}</StyledLabel>
                 {item.countLabel ? <StyledCount>{item.countLabel}</StyledCount> : null}

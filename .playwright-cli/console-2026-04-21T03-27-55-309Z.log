@@ -1808,3 +1808,91 @@
 [  250961ms] [LOG] I18nProvider rendered `null`. A call to `i18n.activate` needs to happen in order for translations to be activated and for the I18nProvider to render.This is not an error but an informational message logged only in development. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@lingui_react.js?v=75da7a92:182
 [  251060ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4435
 [  253194ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://twenty-icons.com/sales-workbench:0
+[ 3981244ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://localhost:3000/metadata:0
+[ 3984749ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 3988106ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 3991458ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 3994826ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 3998190ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 4162156ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 4165528ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 4168893ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 4172261ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 4175630ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 4178998ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/metadata:0
+[ 5071797ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-I476ZSYT.js?v=75da7a92:21608
+[ 5071982ms] [LOG] I18nProvider rendered `null`. A call to `i18n.activate` needs to happen in order for translations to be activated and for the I18nProvider to render.This is not an error but an informational message logged only in development. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@lingui_react.js?v=75da7a92:182
+[ 5072067ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4435
+[ 5072295ms] [LOG] UNAUTHENTICATED, triggering token renewal @ http://localhost:3001/src/modules/apollo/services/apollo.factory.ts?t=1776742292598:205
+[ 5072374ms] [LOG] UNAUTHENTICATED, triggering token renewal @ http://localhost:3001/src/modules/apollo/services/apollo.factory.ts?t=1776742292598:205
+[ 5074399ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://twenty-icons.com/sales-workbench:0
+[ 5082302ms] [LOG] Download the Apollo DevTools for a better development experience: %s https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-LCRPECTS.js?v=75da7a92:79
+[19193235ms] [LOG] UNAUTHENTICATED, triggering token renewal @ http://localhost:3001/src/modules/apollo/services/apollo.factory.ts?t=1776742292598:205
+[19196015ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0
+[19196016ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0
+[19196017ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0
+[19196017ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0
+[19270655ms] [WARNING] Cache data may be lost when replacing the %s field of a %s object.
+
+This could cause additional (usually avoidable) network requests to fetch data that were otherwise cached.
+
+To address this problem (which is not a bug in Apollo Client), %sdefine a custom merge function for the %s field, so InMemoryCache can safely merge these objects:
+
+  existing: %o
+  incoming: %o
+
+For more information about these options, please refer to the documentation:
+
+  * Ensuring entity objects have IDs: https://go.apollo.dev/c/generating-unique-identifiers
+  * Defining custom merge functions: https://go.apollo.dev/c/merging-non-normalized-objects
+ people Query either ensure all objects of type PersonConnection have an ID or a custom merge function, or  Query.people {__typename: PersonConnection, totalCount: 1200} {__typename: PersonConnection, countUniqueValuesEmails: 1200} @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-LCRPECTS.js?v=75da7a92:79
+[19278490ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://twenty-icons.com/cadence.com:0
+[19284625ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://twenty-icons.com/seal-software.com:0
+[19285456ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://twenty-icons.com/cloudsoftwaregroup.com:0
+[19288598ms] [WARNING] Cache data may be lost when replacing the %s field of a %s object.
+
+This could cause additional (usually avoidable) network requests to fetch data that were otherwise cached.
+
+To address this problem (which is not a bug in Apollo Client), %sdefine a custom merge function for the %s field, so InMemoryCache can safely merge these objects:
+
+  existing: %o
+  incoming: %o
+
+For more information about these options, please refer to the documentation:
+
+  * Ensuring entity objects have IDs: https://go.apollo.dev/c/generating-unique-identifiers
+  * Defining custom merge functions: https://go.apollo.dev/c/merging-non-normalized-objects
+ opportunities Query either ensure all objects of type OpportunityConnection have an ID or a custom merge function, or  Query.opportunities {__typename: OpportunityConnection, totalCount: 50} {__typename: OpportunityConnection, avgAmountAmountMicros: 707800000000} @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-LCRPECTS.js?v=75da7a92:79
+[19292875ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://twenty-icons.com/ptc.co:0
+[19299382ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://twenty-icons.com/ptc.co:0
+[19299486ms] [WARNING] Cache data may be lost when replacing the %s field of a %s object.
+
+This could cause additional (usually avoidable) network requests to fetch data that were otherwise cached.
+
+To address this problem (which is not a bug in Apollo Client), %sdefine a custom merge function for the %s field, so InMemoryCache can safely merge these objects:
+
+  existing: %o
+  incoming: %o
+
+For more information about these options, please refer to the documentation:
+
+  * Ensuring entity objects have IDs: https://go.apollo.dev/c/generating-unique-identifiers
+  * Defining custom merge functions: https://go.apollo.dev/c/merging-non-normalized-objects
+ companies Query either ensure all objects of type CompanyConnection have an ID or a custom merge function, or  Query.companies {__typename: CompanyConnection, totalCount: 599} {__typename: CompanyConnection, percentageEmptyLinkedinLink: 0} @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-LCRPECTS.js?v=75da7a92:79
+[19301447ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[19301452ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[19304067ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/field-layouts?entityType=lead&pageScene=detail:0
+[19304088ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/field-layouts?entityType=lead&pageScene=detail:0
+[19304140ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[19304147ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[19305167ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[19305175ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[19311478ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/field-layouts?entityType=lead&pageScene=detail:0
+[19311478ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[19311481ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/field-layouts?entityType=lead&pageScene=detail:0
+[19311539ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[21468806ms] [LOG] UNAUTHENTICATED, triggering token renewal @ http://localhost:3001/src/modules/apollo/services/apollo.factory.ts?t=1776742292598:205
+[21475711ms] [LOG] UNAUTHENTICATED, triggering token renewal @ http://localhost:3001/src/modules/apollo/services/apollo.factory.ts?t=1776742292598:205
+[21479977ms] [LOG] UNAUTHENTICATED, triggering token renewal @ http://localhost:3001/src/modules/apollo/services/apollo.factory.ts?t=1776742292598:205
+[21487743ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[21488237ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0

@@ -1,0 +1,487 @@
+- generic [ref=e45]:
+  - generic [ref=e48]:
+    - generic [ref=e49]:
+      - button [ref=e51]:
+        - img [ref=e56] [cursor=pointer]
+      - generic [ref=e58]:
+        - button "搜索" [ref=e59]:
+          - img [ref=e60]
+        - button [ref=e65]:
+          - img [ref=e66]
+    - generic [ref=e71]:
+      - button "搜索 CtrlK" [ref=e73] [cursor=pointer]:
+        - generic [ref=e74]:
+          - img [ref=e76]
+          - generic [ref=e80]: 搜索
+          - generic [ref=e83]: CtrlK
+      - link "设置" [ref=e85] [cursor=pointer]:
+        - /url: /settings/profile
+        - generic [ref=e86]:
+          - img [ref=e88]
+          - generic [ref=e92]: 设置
+    - generic [ref=e94]:
+      - generic [ref=e97]:
+        - generic [ref=e98]: 工作区
+        - img [ref=e100]
+      - link "People" [ref=e103] [cursor=pointer]:
+        - /url: /objects/people
+        - generic [ref=e104]:
+          - img [ref=e107]
+          - generic [ref=e111]: People
+      - link "Companies" [ref=e113] [cursor=pointer]:
+        - /url: /objects/companies?viewId=123952b3-15d7-4674-aa2c-f5e21a0ef4b7
+        - generic [ref=e114]:
+          - img [ref=e117]
+          - generic [ref=e121]: Companies
+      - link "Opportunities" [ref=e123] [cursor=pointer]:
+        - /url: /objects/opportunities
+        - generic [ref=e124]:
+          - img [ref=e127]
+          - generic [ref=e134]: Opportunities
+      - link "Tasks" [ref=e136] [cursor=pointer]:
+        - /url: /objects/tasks
+        - generic [ref=e137]:
+          - img [ref=e140]
+          - generic [ref=e144]: Tasks
+      - link "Notes" [ref=e146] [cursor=pointer]:
+        - /url: /objects/notes
+        - generic [ref=e147]:
+          - img [ref=e150]
+          - generic [ref=e153]: Notes
+  - generic [ref=e170]:
+    - generic [ref=e173]:
+      - img [ref=e175]
+      - generic [ref=e179]: 公司
+    - generic [ref=e184]:
+      - button "All Companies" [ref=e188]:
+        - generic [ref=e189] [cursor=pointer]:
+          - img [ref=e191]
+          - generic [ref=e193]: All Companies
+          - img [ref=e195]
+      - generic [ref=e199]:
+        - generic [ref=e200]:
+          - checkbox [ref=e205]
+          - generic [ref=e206] [cursor=pointer]:
+            - button "Name" [ref=e207]:
+              - generic [ref=e208]:
+                - img [ref=e210]
+                - generic [ref=e213]: Name
+            - separator [ref=e214]
+          - generic [ref=e215] [cursor=pointer]:
+            - separator [ref=e216]
+            - button "Domain Name" [ref=e217]:
+              - generic [ref=e218]:
+                - img [ref=e220]
+                - generic [ref=e224]: Domain Name
+            - separator [ref=e225]
+          - generic [ref=e226] [cursor=pointer]:
+            - separator [ref=e227]
+            - button "Employees" [ref=e228]:
+              - generic [ref=e229]:
+                - img [ref=e231]
+                - generic [ref=e236]: Employees
+            - separator [ref=e237]
+          - generic [ref=e238] [cursor=pointer]:
+            - separator [ref=e239]
+            - button "People" [ref=e240]:
+              - generic [ref=e241]:
+                - img [ref=e243]
+                - generic [ref=e248]: People
+            - separator [ref=e249]
+          - generic [ref=e250] [cursor=pointer]:
+            - separator [ref=e251]
+            - button "Address" [ref=e252]:
+              - generic [ref=e253]:
+                - img [ref=e255]
+                - generic [ref=e257]: Address
+            - separator [ref=e258]
+          - generic [ref=e259] [cursor=pointer]:
+            - separator [ref=e260]
+            - button "Account Owner" [ref=e261]:
+              - generic [ref=e262]:
+                - img [ref=e264]
+                - generic [ref=e268]: Account Owner
+            - separator [ref=e269]
+          - generic [ref=e270] [cursor=pointer]:
+            - separator [ref=e271]
+            - button "Creation date" [ref=e272]:
+              - generic [ref=e273]:
+                - img [ref=e275]
+                - generic [ref=e277]: Creation date
+            - separator [ref=e278]
+          - generic [ref=e279] [cursor=pointer]:
+            - separator [ref=e280]
+            - button "ICP" [ref=e281]:
+              - generic [ref=e282]:
+                - img [ref=e284]
+                - generic [ref=e288]: ICP
+            - separator [ref=e289]
+          - generic [ref=e290] [cursor=pointer]:
+            - separator [ref=e291]
+            - button "Linkedin" [ref=e292]:
+              - generic [ref=e293]:
+                - img [ref=e295]
+                - generic [ref=e298]: Linkedin
+            - separator [ref=e299]
+          - generic [ref=e300] [cursor=pointer]:
+            - separator [ref=e301]
+            - button "Opportunities" [ref=e302]:
+              - generic [ref=e303]:
+                - img [ref=e305]
+                - generic [ref=e311]: Opportunities
+            - separator [ref=e312]
+          - generic [ref=e313] [cursor=pointer]:
+            - separator [ref=e314]
+            - button "X" [ref=e315]:
+              - generic [ref=e316]:
+                - img [ref=e318]
+                - generic [ref=e321]: X
+            - separator [ref=e322]
+          - generic [ref=e323] [cursor=pointer]:
+            - separator [ref=e324]
+            - button "ARR" [ref=e325]:
+              - generic [ref=e326]:
+                - img [ref=e328]
+                - generic [ref=e331]: ARR
+            - separator [ref=e332]
+          - generic [ref=e333] [cursor=pointer]:
+            - separator [ref=e334]
+            - button "Favorites" [ref=e335]:
+              - generic [ref=e336]:
+                - img [ref=e338]
+                - generic [ref=e340]: Favorites
+            - separator [ref=e341]
+          - generic [ref=e342] [cursor=pointer]:
+            - separator [ref=e343]
+            - button [ref=e345]:
+              - img [ref=e347]
+        - generic [ref=e349]:
+          - generic [ref=e352]:
+            - button [ref=e353]:
+              - img [ref=e356]
+            - checkbox [ref=e363]
+            - link "Anthropic" [ref=e369] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e372]: Anthropic
+            - link "anthropic.com" [ref=e380] [cursor=pointer]:
+              - /url: https://anthropic.com
+            - generic [ref=e385] [cursor=pointer]: 1,100
+            - link "B Bertrand Voulzy" [ref=e394] [cursor=pointer]:
+              - /url: /object/person/240da2ec-2d40-4e49-8df4-9c6a049190df
+              - generic [ref=e395]:
+                - generic [ref=e396]: B
+                - generic [ref=e397]: Bertrand Voulzy
+            - generic [ref=e403] [cursor=pointer]: 548 Market Street,San Francisco,94104,United States
+            - generic [ref=e412]: over 1 year ago
+            - link "anthropicresearch" [ref=e424] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/anthropicresearch
+          - generic [ref=e444]:
+            - button [ref=e445]:
+              - img [ref=e448]
+            - checkbox [ref=e455]
+            - link "Google" [ref=e461] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e464]: Google
+            - link "google.com" [ref=e472] [cursor=pointer]:
+              - /url: https://google.com
+            - generic [ref=e477] [cursor=pointer]: 72,000
+            - generic [ref=e483] [cursor=pointer]:
+              - link "M Madison Perez" [ref=e486]:
+                - /url: /object/person/240da2ec-2d40-4e49-8df4-9c6a049190ef
+                - generic [ref=e487]:
+                  - generic [ref=e488]: M
+                  - generic [ref=e489]: Madison Perez
+              - link "A Avery Carter" [ref=e492]:
+                - /url: /object/person/56955422-5d54-41b7-ba36-f0d20e1417ae
+                - generic [ref=e493]:
+                  - generic [ref=e494]: A
+                  - generic [ref=e495]: Avery Carter
+            - generic [ref=e501] [cursor=pointer]: 1600 Amphitheatre Pkwy,Mountain View,Mountain View,CA,94043,United States
+            - generic [ref=e510]: over 1 year ago
+            - link "google" [ref=e522] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/google
+          - generic [ref=e542]:
+            - button [ref=e543]:
+              - img [ref=e546]
+            - checkbox [ref=e553]
+            - link "Facebook" [ref=e559] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e562]: Facebook
+            - link "facebook.com" [ref=e570] [cursor=pointer]:
+              - /url: https://facebook.com
+            - generic [ref=e575] [cursor=pointer]: 87,000
+            - link "C Christopher Gonzalez" [ref=e584] [cursor=pointer]:
+              - /url: /object/person/93c72d2e-f517-42fd-80ae-14173b3b70ae
+              - generic [ref=e585]:
+                - generic [ref=e586]: C
+                - generic [ref=e587]: Christopher Gonzalez
+            - generic [ref=e593] [cursor=pointer]: 1 Hacker Way,Menlo Park,Menlo Park,CA,94025,United States
+            - generic [ref=e602]: over 1 year ago
+            - link "facebook" [ref=e614] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/facebook
+            - link "- 未命名" [ref=e623] [cursor=pointer]:
+              - /url: /object/opportunity/53f66647-0543-4cc2-9f96-95cc699960f2
+              - generic [ref=e624]:
+                - generic [ref=e625]: "-"
+                - generic [ref=e626]: 未命名
+          - generic [ref=e642]:
+            - button [ref=e643]:
+              - img [ref=e646]
+            - checkbox [ref=e653]
+            - link "Netflix" [ref=e659] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e662]: Netflix
+            - link "netflix.com" [ref=e670] [cursor=pointer]:
+              - /url: https://netflix.com
+            - generic [ref=e675] [cursor=pointer]: 3,000
+            - generic [ref=e685] [cursor=pointer]: 121 Albright Way,Los Gatos,Paris,CA,95032,France
+            - generic [ref=e694]: over 1 year ago
+            - link "netflix" [ref=e706] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/netflix
+          - generic [ref=e726]:
+            - button [ref=e727]:
+              - img [ref=e730]
+            - checkbox [ref=e737]
+            - link "Microsoft" [ref=e743] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e746]: Microsoft
+            - link "microsoft.com" [ref=e754] [cursor=pointer]:
+              - /url: https://microsoft.com
+            - generic [ref=e759] [cursor=pointer]: 221,000
+            - generic [ref=e765] [cursor=pointer]:
+              - link "I Isabella Scott" [ref=e768]:
+                - /url: /object/person/1d151852-490f-4466-8391-733cfd66a0c8
+                - generic [ref=e769]:
+                  - generic [ref=e770]: I
+                  - generic [ref=e771]: Isabella Scott
+              - link "M Matthew Green" [ref=e774]:
+                - /url: /object/person/98406e26-80f1-4dff-b570-a74942528de3
+                - generic [ref=e775]:
+                  - generic [ref=e776]: M
+                  - generic [ref=e777]: Matthew Green
+            - generic [ref=e783] [cursor=pointer]: 1 Microsoft Way,Redmond,Redmond,WA,98052,United States
+            - generic [ref=e792]: over 1 year ago
+            - link "microsoft" [ref=e804] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/microsoft
+            - generic [ref=e810] [cursor=pointer]:
+              - link "- 未命名" [ref=e813]:
+                - /url: /object/opportunity/81ab695d-2f89-406f-90ea-180f433b2445
+                - generic [ref=e814]:
+                  - generic [ref=e815]: "-"
+                  - generic [ref=e816]: 未命名
+              - link "- 未命名" [ref=e819]:
+                - /url: /object/opportunity/9b059852-35b1-4045-9cde-42f715148954
+                - generic [ref=e820]:
+                  - generic [ref=e821]: "-"
+                  - generic [ref=e822]: 未命名
+          - generic [ref=e838]:
+            - button [ref=e839]:
+              - img [ref=e842]
+            - checkbox [ref=e849]
+            - link "Libeo" [ref=e855] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e858]: Libeo
+            - link "libeo.io" [ref=e866] [cursor=pointer]:
+              - /url: https://libeo.io
+            - generic [ref=e871] [cursor=pointer]: "50"
+            - generic [ref=e881] [cursor=pointer]: 42 rue de paradis,3rd floor,Paris,Ile de France,75010,France
+            - generic [ref=e890]: over 1 year ago
+            - link "libeo" [ref=e902] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/libeo
+          - generic [ref=e922]:
+            - button [ref=e923]:
+              - img [ref=e926]
+            - checkbox [ref=e933]
+            - link "Airbnb" [ref=e939] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e942]: Airbnb
+            - link "airbnb.com" [ref=e950] [cursor=pointer]:
+              - /url: https://airbnb.com
+            - generic [ref=e955] [cursor=pointer]: 6,000
+            - generic [ref=e965] [cursor=pointer]: 888 Brannan Street,4th Floor,San Francisco,CA,94103,United States
+            - generic [ref=e974]: over 1 year ago
+            - link "airbnb" [ref=e986] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/airbnb
+          - generic [ref=e1006]:
+            - button [ref=e1007]:
+              - img [ref=e1010]
+            - checkbox [ref=e1017]
+            - link "Claap" [ref=e1023] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e1026]: Claap
+            - link "claap.io" [ref=e1034] [cursor=pointer]:
+              - /url: https://claap.io
+            - generic [ref=e1039] [cursor=pointer]: "7"
+            - generic [ref=e1049] [cursor=pointer]: 901 Fifth Avenue,Suite 1200,Seattle,WA,98164,United States
+            - generic [ref=e1058]: over 1 year ago
+            - link "claap" [ref=e1070] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/claap
+          - generic [ref=e1090]:
+            - button [ref=e1091]:
+              - img [ref=e1094]
+            - checkbox [ref=e1101]
+            - link "Algolia" [ref=e1107] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e1110]: Algolia
+            - link "algolia.com" [ref=e1118] [cursor=pointer]:
+              - /url: https://algolia.com
+            - generic [ref=e1123] [cursor=pointer]: "250"
+            - link "L Lorie Vladim" [ref=e1132] [cursor=pointer]:
+              - /url: /object/person/240da2ec-2d40-4e49-8df4-9c6a049191df
+              - generic [ref=e1133]:
+                - generic [ref=e1134]: L
+                - generic [ref=e1135]: Lorie Vladim
+            - generic [ref=e1141] [cursor=pointer]: 3790 El Camino Real,Unit 518,Palo Alto,CA,94306,United States
+            - generic [ref=e1150]: over 1 year ago
+            - link "algolia" [ref=e1162] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/algolia
+          - generic [ref=e1182]:
+            - button [ref=e1183]:
+              - img [ref=e1186]
+            - checkbox [ref=e1193]
+            - link "Samsung" [ref=e1199] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e1202]: Samsung
+            - link "samsung.com" [ref=e1210] [cursor=pointer]:
+              - /url: https://samsung.com
+            - generic [ref=e1215] [cursor=pointer]: 400,000
+            - link "L Louis Duss" [ref=e1224] [cursor=pointer]:
+              - /url: /object/person/240da2ec-2d40-4e49-8df4-9c6a049191de
+              - generic [ref=e1225]:
+                - generic [ref=e1226]: L
+                - generic [ref=e1227]: Louis Duss
+            - generic [ref=e1233] [cursor=pointer]: 129, Samsung-ro,Yeongtong-gu, Suwon-si,Gyeonggi-do,Gyeonggi-do,16677,South Korea
+            - generic [ref=e1242]: over 1 year ago
+            - link "samsung" [ref=e1254] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/samsung
+          - generic [ref=e1274]:
+            - button [ref=e1275]:
+              - img [ref=e1278]
+            - checkbox [ref=e1285]
+            - link "Hasura" [ref=e1291] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e1294]: Hasura
+            - link "hasura.io" [ref=e1302] [cursor=pointer]:
+              - /url: https://hasura.io
+            - generic [ref=e1307] [cursor=pointer]: 17,000
+            - generic [ref=e1317] [cursor=pointer]: 576 Folsom St.,Floor 3,San Francisco,CA,94105,United States
+            - generic [ref=e1326]: over 1 year ago
+            - link "hasura" [ref=e1338] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/hasura
+          - generic [ref=e1358]:
+            - button [ref=e1359]:
+              - img [ref=e1362]
+            - checkbox [ref=e1369]
+            - link "Wework" [ref=e1375] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e1378]: Wework
+            - link "wework.com" [ref=e1386] [cursor=pointer]:
+              - /url: https://wework.com
+            - generic [ref=e1391] [cursor=pointer]: 2,000
+            - generic [ref=e1401] [cursor=pointer]: 575 Lexington Ave 16th Floor,16th Floor,New York,NY,10022,United States
+            - generic [ref=e1410]: over 1 year ago
+            - link "wework" [ref=e1422] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/wework
+          - generic [ref=e1442]:
+            - button [ref=e1443]:
+              - img [ref=e1446]
+            - checkbox [ref=e1453]
+            - link "Linkedin" [ref=e1459] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e1462]: Linkedin
+            - link "linkedin.com" [ref=e1470] [cursor=pointer]:
+              - /url: https://linkedin.com
+            - generic [ref=e1475] [cursor=pointer]: 20,000
+            - generic [ref=e1481] [cursor=pointer]:
+              - link "S Sylvie Palmer" [ref=e1484]:
+                - /url: /object/person/0aa00beb-ac73-4797-824e-87a1f5aea9e0
+                - generic [ref=e1485]:
+                  - generic [ref=e1486]: S
+                  - generic [ref=e1487]: Sylvie Palmer
+              - link "C Christoph Callisto" [ref=e1490]:
+                - /url: /object/person/86083141-1c0e-494c-a1b6-85b1c6fefaa5
+                - generic [ref=e1491]:
+                  - generic [ref=e1492]: C
+                  - generic [ref=e1493]: Christoph Callisto
+            - generic [ref=e1499] [cursor=pointer]: 315 Montgomery St,13th Fl.,San Francisco,CA,94104,United States
+            - generic [ref=e1508]: over 1 year ago
+            - link "linkedin" [ref=e1520] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/linkedin
+            - link "- 未命名" [ref=e1529] [cursor=pointer]:
+              - /url: /object/opportunity/7c887ee3-be10-412b-a663-16bd3c2228e1
+              - generic [ref=e1530]:
+                - generic [ref=e1531]: "-"
+                - generic [ref=e1532]: 未命名
+          - generic [ref=e1547] [cursor=pointer]:
+            - img [ref=e1550]
+            - generic [ref=e1552]: 添加新
+        - generic [ref=e1555]:
+          - button "计算" [ref=e1559] [cursor=pointer]:
+            - generic [ref=e1561]:
+              - generic [ref=e1562]: 计算
+              - img [ref=e1564]
+          - button [ref=e1568] [cursor=pointer]
+          - button [ref=e1573] [cursor=pointer]
+          - button [ref=e1578] [cursor=pointer]
+          - button [ref=e1583] [cursor=pointer]
+          - button [ref=e1588] [cursor=pointer]
+          - button [ref=e1593] [cursor=pointer]
+          - button [ref=e1598] [cursor=pointer]
+          - button [ref=e1603] [cursor=pointer]
+          - button [ref=e1608] [cursor=pointer]
+          - button [ref=e1613] [cursor=pointer]
+          - button [ref=e1618] [cursor=pointer]
+          - button [ref=e1623] [cursor=pointer]
+  - generic [ref=e1627]:
+    - generic [ref=e1628]:
+      - button "AM AMAIN CRM 亚麦客户管理" [ref=e1629] [cursor=pointer]:
+        - generic [ref=e1630]: AM
+        - generic [ref=e1631]:
+          - generic [ref=e1632]: AMAIN CRM
+          - generic [ref=e1633]: 亚麦客户管理
+      - generic "界面语言" [ref=e1634]:
+        - button "Chinese" [ref=e1635]
+        - button "English" [ref=e1636] [cursor=pointer]
+    - generic [ref=e1637]:
+      - generic [ref=e1639]:
+        - button "AM 3D Glass" [ref=e1640] [cursor=pointer]:
+          - generic [ref=e1641]:
+            - generic [ref=e1645]: AM
+            - generic [ref=e1646]: 3D Glass
+        - generic [ref=e1647]:
+          - generic [ref=e1648]: 外贸销售执行中枢
+          - generic [ref=e1649]:
+            - generic [ref=e1650]: 亚麦客户管理
+            - generic [ref=e1651]: AMAIN CRM
+          - heading "把获客、客户与商机放回同一个工作面。" [level=1] [ref=e1652]
+          - paragraph [ref=e1653]: AMAIN CRM 面向外贸销售与主管，保留清晰动作链，减少无效跳转和冗余入口。
+          - generic [ref=e1654]:
+            - generic [ref=e1655]: Lead Intake
+            - generic [ref=e1656]: Customer 360
+            - generic [ref=e1657]: Pipeline Motion
+      - generic [ref=e1659]:
+        - generic [ref=e1660]: "当前工作区: Apple"
+        - generic [ref=e1661]:
+          - button "登录" [ref=e1662] [cursor=pointer]
+          - button "报名注册" [ref=e1663] [cursor=pointer]
+        - heading "登录" [level=2] [ref=e1664]
+        - paragraph [ref=e1665]: 登录后默认进入外贸 CRM 工作台。
+        - generic [ref=e1666]:
+          - button "邮箱" [ref=e1667] [cursor=pointer]
+          - button "手机号" [ref=e1668] [cursor=pointer]
+        - generic [ref=e1670]:
+          - textbox "请输入邮箱" [ref=e1673]: tim@apple.dev
+          - generic [ref=e1686]:
+            - textbox "请输入密码" [ref=e1687]: tim@apple.dev
+            - img [ref=e1690] [cursor=pointer]
+          - button "登录" [ref=e1693] [cursor=pointer]:
+            - generic [ref=e1676]: 登录
+        - generic [ref=e1677]:
+          - generic [ref=e1678]:
+            - generic [ref=e1679]: ✓
+            - text: 正在使用 https 方式安全登录
+          - generic [ref=e1680]:
+            - generic [ref=e1681]: 至少 8 个字符。
+            - button "没有账号？报名注册" [ref=e1682] [cursor=pointer]
+          - button "忘记密码" [ref=e1694] [cursor=pointer]
+        - generic [ref=e1683]: 登录后默认进入外贸 CRM 工作台。
