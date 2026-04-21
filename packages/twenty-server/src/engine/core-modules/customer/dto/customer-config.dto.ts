@@ -10,7 +10,7 @@ export class CustomerConfigSelectOptionDTO {
   @Field()
   value: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   color: string | null;
 
   @Field(() => Int, { nullable: true })
@@ -46,13 +46,13 @@ export class CustomerConfigTagDTO {
   @Field()
   label: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   color: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   scope: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   objectScope: string | null;
 
   @Field(() => Int, { nullable: true })
@@ -70,7 +70,7 @@ export class CustomerConfigSourceDTO {
   @Field()
   label: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   code: string | null;
 
   @Field(() => Int, { nullable: true })
@@ -97,7 +97,7 @@ export class CustomerConfigPublicPoolRuleDTO {
   @Field(() => [String])
   scopeStageValues: string[];
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   publicPoolGroupValue: string | null;
 
   @Field()
@@ -127,7 +127,7 @@ export class CustomerConfigImportDefaultsDTO {
   @Field(() => UUIDScalarType, { nullable: true })
   id: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   destinationValue: string | null;
 
   @Field()
@@ -136,7 +136,7 @@ export class CustomerConfigImportDefaultsDTO {
   @Field(() => [String])
   selectedFields: string[];
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   status: string | null;
 }
 

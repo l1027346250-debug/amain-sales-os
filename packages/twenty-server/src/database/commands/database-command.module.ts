@@ -57,6 +57,7 @@ import { ViewFilterGroupModule } from 'src/engine/metadata-modules/view-filter-g
 import { ViewSortModule } from 'src/engine/metadata-modules/view-sort/view-sort.module';
 import { RecordPositionModule } from 'src/engine/core-modules/record-position/record-position.module';
 import { CalendarEventImportManagerModule } from 'src/modules/calendar/calendar-event-import-manager/calendar-event-import-manager.module';
+import { EnterpriseManagementModule } from 'src/modules/enterprise/enterprise.module';
 import { MessagingImportManagerModule } from 'src/modules/messaging/message-import-manager/messaging-import-manager.module';
 import { WorkflowRunQueueModule } from 'src/modules/workflow/workflow-runner/workflow-run-queue/workflow-run-queue.module';
 import { AutomatedTriggerModule } from 'src/modules/workflow/workflow-trigger/automated-trigger/automated-trigger.module';
@@ -111,6 +112,7 @@ import { WorkflowTriggerModule } from 'src/modules/workflow/workflow-trigger/wor
     CoreMigrationRunnerModule,
     WorkspaceVersionModule,
     WorkflowTriggerModule,
+    EnterpriseManagementModule,
   ],
   providers: [
     DataSeedWorkspaceCommand,

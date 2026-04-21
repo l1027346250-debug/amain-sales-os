@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { styled } from '@linaria/react';
 
@@ -22,6 +22,8 @@ type EnterpriseCustomerExportJob = {
   customerCount: number | null;
   status: string;
   fileUrl: string | null;
+  fileExpiresAt: string | null;
+  retryCount: number;
   errorMessage: string | null;
   createdAt: string;
 };
@@ -187,16 +189,19 @@ const StyledTable = styled.table`
 
 const StyledActionCell = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledStatus = styled.span<{ tone: 'neutral' | 'danger' | 'success' }>`
+const StyledStatus = styled.span<{ tone: 'neutral' | 'danger' | 'success' | 'warning' }>`
   color: ${({ tone }) =>
     tone === 'danger'
       ? themeCssVariables.font.color.danger
       : tone === 'success'
         ? themeCssVariables.snackBar.success.color
-        : themeCssVariables.font.color.secondary};
+        : tone === 'warning'
+          ? themeCssVariables.color.yellow7
+          : themeCssVariables.font.color.secondary};
   font-weight: ${themeCssVariables.font.weight.medium};
 `;
 
@@ -214,7 +219,12 @@ const buildSidebar = () =>
   }));
 
 const hasProcessingJobs = (jobs: EnterpriseCustomerExportJob[]) =>
-  jobs.some((job) => job.status === 'pending' || job.status === 'running');
+  jobs.some(
+    (job) =>
+      job.status === 'pending' ||
+      job.status === 'running' ||
+      job.status === 'retrying',
+  );
 
 export const EnterpriseCustomerExportPage = () => {
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
@@ -351,7 +361,7 @@ export const EnterpriseCustomerExportPage = () => {
         throw new Error('Failed to create customer export job');
       }
 
-      enqueueSuccessSnackBar({ message: '客户导出任务已入队' });
+      enqueueSuccessSnackBar({ message: '客户导出任务已进入后台队列' });
       await loadJobs();
     } catch {
       enqueueErrorSnackBar({ message: '创建客户导出任务失败' });
@@ -384,31 +394,31 @@ export const EnterpriseCustomerExportPage = () => {
   const downloadExportJob = async (job: EnterpriseCustomerExportJob) => {
     try {
       const response = await fetch(
-        `/api/enterprise/customer-export/jobs/${job.id}/download`,
+        `/api/enterprise/customer-export/jobs/${job.id}/file-access`,
         {
           credentials: 'include',
         },
       );
 
       if (!response.ok) {
-        throw new Error('Failed to download customer export');
+        throw new Error('Failed to get file access');
       }
 
-      const fileBlob = await response.blob();
-      const contentDisposition = response.headers.get('Content-Disposition');
-      const fileNameMatch = contentDisposition?.match(/filename="([^"]+)"/);
-      const fileName =
-        fileNameMatch?.[1] ?? `${job.taskName || 'customer-export'}.csv`;
-      const downloadUrl = window.URL.createObjectURL(fileBlob);
-      const anchorElement = document.createElement('a');
+      const data = (await response.json()) as {
+        downloadUrl: string;
+        fileName: string;
+      };
 
-      anchorElement.href = downloadUrl;
-      anchorElement.download = fileName;
+      const anchorElement = document.createElement('a');
+      anchorElement.href = data.downloadUrl;
+      anchorElement.download = data.fileName;
+      anchorElement.target = '_blank';
+      anchorElement.rel = 'noreferrer';
       anchorElement.click();
-      window.URL.revokeObjectURL(downloadUrl);
-      enqueueSuccessSnackBar({ message: '客户导出文件已下载' });
+      enqueueSuccessSnackBar({ message: '已生成临时下载链接' });
+      await loadJobs();
     } catch {
-      enqueueErrorSnackBar({ message: '下载客户导出文件失败' });
+      enqueueErrorSnackBar({ message: '获取客户导出文件失败' });
     }
   };
 
@@ -417,7 +427,9 @@ export const EnterpriseCustomerExportPage = () => {
       case 'pending':
         return '待执行';
       case 'running':
-        return '生成中';
+        return '执行中';
+      case 'retrying':
+        return '重试中';
       case 'completed':
         return '已完成';
       case 'failed':
@@ -429,12 +441,20 @@ export const EnterpriseCustomerExportPage = () => {
     }
   };
 
-  const toggleFieldCode = (fieldCode: string) => {
-    setSelectedFieldCodes((currentFieldCodes) =>
-      currentFieldCodes.includes(fieldCode)
-        ? currentFieldCodes.filter((value) => value !== fieldCode)
-        : [...currentFieldCodes, fieldCode],
-    );
+  const renderStatusTone = (
+    status: string,
+  ): 'neutral' | 'danger' | 'success' | 'warning' => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'failed':
+        return 'danger';
+      case 'expired':
+      case 'retrying':
+        return 'warning';
+      default:
+        return 'neutral';
+    }
   };
 
   return (
@@ -442,25 +462,26 @@ export const EnterpriseCustomerExportPage = () => {
       <EnterpriseShell title="客户导出" sidebar={sidebar}>
         <StyledGrid>
           <StyledHero>
-            <StyledHeroTitle>客户导出中心</StyledHeroTitle>
+            <StyledHeroTitle>客户导出工作台</StyledHeroTitle>
             <StyledHeroText>
-              当前版本已经接通后台任务、状态轮询和 CSV 下载。创建任务后系统会自动入队执行，任务完成后再提供下载。
+              当前链路已经支持字段选择、数量预估、后台导出、失败重试、临时签名下载链接和过期回收。
             </StyledHeroText>
           </StyledHero>
 
           <StyledPanel>
             <StyledHeader>
               <div>
-                <StyledTitle>创建导出任务</StyledTitle>
+                <StyledTitle>新建导出任务</StyledTitle>
                 <StyledDescription>
-                  当前支持按关键词和负责人筛选客户，并支持系统字段与企业管理自定义字段一起导出。
+                  先定义筛选条件和字段范围，再把任务送入后台。导出文件默认保留 7 天，过期后会被自动清理。
                 </StyledDescription>
               </div>
-              <Button
-                variant="secondary"
-                title="刷新任务"
-                onClick={() => void loadJobs()}
-              />
+              <StyledMetric>
+                <span>预计客户数</span>
+                <StyledMetricValue>
+                  {isPreviewLoading ? '...' : previewCount ?? '--'}
+                </StyledMetricValue>
+              </StyledMetric>
             </StyledHeader>
 
             <StyledFormGrid>
@@ -476,7 +497,6 @@ export const EnterpriseCustomerExportPage = () => {
                 <StyledLabel>关键词</StyledLabel>
                 <StyledInput
                   value={keyword}
-                  placeholder="按客户名称模糊筛选"
                   onChange={(event) => setKeyword(event.target.value)}
                 />
               </StyledField>
@@ -485,124 +505,125 @@ export const EnterpriseCustomerExportPage = () => {
                 <StyledLabel>负责人 ID</StyledLabel>
                 <StyledInput
                   value={accountOwnerId}
-                  placeholder="可留空"
                   onChange={(event) => setAccountOwnerId(event.target.value)}
                 />
               </StyledField>
+
+              <StyledActionCell>
+                <Button
+                  title={isPreviewLoading ? '计算中...' : '预估数量'}
+                  onClick={() => void runPreviewCount()}
+                />
+                <Button
+                  accent="blue"
+                  disabled={isSaving}
+                  title={isSaving ? '提交中...' : '创建任务'}
+                  onClick={() => void createExportJob()}
+                />
+              </StyledActionCell>
             </StyledFormGrid>
 
             <div>
-              <StyledLabel>导出字段</StyledLabel>
-              <StyledMultiSelect>
-                {fieldOptions.map((field) => (
-                  <StyledFieldOption key={field.fieldCode}>
-                    <input
-                      checked={selectedFieldCodes.includes(field.fieldCode)}
-                      type="checkbox"
-                      onChange={() => toggleFieldCode(field.fieldCode)}
-                    />
-                    {field.fieldName}
-                    <span>({field.fieldCode})</span>
-                  </StyledFieldOption>
-                ))}
-              </StyledMultiSelect>
+              <StyledTitle>导出字段</StyledTitle>
+              <StyledHint>
+                基础字段和企业管理自定义字段可以混合导出。至少保留一个字段。
+              </StyledHint>
             </div>
 
-            <StyledHeader>
-              <StyledMetric>
-                <StyledLabel>预估客户数</StyledLabel>
-                <StyledMetricValue>
-                  {previewCount === null ? '-' : previewCount}
-                </StyledMetricValue>
-              </StyledMetric>
+            <StyledMultiSelect>
+              {fieldOptions.map((field) => {
+                const checked = selectedFieldCodes.includes(field.fieldCode);
 
-              <div style={{ display: 'flex', gap: themeCssVariables.spacing[3] }}>
-                <Button
-                  variant="secondary"
-                  title="预估数量"
-                  disabled={isPreviewLoading}
-                  onClick={runPreviewCount}
-                />
-                <Button
-                  title="创建任务"
-                  disabled={selectedFieldCodes.length === 0 || isSaving}
-                  onClick={createExportJob}
-                />
-              </div>
-            </StyledHeader>
+                return (
+                  <StyledFieldOption key={field.fieldCode}>
+                    <input
+                      checked={checked}
+                      type="checkbox"
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          setSelectedFieldCodes((currentFieldCodes) => [
+                            ...currentFieldCodes,
+                            field.fieldCode,
+                          ]);
 
-            <StyledHint>
-              创建后任务会自动进入后台队列。状态为“已完成”时即可下载 CSV，状态为“失败”时可重新入队。
-            </StyledHint>
+                          return;
+                        }
+
+                        setSelectedFieldCodes((currentFieldCodes) =>
+                          currentFieldCodes.filter(
+                            (fieldCode) => fieldCode !== field.fieldCode,
+                          ),
+                        );
+                      }}
+                    />
+                    <span>{field.fieldName}</span>
+                  </StyledFieldOption>
+                );
+              })}
+            </StyledMultiSelect>
           </StyledPanel>
 
           <StyledPanel>
-            <StyledHeader>
-              <div>
-                <StyledTitle>导出任务列表</StyledTitle>
-                <StyledDescription>
-                  展示当前工作区创建过的客户导出任务，并反映后台执行状态。
-                </StyledDescription>
-              </div>
-            </StyledHeader>
+            <div>
+              <StyledTitle>导出任务列表</StyledTitle>
+              <StyledDescription>
+                完成后的文件会通过临时签名链接访问。失败任务会自动尝试重试，达到上限后再进入失败状态。
+              </StyledDescription>
+            </div>
 
             {jobs.length === 0 ? (
-              <StyledEmpty>当前还没有客户导出任务。</StyledEmpty>
+              <StyledEmpty>还没有客户导出任务。</StyledEmpty>
             ) : (
               <StyledTable>
                 <thead>
                   <tr>
-                    <th>任务名称</th>
+                    <th>任务</th>
+                    <th>状态</th>
                     <th>客户数</th>
                     <th>字段数</th>
-                    <th>状态</th>
-                    <th>创建时间</th>
-                    <th>错误信息</th>
+                    <th>过期时间</th>
                     <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {jobs.map((job) => (
                     <tr key={job.id}>
-                      <td>{job.taskName}</td>
-                      <td>{job.customerCount ?? '-'}</td>
-                      <td>{job.selectedFieldCodes.length}</td>
                       <td>
-                        <StyledStatus
-                          tone={
-                            job.status === 'failed'
-                              ? 'danger'
-                              : job.status === 'completed'
-                                ? 'success'
-                                : 'neutral'
-                          }
-                        >
+                        <div>{job.taskName}</div>
+                        <StyledHint>
+                          创建时间：{new Date(job.createdAt).toLocaleString()}
+                          {job.retryCount > 0 ? ` · 已重试 ${job.retryCount} 次` : ''}
+                        </StyledHint>
+                        {job.errorMessage ? (
+                          <StyledHint>{job.errorMessage}</StyledHint>
+                        ) : null}
+                      </td>
+                      <td>
+                        <StyledStatus tone={renderStatusTone(job.status)}>
                           {renderStatusLabel(job.status)}
                         </StyledStatus>
                       </td>
-                      <td>{new Date(job.createdAt).toLocaleString('zh-CN')}</td>
-                      <td>{job.errorMessage ?? '-'}</td>
+                      <td>{job.customerCount ?? '--'}</td>
+                      <td>{job.selectedFieldCodes.length}</td>
+                      <td>
+                        {job.fileExpiresAt
+                          ? new Date(job.fileExpiresAt).toLocaleString()
+                          : '--'}
+                      </td>
                       <td>
                         <StyledActionCell>
                           {job.status === 'completed' ? (
                             <Button
-                              variant="secondary"
                               title="下载"
                               onClick={() => void downloadExportJob(job)}
                             />
-                          ) : job.status === 'failed' ? (
+                          ) : null}
+                          {job.status === 'failed' || job.status === 'expired' ? (
                             <Button
-                              variant="secondary"
                               title="重新执行"
                               onClick={() => void requeueExportJob(job)}
                             />
-                          ) : (
-                            <Button
-                              variant="secondary"
-                              title="处理中"
-                              disabled
-                            />
-                          )}
+                          ) : null}
                         </StyledActionCell>
                       </td>
                     </tr>
@@ -616,3 +637,5 @@ export const EnterpriseCustomerExportPage = () => {
     </EnterprisePermissionGuard>
   );
 };
+
+

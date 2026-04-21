@@ -28,7 +28,11 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { APP_LOCALES } from 'twenty-shared/translations';
 import { isDefined } from 'twenty-shared/utils';
 import { Loader } from 'twenty-ui/feedback';
-import { type PublicWorkspaceData } from '~/generated-metadata/graphql';
+import {
+  type AuthBypassProviders,
+  type AuthProviders,
+  type PublicWorkspaceData,
+} from '~/generated-metadata/graphql';
 import { dateLocaleState } from '~/localization/states/dateLocaleState';
 import { dynamicActivate } from '~/utils/i18n/dynamicActivate';
 import { logError } from '~/utils/logError';
@@ -651,12 +655,8 @@ const getResolvedProviders = ({
   shouldOfferBypass,
   shouldUseBypass,
 }: {
-  workspaceAuthProviders: ReturnType<
-    typeof useAtomStateValue<typeof workspaceAuthProvidersState>
-  >;
-  workspaceAuthBypassProviders: ReturnType<
-    typeof useAtomStateValue<typeof workspaceAuthBypassProvidersState>
-  >;
+  workspaceAuthProviders: AuthProviders | null;
+  workspaceAuthBypassProviders: AuthBypassProviders | null;
   shouldOfferBypass: boolean;
   shouldUseBypass: boolean;
 }) => {
@@ -666,6 +666,9 @@ const getResolvedProviders = ({
 
   if (shouldOfferBypass && shouldUseBypass) {
     return {
+      password: workspaceAuthBypassProviders?.password ?? false,
+      google: workspaceAuthBypassProviders?.google ?? false,
+      microsoft: workspaceAuthBypassProviders?.microsoft ?? false,
       ...workspaceAuthBypassProviders,
       sso: [],
     };
@@ -723,7 +726,7 @@ export const AmainBrandedAuthScreen = ({
   const copy = authCopy[authLocale];
   const workspaceName =
     workspacePublicData?.displayName?.trim() ||
-    workspacePublicData?.inviteHash ||
+    workspacePublicData?.id ||
     'AMAIN';
   const workspacePersonalInviteToken = searchParams.get('inviteToken');
   const hasWorkspaceJoinContext =
@@ -1045,7 +1048,7 @@ export const AmainBrandedAuthScreen = ({
                       >
                         <StyledPrimaryButtonText>
                           {form.formState.isSubmitting ? (
-                            <Loader color="white" />
+                            <Loader color="gray" />
                           ) : null}
                           {primaryActionLabel}
                         </StyledPrimaryButtonText>

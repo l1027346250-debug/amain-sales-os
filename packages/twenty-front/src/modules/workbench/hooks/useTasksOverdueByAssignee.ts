@@ -39,7 +39,7 @@ export const useTasksOverdueByAssignee = () => {
 
     for (const task of overdueTasks) {
       const ownerLabel =
-        task.assignee?.name?.trim() || task.assigneeId?.trim() || 'Unassigned';
+        getAssigneeLabel(task) ?? task.assigneeId?.trim() ?? 'Unassigned';
 
       ownerCountMap.set(ownerLabel, (ownerCountMap.get(ownerLabel) ?? 0) + 1);
     }
@@ -55,11 +55,19 @@ export const useTasksOverdueByAssignee = () => {
     totalOverdueTasksCount: overdueTasks.length,
     affectedAssigneeCount: new Set(
       overdueTasks.map(
-        (task) => task.assigneeId ?? task.assignee?.name ?? 'unassigned',
+        (task) => task.assigneeId?.trim() ?? getAssigneeLabel(task) ?? 'unassigned',
       ),
     ).size,
     ownerPreview,
     loading,
     hasError: Boolean(error),
   };
+};
+
+const getAssigneeLabel = (task: Task) => {
+  const firstName = task.assignee?.name?.firstName?.trim() ?? '';
+  const lastName = task.assignee?.name?.lastName?.trim() ?? '';
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  return fullName.length > 0 ? fullName : null;
 };

@@ -1,0 +1,32 @@
+
+[7m[1m[36m NX [39m[22m[27m  [36mRunning target [1mstart[22m for project twenty-server and [1m4[22m tasks it depends on:[39m
+
+[2m[36m[39m[22m
+
+[2m> [22m[2mnx run[22m twenty-shared:generateBarrels  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-shared:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-client-sdk:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-emails:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-server:start
+
+[2m> [22mrimraf dist && NODE_ENV=development nest start --watch
+
+
+[2m[31m[39m[22m
+
+[7m[1m[31m NX [39m[22m[27m  [31mRunning target [1mstart[22m for project twenty-server and [1m4[22m tasks it depends on failed[39m
+
+[2mFailed tasks:[22m
+
+[2m-[22m twenty-server:start
+
+[2mHint: run the command with[22m --verbose [2mfor more details.[22m
+

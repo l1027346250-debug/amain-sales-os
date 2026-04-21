@@ -1,0 +1,37 @@
+
+[7m[1m[36m NX [39m[22m[27m  [36mRunning target [1mworker[22m for project twenty-server and [1m5[22m tasks it depends on:[39m
+
+[2m[36m[39m[22m
+
+[2m> [22m[2mnx run[22m twenty-shared:generateBarrels  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-shared:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-client-sdk:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-emails:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-server:build
+
+[2m> [22mrimraf dist
+
+[2m> [22mnest build --path ./tsconfig.build.json
+
+[36m> [39m[46m[1m SWC [22m[49m [36mRunning...[39m
+[2m> [22mmkdir -p dist/assets/twenty-client-sdk && cp ../twenty-client-sdk/package.json dist/assets/twenty-client-sdk/ && cp -r ../twenty-client-sdk/dist dist/assets/twenty-client-sdk/dist
+
+
+[2m[31m[39m[22m
+
+[7m[1m[31m NX [39m[22m[27m  [31mRunning target [1mworker[22m for project twenty-server and [1m5[22m tasks it depends on failed[39m
+
+[2mFailed tasks:[22m
+
+[2m-[22m twenty-server:build
+
+[2mHint: run the command with[22m --verbose [2mfor more details.[22m
+

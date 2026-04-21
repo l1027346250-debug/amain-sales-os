@@ -10,6 +10,7 @@ import { tradeCrmRouteMap } from '@/trade-crm/navigation/tradeCrmRouteMap';
 export type TradeCrmMailViewKey =
   | 'inbox'
   | 'pending'
+  | 'pending-replies'
   | 'unread'
   | 'drafts'
   | 'sent'
@@ -35,6 +36,7 @@ export type TradeCrmMailViewKey =
   | 'audiences'
   | 'groups'
   | 'templates'
+  | 'sequences'
   | 'campaigns'
   | 'jobs'
   | 'sender-pool'
@@ -63,6 +65,8 @@ export type TradeCrmMailListItem = {
   status: string;
   href?: string;
   threadId?: string;
+  senderPoolMode?: string;
+  tags?: string[];
 };
 
 export type TradeCrmMailMetric = {

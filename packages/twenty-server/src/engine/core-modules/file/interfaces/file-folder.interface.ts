@@ -48,6 +48,9 @@ export const fileFolderConfigs: Record<FileFolder, FileFolderConfig> = {
   [FileFolder.FilesField]: {
     ignoreExpirationToken: false,
   },
+  [FileFolder.EnterpriseExport]: {
+    ignoreExpirationToken: false,
+  },
   [FileFolder.Dependencies]: {
     ignoreExpirationToken: false,
   },

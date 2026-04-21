@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+﻿import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 
 import { FileFolder } from 'twenty-shared/types';
 
@@ -13,6 +13,7 @@ export const SUPPORTED_FILE_FOLDERS = [
   FileFolder.Workflow,
   FileFolder.AgentChat,
   FileFolder.AppTarball,
+  FileFolder.EnterpriseExport,
 ] as const;
 
 export type SupportedFileFolder = (typeof SUPPORTED_FILE_FOLDERS)[number];
@@ -69,3 +70,5 @@ export class FileByIdGuard implements CanActivate {
     return SUPPORTED_FILE_FOLDERS.includes(fileFolder as SupportedFileFolder);
   }
 }
+
+

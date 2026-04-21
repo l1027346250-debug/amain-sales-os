@@ -2,9 +2,13 @@
 import { styled } from '@linaria/react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { SettingsPath } from 'twenty-shared/types';
+import { AppPath, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
+import {
+  getTradeCrmScopedViewPath,
+  tradeCrmRouteMap,
+} from '@/trade-crm/navigation/tradeCrmRouteMap';
 
 import { MainContainerLayoutWithSidePanel } from '@/object-record/components/MainContainerLayoutWithSidePanel';
 import { TradeCrmMailFolderTree } from '@/trade-crm/mail/components/TradeCrmMailFolderTree';
@@ -1230,6 +1234,19 @@ export const TradeCrmMailPage = () => {
     updateTradeCrmMailThreadStateMutation,
     { loading: updatingTradeCrmMailThreadState },
   ] = useMutation(UPDATE_TRADE_CRM_MAIL_THREAD_STATE);
+  const currentScope = getCurrentScope(
+    legacyMailRouteTarget?.scope ?? requestedScope,
+  );
+  const workspace = getTradeCrmMailWorkspace(currentScope);
+  const currentViewKey = getCurrentView({
+    requestedView: legacyMailRouteTarget?.view ?? requestedView,
+    availableViewKeys: workspace.sidebarItems.map((item) => item.key),
+    fallbackViewKey: workspace.defaultViewKey,
+  });
+  const heroSubviewItems = workspace.sidebarItems.slice(
+    0,
+    currentScope === 'campaign' ? 6 : 5,
+  );
 
   const sidebarItems =
     currentViewKey === 'pending-replies'
@@ -1616,42 +1633,66 @@ export const TradeCrmMailPage = () => {
       ],
       awaitRefetchQueries: true,
     });
-  const [getDevelopmentEmailReportExport, { loading: loadingReportExport }] =
-    useLazyQuery<{
-      getDevelopmentEmailReportExport: {
-        fileName: string;
-        csvContent: string;
-        rowCount: number;
-      };
-    }>(GET_DEVELOPMENT_EMAIL_REPORT_EXPORT, {
-      fetchPolicy: 'network-only',
-      onCompleted: (data) => {
-        setReportExportFileName(data.getDevelopmentEmailReportExport.fileName);
-        setReportExportPreview(data.getDevelopmentEmailReportExport.csvContent);
-        setReportExportRowCount(data.getDevelopmentEmailReportExport.rowCount);
-      },
-    });
-  const [getDevelopmentEmailTrackingLinks, { loading: loadingTrackingLinks }] =
-    useLazyQuery<{
-      getDevelopmentEmailTrackingLinks: {
-        openTrackingUrl: string;
-        clickTrackingUrl: string;
-        expiresAt: string;
-      };
-    }>(GET_DEVELOPMENT_EMAIL_TRACKING_LINKS, {
-      fetchPolicy: 'network-only',
-      onCompleted: (data) => {
-        setSignedOpenTrackingUrl(
-          data.getDevelopmentEmailTrackingLinks.openTrackingUrl,
-        );
-        setSignedClickTrackingUrl(
-          data.getDevelopmentEmailTrackingLinks.clickTrackingUrl,
-        );
-        setTrackingLinksExpiresAt(
-          data.getDevelopmentEmailTrackingLinks.expiresAt,
-        );
-      },
-    });
+  const [
+    getDevelopmentEmailReportExport,
+    {
+      loading: loadingReportExport,
+      data: developmentEmailReportExportData,
+    },
+  ] = useLazyQuery<{
+    getDevelopmentEmailReportExport: {
+      fileName: string;
+      csvContent: string;
+      rowCount: number;
+    };
+  }>(GET_DEVELOPMENT_EMAIL_REPORT_EXPORT, {
+    fetchPolicy: 'network-only',
+  });
+  const [
+    getDevelopmentEmailTrackingLinks,
+    {
+      loading: loadingTrackingLinks,
+      data: developmentEmailTrackingLinksData,
+    },
+  ] = useLazyQuery<{
+    getDevelopmentEmailTrackingLinks: {
+      openTrackingUrl: string;
+      clickTrackingUrl: string;
+      expiresAt: string;
+    };
+  }>(GET_DEVELOPMENT_EMAIL_TRACKING_LINKS, {
+    fetchPolicy: 'network-only',
+  });
+  useEffect(() => {
+    if (!developmentEmailReportExportData) {
+      return;
+    }
+
+    setReportExportFileName(
+      developmentEmailReportExportData.getDevelopmentEmailReportExport.fileName,
+    );
+    setReportExportPreview(
+      developmentEmailReportExportData.getDevelopmentEmailReportExport.csvContent,
+    );
+    setReportExportRowCount(
+      developmentEmailReportExportData.getDevelopmentEmailReportExport.rowCount,
+    );
+  }, [developmentEmailReportExportData]);
+  useEffect(() => {
+    if (!developmentEmailTrackingLinksData) {
+      return;
+    }
+
+    setSignedOpenTrackingUrl(
+      developmentEmailTrackingLinksData.getDevelopmentEmailTrackingLinks.openTrackingUrl,
+    );
+    setSignedClickTrackingUrl(
+      developmentEmailTrackingLinksData.getDevelopmentEmailTrackingLinks.clickTrackingUrl,
+    );
+    setTrackingLinksExpiresAt(
+      developmentEmailTrackingLinksData.getDevelopmentEmailTrackingLinks.expiresAt,
+    );
+  }, [developmentEmailTrackingLinksData]);
   const [startDevelopmentEmailSendJobMutation, { loading: startingSendJob }] =
     useMutation(START_DEVELOPMENT_EMAIL_SEND_JOB, {
       refetchQueries: [
@@ -1678,22 +1719,8 @@ export const TradeCrmMailPage = () => {
       },
       { query: GET_DEVELOPMENT_EMAIL_WORKSPACE },
     ],
-    awaitRefetchQueries: true,
-  });
-
-  const currentScope = getCurrentScope(
-    legacyMailRouteTarget?.scope ?? requestedScope,
-  );
-  const workspace = getTradeCrmMailWorkspace(currentScope);
-  const currentViewKey = getCurrentView({
-    requestedView: legacyMailRouteTarget?.view ?? requestedView,
-    availableViewKeys: workspace.sidebarItems.map((item) => item.key),
-    fallbackViewKey: workspace.defaultViewKey,
-  });
-  const heroSubviewItems = workspace.sidebarItems.slice(
-    0,
-    currentScope === 'campaign' ? 6 : 5,
-  );
+      awaitRefetchQueries: true,
+    });
   const { data: developmentEmailTemplatesData } = useQuery<{
     getDevelopmentEmailTemplates: Array<{
       id: string;

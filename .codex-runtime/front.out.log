@@ -1,0 +1,37 @@
+
+[7m[1m[36m NX [39m[22m[27m  [36mRunning target [1mstart[22m for project twenty-front and [1m7[22m tasks it depends on:[39m
+
+[2m[36m[39m[22m
+
+[2m> [22m[2mnx run[22m twenty-shared:generateBarrels  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-ui:generateBarrels  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-shared:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-ui:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-client-sdk:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-sdk:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-front-component-renderer:build  [2m[local cache][22m
+
+
+[2m> [22m[2mnx run[22m twenty-front:start
+
+[linaria/wyw] Starting CSS pre-build
+[linaria/wyw] Pre-warm: 1271ms ⚠️  slow
+[2m09:37:53[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3001[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[linaria/wyw] slow: G:/codex/twentyCRM/amainCRM/packages/twenty-front/src/modules/error-handler/components/AppRootErrorFallback.tsx 781ms
+[linaria/wyw] slow: G:/codex/twentyCRM/amainCRM/packages/twenty-front/src/modules/ui/layout/page/components/BlankLayout.tsx 467ms
+[linaria/wyw] slow: G:/codex/twentyCRM/amainCRM/packages/twenty-front/src/modules/ui/feedback/snack-bar-manager/components/SnackBarProvider.tsx 422ms
+[linaria/wyw] slow: G:/codex/twentyCRM/amainCRM/packages/twenty-front/src/modules/ui/field/display/components/GlobalFilePreviewModal.tsx 497ms

@@ -1331,7 +1331,10 @@ export const TradeCrmRecordShowShell = ({
             value: leadCountryText,
           }
         : null,
-    ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+    ].filter(
+      (item): item is { label: string; value: string; to: string } =>
+        item !== null,
+    );
     const leadRelatedRecordItems = [
       getTextValue(companyName)
         ? {
@@ -1354,7 +1357,10 @@ export const TradeCrmRecordShowShell = ({
             to: tradeCrmRouteMap.mail,
           }
         : null,
-    ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+    ].filter(
+      (item): item is { label: string; value: string; to: string } =>
+        item !== null,
+    );
     const leadQueueSnapshotItems = [
       {
         label: 'Today New Leads',
@@ -1662,7 +1668,10 @@ export const TradeCrmRecordShowShell = ({
             to: firstLinkedOpportunityLink ?? opportunityPipelineWorkspaceLink,
           }
         : null,
-    ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+    ].filter(
+      (item): item is { label: string; value: string; to: string } =>
+        item !== null,
+    );
     const companyRelatedRecordItems = [
       firstLinkedPersonName != null
         ? {
@@ -1678,7 +1687,10 @@ export const TradeCrmRecordShowShell = ({
             to: firstLinkedOpportunityLink ?? opportunityPipelineWorkspaceLink,
           }
         : null,
-    ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+    ].filter(
+      (item): item is { label: string; value: string; to: string } =>
+        item !== null,
+    );
     const companyQueueSnapshotItems = [
       {
         label: 'Tasks Due Today',
@@ -1981,7 +1993,10 @@ export const TradeCrmRecordShowShell = ({
               ),
           }
         : null,
-    ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+    ].filter(
+      (item): item is { label: string; value: string; to: string } =>
+        item !== null,
+    );
     const personRelatedRecordItems = [
       firstPointOfContactOpportunityName != null
         ? {
@@ -1995,7 +2010,10 @@ export const TradeCrmRecordShowShell = ({
               ),
           }
         : null,
-    ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+    ].filter(
+      (item): item is { label: string; value: string; to: string } =>
+        item !== null,
+    );
     const personQueueSnapshotItems = [
       {
         label: 'Tasks Due Today',
@@ -2315,7 +2333,10 @@ export const TradeCrmRecordShowShell = ({
           value: amountText,
         }
       : null,
-  ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+  ].filter(
+    (item): item is { label: string; value: string; to: string } =>
+      item !== null,
+  );
   const opportunityRelatedRecordItems = [
     companyText
       ? {
@@ -2331,7 +2352,10 @@ export const TradeCrmRecordShowShell = ({
           to: opportunityPointOfContactLink ?? opportunityWorkspaceLink,
         }
       : null,
-  ].filter((item): item is { label: string; value: string; to?: string } => item !== null);
+  ].filter(
+    (item): item is { label: string; value: string; to: string } =>
+      item !== null,
+  );
   const opportunityQueueSnapshotItems = [
     {
       label: 'Needs Next Action',

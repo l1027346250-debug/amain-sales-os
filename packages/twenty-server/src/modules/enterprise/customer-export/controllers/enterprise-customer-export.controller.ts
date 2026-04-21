@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Get,
@@ -85,23 +85,29 @@ export class EnterpriseCustomerExportController {
     );
   }
 
+  @Get('jobs/:id/file-access')
+  async getFileAccess(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Param('id') jobId: string,
+  ) {
+    return this.enterpriseCustomerExportService.getFileAccess(
+      workspace.id,
+      jobId,
+    );
+  }
+
   @Get('jobs/:id/download')
   async downloadCsv(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') jobId: string,
     @Res() response: Response,
   ) {
-    const exportResult = await this.enterpriseCustomerExportService.downloadCsvExport(
+    const fileAccess = await this.enterpriseCustomerExportService.getFileAccess(
       workspace.id,
       jobId,
     );
 
-    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    response.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${exportResult.fileName}"`,
-    );
-
-    response.send(`\uFEFF${exportResult.csvContent}`);
+    return response.redirect(fileAccess.downloadUrl);
   }
 }
+

@@ -8,6 +8,7 @@ import { RecordPositionService } from 'src/engine/core-modules/record-position/s
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
+import { type WorkspaceRepository } from 'src/engine/twenty-orm/repository/workspace.repository';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import {
   TRADE_CRM_AUTOMATION_WORKFLOW_SEEDS,
@@ -55,6 +56,10 @@ type ResolvedTradeCrmLeadAssignmentRule = {
   priority?: number;
   originalIndex: number;
 };
+
+type WorkflowWorkspaceRepository = WorkspaceRepository<WorkflowWorkspaceEntity>;
+type WorkflowVersionWorkspaceRepository =
+  WorkspaceRepository<WorkflowVersionWorkspaceEntity>;
 
 @Injectable()
 export class TradeCrmAutomationsInitializerService {
@@ -654,14 +659,8 @@ export class TradeCrmAutomationsInitializerService {
     seed,
   }: {
     workspaceId: string;
-    workflowRepository: Awaited<
-      ReturnType<GlobalWorkspaceOrmManager['getRepository<WorkflowWorkspaceEntity>']>
-    >;
-    workflowVersionRepository: Awaited<
-      ReturnType<
-        GlobalWorkspaceOrmManager['getRepository<WorkflowVersionWorkspaceEntity>']
-      >
-    >;
+    workflowRepository: WorkflowWorkspaceRepository;
+    workflowVersionRepository: WorkflowVersionWorkspaceRepository;
     workflow: WorkflowWorkspaceEntity;
     seed: TradeCrmAutomationWorkflowSeed;
   }) {
@@ -725,14 +724,8 @@ export class TradeCrmAutomationsInitializerService {
     seed,
   }: {
     workspaceId: string;
-    workflowRepository: Awaited<
-      ReturnType<GlobalWorkspaceOrmManager['getRepository<WorkflowWorkspaceEntity>']>
-    >;
-    workflowVersionRepository: Awaited<
-      ReturnType<
-        GlobalWorkspaceOrmManager['getRepository<WorkflowVersionWorkspaceEntity>']
-      >
-    >;
+    workflowRepository: WorkflowWorkspaceRepository;
+    workflowVersionRepository: WorkflowVersionWorkspaceRepository;
     workflow: WorkflowWorkspaceEntity;
     seed: TradeCrmAutomationWorkflowSeed;
   }) {
@@ -806,9 +799,7 @@ export class TradeCrmAutomationsInitializerService {
     resolvedName,
     seedName,
   }: {
-    workflowRepository: Awaited<
-      ReturnType<GlobalWorkspaceOrmManager['getRepository<WorkflowWorkspaceEntity>']>
-    >;
+    workflowRepository: WorkflowWorkspaceRepository;
     resolvedName: string;
     seedName: string;
   }) {
@@ -834,9 +825,7 @@ export class TradeCrmAutomationsInitializerService {
     seed,
   }: {
     workspaceId: string;
-    workflowRepository: Awaited<
-      ReturnType<GlobalWorkspaceOrmManager['getRepository<WorkflowWorkspaceEntity>']>
-    >;
+    workflowRepository: WorkflowWorkspaceRepository;
     seed: TradeCrmAutomationWorkflowSeed;
   }): Promise<WorkflowWorkspaceEntity> {
     const position = await this.recordPositionService.buildRecordPosition({
@@ -867,11 +856,7 @@ export class TradeCrmAutomationsInitializerService {
     versionName = 'v1',
   }: {
     workspaceId: string;
-    workflowVersionRepository: Awaited<
-      ReturnType<
-        GlobalWorkspaceOrmManager['getRepository<WorkflowVersionWorkspaceEntity>']
-      >
-    >;
+    workflowVersionRepository: WorkflowVersionWorkspaceRepository;
     workflowId: string;
     seed: TradeCrmAutomationWorkflowSeed;
     versionName?: string;

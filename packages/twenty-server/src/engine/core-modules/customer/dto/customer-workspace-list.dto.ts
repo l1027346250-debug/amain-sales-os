@@ -6,19 +6,19 @@ import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/
 
 @ArgsType()
 export class CustomerWorkspaceListArgs {
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   searchTerm?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   stageValue?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   sourceValue?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   tagValue?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   publicPoolStateValue?: string;
 
   @Field(() => Int, { nullable: true, defaultValue: 50 })
@@ -39,13 +39,13 @@ export class CustomerWorkspaceListItemDTO {
   @Field(() => UUIDScalarType)
   id: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   name: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   shortName: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   country: string | null;
 
   @Field(() => GraphQLJSON, { nullable: true })
@@ -54,7 +54,7 @@ export class CustomerWorkspaceListItemDTO {
   @Field(() => GraphQLJSON, { nullable: true })
   website: Record<string, unknown> | string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   domainName: string | null;
 
   @Field(() => GraphQLJSON, { nullable: true })
@@ -81,16 +81,16 @@ export class CustomerWorkspaceListItemDTO {
   @Field(() => GraphQLJSON, { nullable: true })
   customerScore: number | string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   customerCode: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   lastContactAt: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   lastFollowUpAt: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   lastWonAt: string | null;
 
   @Field(() => GraphQLJSON, { nullable: true })
@@ -102,7 +102,7 @@ export class CustomerWorkspaceListItemDTO {
   @Field(() => GraphQLJSON, { nullable: true })
   publicPoolGroup: Record<string, unknown> | string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   publicPoolEnteredAt: string | null;
 }
 

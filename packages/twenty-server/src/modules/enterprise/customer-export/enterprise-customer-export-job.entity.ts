@@ -1,4 +1,4 @@
-import {
+﻿import {
   Column,
   CreateDateColumn,
   Entity,
@@ -36,8 +36,20 @@ export class EnterpriseCustomerExportJobEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'text', nullable: true })
   fileUrl: string | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  fileId: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   fileExpiresAt: Date | null;
+
+  @Column({ type: 'int', default: 0 })
+  retryCount: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  lastAttemptAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  storageDeletedAt: Date | null;
 
   @Column({ type: 'text', nullable: true })
   errorMessage: string | null;
@@ -57,3 +69,4 @@ export class EnterpriseCustomerExportJobEntity extends WorkspaceRelatedEntity {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }
+

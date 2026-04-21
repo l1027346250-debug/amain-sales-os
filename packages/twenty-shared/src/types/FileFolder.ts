@@ -11,6 +11,7 @@ export enum FileFolder {
   PublicAsset = 'public-asset',
   Source = 'source',
   FilesField = 'files-field',
+  EnterpriseExport = 'enterprise-export',
   Dependencies = 'dependencies',
   Workflow = 'workflow',
   AppTarball = 'app-tarball',

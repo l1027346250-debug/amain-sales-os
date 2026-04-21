@@ -1,4 +1,5 @@
 import { WorkflowStatus } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
+import { StepLogicalOperator, ViewFilterOperand } from 'twenty-shared/types';
 import {
   WorkflowActionType,
   type WorkflowAction,
@@ -209,7 +210,7 @@ export const buildTradeCrmLeadAutoAssignmentWorkflowSeed = ({
         input: {
           stepFilterGroups: rules.map((rule, index) => ({
             id: `lead-auto-assignment-filter-group-${index + 1}`,
-            logicalOperator: 'AND',
+            logicalOperator: StepLogicalOperator.AND,
           })),
           stepFilters: rules.flatMap((rule, index) => {
             const groupId = `lead-auto-assignment-filter-group-${index + 1}`;
@@ -220,7 +221,7 @@ export const buildTradeCrmLeadAutoAssignmentWorkflowSeed = ({
                 id: `lead-auto-assignment-source-filter-${index + 1}`,
                 type: 'string',
                 value: rule.source,
-                operand: 'IS',
+                operand: ViewFilterOperand.IS,
                 stepOutputKey: '{{trigger.properties.after.source}}',
                 stepFilterGroupId: groupId,
                 positionInStepFilterGroup: filters.length,
@@ -233,7 +234,7 @@ export const buildTradeCrmLeadAutoAssignmentWorkflowSeed = ({
                 id: `lead-auto-assignment-country-filter-${index + 1}`,
                 type: 'string',
                 value: rule.country,
-                operand: 'IS',
+                operand: ViewFilterOperand.IS,
                 stepOutputKey: '{{trigger.properties.after.country}}',
                 stepFilterGroupId: groupId,
                 positionInStepFilterGroup: filters.length,
@@ -246,7 +247,7 @@ export const buildTradeCrmLeadAutoAssignmentWorkflowSeed = ({
                 id: `lead-auto-assignment-product-category-filter-${index + 1}`,
                 type: 'string',
                 value: rule.productCategory,
-                operand: 'IS',
+                operand: ViewFilterOperand.IS,
                 stepOutputKey: '{{trigger.properties.after.productCategory}}',
                 stepFilterGroupId: groupId,
                 positionInStepFilterGroup: filters.length,
@@ -259,7 +260,7 @@ export const buildTradeCrmLeadAutoAssignmentWorkflowSeed = ({
                 id: `lead-auto-assignment-catch-all-filter-${index + 1}`,
                 type: 'string',
                 value: '{{trigger.properties.after.id}}',
-                operand: 'IS_NOT_EMPTY',
+                operand: ViewFilterOperand.IS_NOT_EMPTY,
                 stepOutputKey: '{{trigger.properties.after.id}}',
                 stepFilterGroupId: groupId,
                 positionInStepFilterGroup: 0,
@@ -363,7 +364,7 @@ export const buildTradeCrmLead12hFirstResponseReminderWorkflowSeed = ({
             recordFilterGroups: [
               {
                 id: LEAD_12H_FILTER_GROUP_ID,
-                logicalOperator: 'AND',
+                logicalOperator: StepLogicalOperator.AND,
               },
             ],
             recordFilters: [
@@ -372,7 +373,7 @@ export const buildTradeCrmLead12hFirstResponseReminderWorkflowSeed = ({
                 fieldMetadataId: leadIdFieldMetadataId,
                 type: 'UUID',
                 value: '["{{trigger.properties.after.id}}"]',
-                operand: 'IS',
+                operand: ViewFilterOperand.IS,
                 recordFilterGroupId: LEAD_12H_FILTER_GROUP_ID,
               },
               {
@@ -380,7 +381,7 @@ export const buildTradeCrmLead12hFirstResponseReminderWorkflowSeed = ({
                 fieldMetadataId: leadFirstResponseTimeFieldMetadataId,
                 type: 'DATE_TIME',
                 value: '',
-                operand: 'IS_EMPTY',
+                operand: ViewFilterOperand.IS_EMPTY,
                 recordFilterGroupId: LEAD_12H_FILTER_GROUP_ID,
               },
             ],
@@ -402,7 +403,7 @@ export const buildTradeCrmLead12hFirstResponseReminderWorkflowSeed = ({
           stepFilterGroups: [
             {
               id: LEAD_12H_IF_FILTER_GROUP_ID,
-              logicalOperator: 'AND',
+              logicalOperator: StepLogicalOperator.AND,
             },
           ],
           stepFilters: [
@@ -410,7 +411,7 @@ export const buildTradeCrmLead12hFirstResponseReminderWorkflowSeed = ({
               id: '3f34452d-2b7b-40d0-a7d6-f7e8587b2208',
               type: 'number',
               value: '1',
-              operand: 'GREATER_THAN_OR_EQUAL',
+              operand: ViewFilterOperand.GREATER_THAN_OR_EQUAL,
               isFullRecord: false,
               stepOutputKey: `{{${LEAD_12H_FIND_STEP_ID}.totalCount}}`,
               stepFilterGroupId: LEAD_12H_IF_FILTER_GROUP_ID,
@@ -511,7 +512,7 @@ export const buildTradeCrmOpportunityQuotation3dFollowUpWorkflowSeed = ({
             recordFilterGroups: [
               {
                 id: OPPORTUNITY_QUOTATION_FILTER_GROUP_ID,
-                logicalOperator: 'AND',
+                logicalOperator: StepLogicalOperator.AND,
               },
             ],
             recordFilters: [
@@ -520,7 +521,7 @@ export const buildTradeCrmOpportunityQuotation3dFollowUpWorkflowSeed = ({
                 fieldMetadataId: opportunityIdFieldMetadataId,
                 type: 'UUID',
                 value: '["{{trigger.properties.after.id}}"]',
-                operand: 'IS',
+                operand: ViewFilterOperand.IS,
                 recordFilterGroupId: OPPORTUNITY_QUOTATION_FILTER_GROUP_ID,
               },
               {
@@ -528,7 +529,7 @@ export const buildTradeCrmOpportunityQuotation3dFollowUpWorkflowSeed = ({
                 fieldMetadataId: opportunityStageFieldMetadataId,
                 type: 'SELECT',
                 value: quotationSentStageValue,
-                operand: 'IS',
+                operand: ViewFilterOperand.IS,
                 recordFilterGroupId: OPPORTUNITY_QUOTATION_FILTER_GROUP_ID,
               },
             ],
@@ -550,7 +551,7 @@ export const buildTradeCrmOpportunityQuotation3dFollowUpWorkflowSeed = ({
           stepFilterGroups: [
             {
               id: OPPORTUNITY_QUOTATION_IF_FILTER_GROUP_ID,
-              logicalOperator: 'AND',
+              logicalOperator: StepLogicalOperator.AND,
             },
           ],
           stepFilters: [
@@ -558,7 +559,7 @@ export const buildTradeCrmOpportunityQuotation3dFollowUpWorkflowSeed = ({
               id: '5f17eb89-f897-4d4d-8164-1cb8b54d3c3d',
               type: 'number',
               value: '1',
-              operand: 'GREATER_THAN_OR_EQUAL',
+              operand: ViewFilterOperand.GREATER_THAN_OR_EQUAL,
               isFullRecord: false,
               stepOutputKey: `{{${OPPORTUNITY_QUOTATION_FIND_STEP_ID}.totalCount}}`,
               stepFilterGroupId: OPPORTUNITY_QUOTATION_IF_FILTER_GROUP_ID,
@@ -568,7 +569,7 @@ export const buildTradeCrmOpportunityQuotation3dFollowUpWorkflowSeed = ({
               id: '03397e10-913d-4b91-b927-0a4d0183e725',
               type: 'string',
               value: '{{trigger.properties.after.lastActivityDate}}',
-              operand: 'IS',
+              operand: ViewFilterOperand.IS,
               isFullRecord: false,
               stepOutputKey: `{{${OPPORTUNITY_QUOTATION_FIND_STEP_ID}.first.lastActivityDate}}`,
               stepFilterGroupId: OPPORTUNITY_QUOTATION_IF_FILTER_GROUP_ID,
@@ -667,7 +668,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
             recordFilterGroups: [
               {
                 id: OPPORTUNITY_STALLED_FILTER_GROUP_ID,
-                logicalOperator: 'AND',
+                logicalOperator: StepLogicalOperator.AND,
               },
             ],
             recordFilters: [
@@ -676,7 +677,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
                 fieldMetadataId: opportunityIdFieldMetadataId,
                 type: 'UUID',
                 value: '["{{trigger.properties.after.id}}"]',
-                operand: 'IS',
+                operand: ViewFilterOperand.IS,
                 recordFilterGroupId: OPPORTUNITY_STALLED_FILTER_GROUP_ID,
               },
             ],
@@ -698,7 +699,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
           stepFilterGroups: [
             {
               id: OPPORTUNITY_STALLED_IF_FILTER_GROUP_ID,
-              logicalOperator: 'AND',
+              logicalOperator: StepLogicalOperator.AND,
             },
           ],
           stepFilters: [
@@ -706,7 +707,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
               id: '674aa465-030a-41be-a1c1-82c8d6f1f234',
               type: 'number',
               value: '1',
-              operand: 'GREATER_THAN_OR_EQUAL',
+              operand: ViewFilterOperand.GREATER_THAN_OR_EQUAL,
               isFullRecord: false,
               stepOutputKey: `{{${OPPORTUNITY_STALLED_FIND_STEP_ID}.totalCount}}`,
               stepFilterGroupId: OPPORTUNITY_STALLED_IF_FILTER_GROUP_ID,
@@ -716,7 +717,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
               id: 'a23c3011-9d80-45eb-baa7-05866c21f7b0',
               type: 'string',
               value: '{{trigger.properties.after.lastActivityDate}}',
-              operand: 'IS',
+              operand: ViewFilterOperand.IS,
               isFullRecord: false,
               stepOutputKey: `{{${OPPORTUNITY_STALLED_FIND_STEP_ID}.first.lastActivityDate}}`,
               stepFilterGroupId: OPPORTUNITY_STALLED_IF_FILTER_GROUP_ID,
@@ -726,7 +727,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
               id: '2d3fb4a6-b9aa-4df0-bf05-a4ec703b3954',
               type: 'string',
               value: 'WON',
-              operand: 'IS_NOT',
+              operand: ViewFilterOperand.IS_NOT,
               isFullRecord: false,
               stepOutputKey: `{{${OPPORTUNITY_STALLED_FIND_STEP_ID}.first.stage}}`,
               stepFilterGroupId: OPPORTUNITY_STALLED_IF_FILTER_GROUP_ID,
@@ -736,7 +737,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
               id: 'c216cf7f-5f8d-43dd-a001-e56ea8d5c4c9',
               type: 'string',
               value: 'LOST',
-              operand: 'IS_NOT',
+              operand: ViewFilterOperand.IS_NOT,
               isFullRecord: false,
               stepOutputKey: `{{${OPPORTUNITY_STALLED_FIND_STEP_ID}.first.stage}}`,
               stepFilterGroupId: OPPORTUNITY_STALLED_IF_FILTER_GROUP_ID,
@@ -746,7 +747,7 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
               id: '0b152f7f-dddd-49c1-9de4-67b48f26d678',
               type: 'string',
               value: stalledStageValue,
-              operand: 'IS_NOT',
+              operand: ViewFilterOperand.IS_NOT,
               isFullRecord: false,
               stepOutputKey: `{{${OPPORTUNITY_STALLED_FIND_STEP_ID}.first.stage}}`,
               stepFilterGroupId: OPPORTUNITY_STALLED_IF_FILTER_GROUP_ID,
@@ -791,3 +792,5 @@ export const buildTradeCrmOpportunity7dStalledMarkerWorkflowSeed = ({
     },
   ],
 });
+
+

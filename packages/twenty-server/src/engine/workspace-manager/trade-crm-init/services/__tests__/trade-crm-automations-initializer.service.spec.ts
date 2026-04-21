@@ -5,11 +5,17 @@ import {
   TRADE_CRM_LEAD_AUTO_ASSIGNMENT_WORKFLOW_NAME,
 } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-automation-workflow-seeds.constant';
 import { TradeCrmAutomationsInitializerService } from 'src/engine/workspace-manager/trade-crm-init/services/trade-crm-automations-initializer.service';
+import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
+import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { WorkflowVersionStatus } from 'src/modules/workflow/common/standard-objects/workflow-version.workspace-entity';
 import { WorkflowStatus } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
 
 describe('TradeCrmAutomationsInitializerService', () => {
   const workspaceId = uuidv4();
+  type WorkspaceMemberMock = {
+    id: string;
+    userEmail?: string;
+  };
 
   const buildWorkflowRepository = () => ({
     findOne: jest.fn(),
@@ -25,11 +31,11 @@ describe('TradeCrmAutomationsInitializerService', () => {
     update: jest.fn(),
   });
 
-  const buildWorkspaceMemberRepository = (members: Array<{ id: string }>) => ({
+  const buildWorkspaceMemberRepository = (members: WorkspaceMemberMock[]) => ({
     find: jest.fn().mockResolvedValue(members),
   });
 
-  const buildMetadataDataSource = ({
+  const buildMetadataRepositories = ({
     leadObjectMetadataId = 'lead-object-metadata',
     fields = [
       {
@@ -45,25 +51,46 @@ describe('TradeCrmAutomationsInitializerService', () => {
     leadObjectMetadataId?: string;
     fields?: Array<{ id: string; name: string }>;
   } = {}) => ({
-    getRepository: jest.fn((entity) => {
-      if (entity.name === 'ObjectMetadataEntity') {
-        return {
-          findOne: jest.fn().mockResolvedValue({
-            id: leadObjectMetadataId,
-            nameSingular: 'lead',
-          }),
-        };
-      }
-
-      if (entity.name === 'FieldMetadataEntity') {
-        return {
-          find: jest.fn().mockResolvedValue(fields),
-        };
-      }
-
-      throw new Error(`Unexpected metadata repository ${entity.name}`);
-    }),
+    objectMetadataRepository: {
+      findOne: jest.fn().mockResolvedValue({
+        id: leadObjectMetadataId,
+        nameSingular: 'lead',
+      }),
+    } as Partial<ObjectMetadataEntity> & {
+      findOne: jest.Mock;
+    },
+    fieldMetadataRepository: {
+      find: jest.fn().mockResolvedValue(fields),
+    } as Partial<FieldMetadataEntity> & {
+      find: jest.Mock;
+    },
   });
+
+  const buildService = ({
+    getRepository,
+    activateWorkflowVersion = jest.fn().mockResolvedValue(undefined),
+  }: {
+    getRepository: jest.Mock;
+    activateWorkflowVersion?: jest.Mock;
+  }) => {
+    const { objectMetadataRepository, fieldMetadataRepository } =
+      buildMetadataRepositories();
+
+    return new TradeCrmAutomationsInitializerService(
+      {
+        executeInWorkspaceContext: jest.fn(async (callback) => callback()),
+        getRepository,
+      } as never,
+      {
+        buildRecordPosition: jest.fn().mockResolvedValue(0),
+      } as never,
+      {
+        activateWorkflowVersion,
+      } as never,
+      objectMetadataRepository as never,
+      fieldMetadataRepository as never,
+    );
+  };
 
   it('should create active lead auto assignment when workspace has a single member', async () => {
     const workflowRepository = buildWorkflowRepository();
@@ -99,21 +126,7 @@ describe('TradeCrmAutomationsInitializerService', () => {
       throw new Error(`Unexpected table ${tableName}`);
     });
 
-    const service = new TradeCrmAutomationsInitializerService(
-      {
-        executeInWorkspaceContext: jest.fn(async (callback) => callback()),
-        getRepository,
-        getGlobalWorkspaceDataSource: jest
-          .fn()
-          .mockResolvedValue(buildMetadataDataSource()),
-      } as never,
-      {
-        buildRecordPosition: jest.fn().mockResolvedValue(0),
-      } as never,
-      {
-        activateWorkflowVersion: jest.fn().mockResolvedValue(undefined),
-      } as never,
-    );
+    const service = buildService({ getRepository });
 
     await service.initializeAutomations(workspaceId);
 
@@ -200,21 +213,7 @@ describe('TradeCrmAutomationsInitializerService', () => {
       throw new Error(`Unexpected table ${tableName}`);
     });
 
-    const service = new TradeCrmAutomationsInitializerService(
-      {
-        executeInWorkspaceContext: jest.fn(async (callback) => callback()),
-        getRepository,
-        getGlobalWorkspaceDataSource: jest
-          .fn()
-          .mockResolvedValue(buildMetadataDataSource()),
-      } as never,
-      {
-        buildRecordPosition: jest.fn().mockResolvedValue(0),
-      } as never,
-      {
-        activateWorkflowVersion,
-      } as never,
-    );
+    const service = buildService({ getRepository, activateWorkflowVersion });
 
     await service.initializeAutomations(workspaceId);
 
@@ -275,21 +274,7 @@ describe('TradeCrmAutomationsInitializerService', () => {
       throw new Error(`Unexpected table ${tableName}`);
     });
 
-    const service = new TradeCrmAutomationsInitializerService(
-      {
-        executeInWorkspaceContext: jest.fn(async (callback) => callback()),
-        getRepository,
-        getGlobalWorkspaceDataSource: jest
-          .fn()
-          .mockResolvedValue(buildMetadataDataSource()),
-      } as never,
-      {
-        buildRecordPosition: jest.fn().mockResolvedValue(0),
-      } as never,
-      {
-        activateWorkflowVersion: jest.fn().mockResolvedValue(undefined),
-      } as never,
-    );
+    const service = buildService({ getRepository });
 
     await service.initializeAutomations(workspaceId);
 
@@ -367,21 +352,7 @@ describe('TradeCrmAutomationsInitializerService', () => {
       throw new Error(`Unexpected table ${tableName}`);
     });
 
-    const service = new TradeCrmAutomationsInitializerService(
-      {
-        executeInWorkspaceContext: jest.fn(async (callback) => callback()),
-        getRepository,
-        getGlobalWorkspaceDataSource: jest
-          .fn()
-          .mockResolvedValue(buildMetadataDataSource()),
-      } as never,
-      {
-        buildRecordPosition: jest.fn().mockResolvedValue(0),
-      } as never,
-      {
-        activateWorkflowVersion,
-      } as never,
-    );
+    const service = buildService({ getRepository, activateWorkflowVersion });
 
     await service.initializeAutomations(workspaceId);
 
@@ -445,21 +416,7 @@ describe('TradeCrmAutomationsInitializerService', () => {
       throw new Error(`Unexpected table ${tableName}`);
     });
 
-    const service = new TradeCrmAutomationsInitializerService(
-      {
-        executeInWorkspaceContext: jest.fn(async (callback) => callback()),
-        getRepository,
-        getGlobalWorkspaceDataSource: jest
-          .fn()
-          .mockResolvedValue(buildMetadataDataSource()),
-      } as never,
-      {
-        buildRecordPosition: jest.fn().mockResolvedValue(0),
-      } as never,
-      {
-        activateWorkflowVersion: jest.fn().mockResolvedValue(undefined),
-      } as never,
-    );
+    const service = buildService({ getRepository });
 
     await service.initializeAutomations(workspaceId, {
       leadAssignmentRules: [

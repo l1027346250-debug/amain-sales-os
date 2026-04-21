@@ -1,13 +1,24 @@
-import {
+﻿import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
+import { addDays } from 'date-fns';
 import { ILike, In, IsNull, Repository } from 'typeorm';
-import { type LinksMetadata } from 'twenty-shared/types';
+import { v4 } from 'uuid';
 
+import { type LinksMetadata, FileFolder } from 'twenty-shared/types';
+
+import { ApplicationService } from 'src/engine/core-modules/application/application.service';
+import { FileStorageService } from 'src/engine/core-modules/file-storage/file-storage.service';
+import { FileUrlService } from 'src/engine/core-modules/file/file-url/file-url.service';
+import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
+import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
+import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
+import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
+import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { CompanyWorkspaceEntity } from 'src/modules/company/standard-objects/company.workspace-entity';
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
 import { CreateEnterpriseCustomerExportJobDto } from 'src/modules/enterprise/customer-export/dtos/create-enterprise-customer-export-job.dto';
@@ -19,11 +30,6 @@ import { EnterpriseFieldDefinitionEntity } from 'src/modules/enterprise/field-de
 import { EnterpriseFieldDefinitionService } from 'src/modules/enterprise/field-definition/services/enterprise-field-definition.service';
 import { EnterpriseFieldValueEntity } from 'src/modules/enterprise/field-value/enterprise-field-value.entity';
 import { EnterpriseEntityType } from 'src/modules/enterprise/shared/types/enterprise-entity-type';
-import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
-import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
-import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
-import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
-import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 
 const DEFAULT_CUSTOMER_EXPORT_FIELD_CODES = [
   'name',
@@ -31,6 +37,9 @@ const DEFAULT_CUSTOMER_EXPORT_FIELD_CODES = [
   'accountOwnerId',
   'createdAt',
 ];
+const ENTERPRISE_CUSTOMER_EXPORT_RETENTION_DAYS = 7;
+const ENTERPRISE_CUSTOMER_EXPORT_MAX_RETRY_COUNT = 3;
+const ENTERPRISE_CUSTOMER_EXPORT_RETRY_DELAY_MS = 60_000;
 
 @Injectable()
 export class EnterpriseCustomerExportService {
@@ -45,6 +54,9 @@ export class EnterpriseCustomerExportService {
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
     private readonly enterpriseEntityBindingService: EnterpriseEntityBindingService,
     private readonly enterpriseFieldDefinitionService: EnterpriseFieldDefinitionService,
+    private readonly applicationService: ApplicationService,
+    private readonly fileStorageService: FileStorageService,
+    private readonly fileUrlService: FileUrlService,
   ) {}
 
   async previewCount(
@@ -66,7 +78,7 @@ export class EnterpriseCustomerExportService {
       dto.selectedFieldCodes,
     );
     const normalizedFilter = this.normalizeFilter(dto.filter);
-    const jobToCreate: EnterpriseCustomerExportJobEntity =
+    const job = await this.enterpriseCustomerExportJobRepository.save(
       this.enterpriseCustomerExportJobRepository.create({
         workspaceId,
         taskName: dto.taskName.trim(),
@@ -75,15 +87,17 @@ export class EnterpriseCustomerExportService {
         customerCount,
         status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.PENDING,
         fileUrl: null,
+        fileId: null,
         fileExpiresAt: null,
+        retryCount: 0,
+        lastAttemptAt: null,
+        storageDeletedAt: null,
         errorMessage: null,
         createdByWorkspaceMemberId: actorWorkspaceMemberId ?? null,
         startedAt: null,
         finishedAt: null,
-      });
-
-    const job: EnterpriseCustomerExportJobEntity =
-      await this.enterpriseCustomerExportJobRepository.save(jobToCreate);
+      }),
+    );
 
     await this.enterpriseConfigAuditService.createLog({
       workspaceId,
@@ -113,14 +127,20 @@ export class EnterpriseCustomerExportService {
   ) {
     const job = await this.findOneOrFail(workspaceId, jobId);
 
+    await this.deleteExportFileIfExists(job);
+
     await this.enterpriseCustomerExportJobRepository.save({
       ...job,
       status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.PENDING,
+      retryCount: 0,
       errorMessage: null,
       startedAt: null,
       finishedAt: null,
+      lastAttemptAt: null,
       fileUrl: null,
+      fileId: null,
       fileExpiresAt: null,
+      storageDeletedAt: job.storageDeletedAt,
     });
 
     await this.workspaceQueueService.add<EnterpriseCustomerExportJobData>(
@@ -153,11 +173,13 @@ export class EnterpriseCustomerExportService {
     actorWorkspaceMemberId?: string | null,
   ) {
     const job = await this.findOneOrFail(workspaceId, jobId);
+    const jobStartedAt = new Date();
 
     await this.enterpriseCustomerExportJobRepository.save({
       ...job,
       status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.RUNNING,
-      startedAt: job.startedAt ?? new Date(),
+      startedAt: job.startedAt ?? jobStartedAt,
+      lastAttemptAt: jobStartedAt,
       finishedAt: null,
       errorMessage: null,
     });
@@ -166,19 +188,75 @@ export class EnterpriseCustomerExportService {
       const selectedFieldCodes = this.normalizeSelectedFieldCodes(
         job.selectedFieldCodes,
       );
+      const selectedFieldLabels = await this.buildSelectedFieldLabels(
+        workspaceId,
+        selectedFieldCodes,
+      );
       const customers = await this.findCustomersForExport(
         workspaceId,
         job.filterJson,
       );
+      const customFieldValueMap = await this.buildCustomFieldValueMap(
+        workspaceId,
+        customers.map((customer) => customer.id),
+        selectedFieldCodes,
+      );
+      const rows = customers.map((customer) =>
+        selectedFieldCodes.map((fieldCode) =>
+          this.resolveExportCellValue(
+            customer,
+            fieldCode,
+            customFieldValueMap.get(`${customer.id}:${fieldCode}`),
+          ),
+        ),
+      );
+      const csvContent = this.buildCsvContent([
+        selectedFieldCodes.map(
+          (fieldCode) => selectedFieldLabels.get(fieldCode) ?? fieldCode,
+        ),
+        ...rows,
+      ]);
+      const fileName = this.buildExportFileName(job.taskName, job.id);
+      const fileExpiresAt = addDays(
+        new Date(),
+        ENTERPRISE_CUSTOMER_EXPORT_RETENTION_DAYS,
+      );
+      const { workspaceCustomFlatApplication } =
+        await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+          {
+            workspaceId,
+          },
+        );
+      const fileId = v4();
+
+      await this.deleteExportFileIfExists(job);
+
+      await this.fileStorageService.writeFile({
+        sourceFile: Buffer.from(`\uFEFF${csvContent}`, 'utf-8'),
+        mimeType: 'text/csv; charset=utf-8',
+        fileFolder: FileFolder.EnterpriseExport,
+        applicationUniversalIdentifier:
+          workspaceCustomFlatApplication.universalIdentifier,
+        workspaceId,
+        resourcePath: `${job.id}/${fileName}`,
+        fileId,
+        settings: {
+          isTemporaryFile: false,
+          toDelete: false,
+        },
+      });
 
       await this.enterpriseCustomerExportJobRepository.save({
         ...job,
         selectedFieldCodes,
         customerCount: customers.length,
         status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.COMPLETED,
-        fileUrl: `/api/enterprise/customer-export/jobs/${job.id}/download`,
-        fileExpiresAt: null,
+        fileUrl: `/api/enterprise/customer-export/jobs/${job.id}/file-access`,
+        fileId,
+        fileExpiresAt,
+        retryCount: job.retryCount,
         errorMessage: null,
+        storageDeletedAt: null,
         finishedAt: new Date(),
       });
 
@@ -192,6 +270,7 @@ export class EnterpriseCustomerExportService {
           taskName: job.taskName,
           rowCount: customers.length,
           fieldCount: selectedFieldCodes.length,
+          fileExpiresAt: fileExpiresAt.toISOString(),
         },
       });
 
@@ -199,60 +278,119 @@ export class EnterpriseCustomerExportService {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown export error';
+      const retryCount = job.retryCount + 1;
+
+      if (retryCount < ENTERPRISE_CUSTOMER_EXPORT_MAX_RETRY_COUNT) {
+        await this.enterpriseCustomerExportJobRepository.save({
+          ...job,
+          status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.RETRYING,
+          retryCount,
+          errorMessage,
+          finishedAt: null,
+        });
+
+        await this.workspaceQueueService.add<EnterpriseCustomerExportJobData>(
+          EnterpriseCustomerExportJob.name,
+          {
+            workspaceId,
+            jobId,
+            actorWorkspaceMemberId: actorWorkspaceMemberId ?? null,
+          },
+          {
+            delay: ENTERPRISE_CUSTOMER_EXPORT_RETRY_DELAY_MS,
+          },
+        );
+
+        await this.enterpriseConfigAuditService.createLog({
+          workspaceId,
+          action: 'enterprise.customerExport.retryScheduled',
+          resourceType: 'enterpriseCustomerExportJob',
+          resourceId: job.id,
+          actorWorkspaceMemberId,
+          afterJson: {
+            retryCount,
+            maxRetryCount: ENTERPRISE_CUSTOMER_EXPORT_MAX_RETRY_COUNT,
+            retryDelayMs: ENTERPRISE_CUSTOMER_EXPORT_RETRY_DELAY_MS,
+          },
+          contextJson: {
+            errorMessage,
+          },
+        });
+
+        return this.findOneOrFail(workspaceId, job.id);
+      }
 
       await this.enterpriseCustomerExportJobRepository.save({
         ...job,
         status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.FAILED,
+        retryCount,
         errorMessage,
         finishedAt: new Date(),
       });
 
-      throw error;
+      await this.enterpriseConfigAuditService.createLog({
+        workspaceId,
+        action: 'enterprise.customerExport.failed',
+        resourceType: 'enterpriseCustomerExportJob',
+        resourceId: job.id,
+        actorWorkspaceMemberId,
+        afterJson: {
+          retryCount,
+          maxRetryCount: ENTERPRISE_CUSTOMER_EXPORT_MAX_RETRY_COUNT,
+        },
+        contextJson: {
+          errorMessage,
+        },
+      });
+
+      return this.findOneOrFail(workspaceId, job.id);
     }
   }
 
-  async downloadCsvExport(workspaceId: string, jobId: string) {
+  async getFileAccess(workspaceId: string, jobId: string) {
     const job = await this.findOneOrFail(workspaceId, jobId);
 
-    if (job.status !== ENTERPRISE_CUSTOMER_EXPORT_STATUS.COMPLETED) {
+    if (job.fileExpiresAt && job.fileExpiresAt.getTime() <= Date.now()) {
+      await this.expireJob(job);
       throw new BadRequestException(
-        `Enterprise customer export job ${jobId} is not ready for download`,
+        `Enterprise customer export job ${job.id} has expired`,
       );
     }
 
-    const selectedFieldCodes = this.normalizeSelectedFieldCodes(
-      job.selectedFieldCodes,
-    );
-    const selectedFieldLabels = await this.buildSelectedFieldLabels(
-      workspaceId,
-      selectedFieldCodes,
-    );
-    const customers = await this.findCustomersForExport(workspaceId, job.filterJson);
-    const customFieldValueMap = await this.buildCustomFieldValueMap(
-      workspaceId,
-      customers.map((customer) => customer.id),
-      selectedFieldCodes,
-    );
-    const rows = customers.map((customer) =>
-      selectedFieldCodes.map((fieldCode) =>
-        this.resolveExportCellValue(
-          customer,
-          fieldCode,
-          customFieldValueMap.get(`${customer.id}:${fieldCode}`),
-        ),
-      ),
-    );
+    this.assertJobReadyForAccess(job);
 
     return {
+      downloadUrl: this.fileUrlService.signFileByIdUrl({
+        fileId: job.fileId as string,
+        workspaceId,
+        fileFolder: FileFolder.EnterpriseExport,
+      }),
       fileName: this.buildExportFileName(job.taskName, job.id),
-      csvContent: this.buildCsvContent([
-        selectedFieldCodes.map(
-          (fieldCode) => selectedFieldLabels.get(fieldCode) ?? fieldCode,
-        ),
-        ...rows,
-      ]),
-      rowCount: rows.length,
+      fileExpiresAt: job.fileExpiresAt,
     };
+  }
+
+  async cleanupExpiredJobs(workspaceId: string) {
+    const expiredJobs = await this.enterpriseCustomerExportJobRepository
+      .createQueryBuilder('job')
+      .where('job.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('job.status = :status', {
+        status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.COMPLETED,
+      })
+      .andWhere('job.fileId IS NOT NULL')
+      .andWhere('job.fileExpiresAt IS NOT NULL')
+      .andWhere('job.fileExpiresAt <= :now', { now: new Date() })
+      .orderBy('job.fileExpiresAt', 'ASC')
+      .getMany();
+
+    let cleanedCount = 0;
+
+    for (const job of expiredJobs) {
+      await this.expireJob(job);
+      cleanedCount += 1;
+    }
+
+    return cleanedCount;
   }
 
   async findMany(workspaceId: string) {
@@ -559,13 +697,60 @@ export class EnterpriseCustomerExportService {
     filter?: PreviewEnterpriseCustomerExportCountDto,
   ): Record<string, unknown> {
     return {
-      ...(filter?.keyword?.trim()
-        ? { keyword: filter.keyword.trim() }
-        : {}),
+      ...(filter?.keyword?.trim() ? { keyword: filter.keyword.trim() } : {}),
       ...(filter?.accountOwnerId
         ? { accountOwnerId: filter.accountOwnerId }
         : {}),
     };
+  }
+
+  private assertJobReadyForAccess(job: EnterpriseCustomerExportJobEntity) {
+    if (job.status !== ENTERPRISE_CUSTOMER_EXPORT_STATUS.COMPLETED) {
+      throw new BadRequestException(
+        `Enterprise customer export job ${job.id} is not ready for download`,
+      );
+    }
+
+    if (job.fileExpiresAt && job.fileExpiresAt.getTime() <= Date.now()) {
+      throw new BadRequestException(
+        `Enterprise customer export job ${job.id} has expired`,
+      );
+    }
+
+    if (!job.fileId) {
+      throw new NotFoundException(
+        `Enterprise customer export job ${job.id} has no file attached`,
+      );
+    }
+  }
+
+  private async expireJob(job: EnterpriseCustomerExportJobEntity) {
+    await this.deleteExportFileIfExists(job);
+
+    await this.enterpriseCustomerExportJobRepository.save({
+      ...job,
+      status: ENTERPRISE_CUSTOMER_EXPORT_STATUS.EXPIRED,
+      fileId: null,
+      fileUrl: null,
+      fileExpiresAt: null,
+      storageDeletedAt: new Date(),
+    });
+  }
+
+  private async deleteExportFileIfExists(job: EnterpriseCustomerExportJobEntity) {
+    if (!job.fileId) {
+      return;
+    }
+
+    try {
+      await this.fileStorageService.deleteByFileId({
+        fileId: job.fileId,
+        workspaceId: job.workspaceId,
+        fileFolder: FileFolder.EnterpriseExport,
+      });
+    } catch {
+      return;
+    }
   }
 }
 
@@ -576,3 +761,5 @@ export type EnterpriseCustomerExportJobData = {
 };
 
 export class EnterpriseCustomerExportJob {}
+
+

@@ -1,24 +1,21 @@
 import { getTradeCrmScopedViewPath } from '@/trade-crm/navigation/tradeCrmRouteMap';
 
-type TradeCrmPageViewDefinition<TKey extends string> = {
-  key: TKey;
+type TradeCrmPageViewDefinition = {
+  key: string;
   label: string;
 };
 
-export const getTradeCrmCurrentView = <
-  TKey extends string,
-  TView extends TradeCrmPageViewDefinition<TKey>,
->({
+export const getTradeCrmCurrentView = <TView extends TradeCrmPageViewDefinition>({
   requestedView,
   views,
   fallbackViewKey,
 }: {
   requestedView: string | null;
   views: TView[];
-  fallbackViewKey: TKey;
+  fallbackViewKey: TView['key'];
 }) => {
   const currentViewKey = views.some((view) => view.key === requestedView)
-    ? (requestedView as TKey)
+    ? (requestedView as TView['key'])
     : fallbackViewKey;
 
   return {
@@ -27,17 +24,14 @@ export const getTradeCrmCurrentView = <
   };
 };
 
-export const getTradeCrmPageTabs = <
-  TKey extends string,
-  TView extends TradeCrmPageViewDefinition<TKey>,
->({
+export const getTradeCrmPageTabs = <TView extends TradeCrmPageViewDefinition>({
   route,
   views,
   currentViewKey,
 }: {
   route: string;
   views: TView[];
-  currentViewKey: TKey;
+  currentViewKey: TView['key'];
 }) =>
   views.map((view) => ({
     label: view.label,

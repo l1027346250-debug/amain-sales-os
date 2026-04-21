@@ -1,0 +1,109 @@
+Successfully compiled: 5453 files with swc (324.55ms)
+[31m[Nest] 42872  - [39m2026/04/21 09:39:39 [31m  ERROR[39m [31mAPP_VERSION must be a valid semantic version (e.g., 1.0.0)[39m
+(node:42872) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[31m[Nest] 42872  - [39m2026/04/21 09:39:42 [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mConfigVariableException [Error]: Config variables validation failed
+    at Object.validate [90m(G:\codex\twentyCRM\amainCRM\packages\twenty-server\[39msrc\engine\core-modules\twenty-config\config-variables.ts:1653:11[90m)[39m
+    at ConfigModule.forRoot (G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\config[24m\dist\config.module.js:78:45)
+    at Object.<anonymous> [90m(G:\codex\twentyCRM\amainCRM\packages\twenty-server\[39msrc\engine\core-modules\environment\environment.module.ts:14:18[90m)[39m
+[90m    at Module._compile (node:internal/modules/cjs/loader:1812:14)[39m
+[90m    at Object..js (node:internal/modules/cjs/loader:1943:10)[39m
+[90m    at Module.load (node:internal/modules/cjs/loader:1533:32)[39m
+[90m    at Module._load (node:internal/modules/cjs/loader:1335:12)[39m
+[90m    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)[39m
+[90m    at Module.require (node:internal/modules/cjs/loader:1556:12)[39m
+[90m    at require (node:internal/modules/helpers:152:16)[39m {
+  code: [32m'VALIDATION_FAILED'[39m,
+  userFriendlyMessage: {
+    id: [32m'n8EtHV'[39m,
+    message: [32m'Configuration validation failed.'[39m
+  }
+}
+'taskkill' ²»ÊÇÄÚ²¿»òÍâ²¿ÃüÁî£¬Ò²²»ÊÇ¿ÉÔËÐÐµÄ³ÌÐò
+»òÅú´¦ÀíÎÄ¼þ¡£
+'taskkill' ²»ÊÇÄÚ²¿»òÍâ²¿ÃüÁî£¬Ò²²»ÊÇ¿ÉÔËÐÐµÄ³ÌÐò
+»òÅú´¦ÀíÎÄ¼þ¡£
+node:child_process:1000
+    throw err;
+    ^
+
+Error: Command failed: taskkill /pid 22200 /T /F
+'taskkill' ï¿½ï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ï¿½î£¬Ò²ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½ÐµÄ³ï¿½ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
+
+    at genericNodeError (node:internal/errors:985:15)
+    at wrappedFn (node:internal/errors:539:14)
+    at checkExecSyncError (node:child_process:925:11)
+    at execSync (node:child_process:997:15)
+    at treeKillSync (G:\codex\twentyCRM\amainCRM\node_modules\@nestjs\cli\lib\utils\tree-kill.js:7:38)
+    at Timeout._onTimeout (G:\codex\twentyCRM\amainCRM\node_modules\@nestjs\cli\actions\start.action.js:68:46)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7) {
+  status: 1,
+  signal: null,
+  output: [
+    null,
+    Buffer(0) [Uint8Array] [],
+    Buffer(67) [Uint8Array] [
+       39, 116,  97, 115, 107, 107, 105, 108, 108,  39,
+       32, 178, 187, 202, 199, 196, 218, 178, 191, 187,
+      242, 205, 226, 178, 191, 195, 252, 193, 238, 163,
+      172, 210, 178, 178, 187, 202, 199, 191, 201, 212,
+      203, 208, 208, 181, 196, 179, 204, 208, 242,  13,
+       10, 187, 242, 197, 250, 180, 166, 192, 237, 206,
+      196, 188, 254, 161, 163,  13,  10
+    ]
+  ],
+  pid: 43040,
+  stdout: Buffer(0) [Uint8Array] [],
+  stderr: Buffer(67) [Uint8Array] [
+     39, 116,  97, 115, 107, 107, 105, 108, 108,  39,
+     32, 178, 187, 202, 199, 196, 218, 178, 191, 187,
+    242, 205, 226, 178, 191, 195, 252, 193, 238, 163,
+    172, 210, 178, 178, 187, 202, 199, 191, 201, 212,
+    203, 208, 208, 181, 196, 179, 204, 208, 242,  13,
+     10, 187, 242, 197, 250, 180, 166, 192, 237, 206,
+    196, 188, 254, 161, 163,  13,  10
+  ]
+}
+
+Node.js v24.14.1
+(node:31988) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[31m[Nest] 31988  - [39m2026/04/21 09:41:31 [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the JwtAuthGuard (?, WorkspaceCacheStorageService). Please make sure that the argument AccessTokenService at index [0] is available in the EnterpriseManagementModule module.
+
+Potential solutions:
+- Is EnterpriseManagementModule a valid NestJS module?
+- If AccessTokenService is a provider, is it part of the current EnterpriseManagementModule?
+- If AccessTokenService is exported from a separate @Module, is that module imported within EnterpriseManagementModule?
+  @Module({
+    imports: [ /* the Module containing AccessTokenService */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules (G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\core[24m\injector\injector.js:290:19)
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at async resolveParam (G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\core[24m\injector\injector.js:140:38)
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams (G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\core[24m\injector\injector.js:169:27)
+    at async Injector.loadInstance (G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\core[24m\injector\injector.js:75:13)
+    at async Injector.loadInjectable (G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\core[24m\injector\injector.js:99:9)
+    at async G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\core[24m\injector\instance-loader.js:80:13
+    at async Promise.all (index 0)
+    at async InstanceLoader.createInstancesOfInjectables (G:\codex\twentyCRM\amainCRM\node_modules\[4m@nestjs\core[24m\injector\instance-loader.js:79:9) {
+  type: [32m'JwtAuthGuard'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [36m[class AccessTokenService][39m,
+      [36m[class WorkspaceCacheStorageService][39m
+    ],
+    name: [36m[class AccessTokenService][39m
+  },
+  metadata: {
+    id: [32m'1496889254'[39m
+  },
+  moduleRef: {
+    id: [32m'-1376424739'[39m
+  }
+}

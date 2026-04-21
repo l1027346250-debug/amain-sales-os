@@ -120,7 +120,10 @@ export const TradeCrmAiDock = ({
         typeof parsedPosition.x === 'number' &&
         typeof parsedPosition.y === 'number'
       ) {
-        setPosition(parsedPosition);
+        setPosition({
+          x: parsedPosition.x,
+          y: parsedPosition.y,
+        });
 
         return;
       }
