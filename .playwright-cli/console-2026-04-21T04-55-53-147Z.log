@@ -4,3 +4,4 @@
 [    3736ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://twenty-icons.com/sales-workbench:0
 [    6900ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0
 [    6901ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0
+[18133809ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3020/api/lead-monitoring/first-response:0

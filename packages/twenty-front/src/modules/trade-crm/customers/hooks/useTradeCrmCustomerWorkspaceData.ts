@@ -1,5 +1,5 @@
 import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { useMemo } from 'react';
 
 import { useSnackBarOnQueryError } from '@/apollo/hooks/useSnackBarOnQueryError';
@@ -91,6 +91,26 @@ type TradeCrmTimelineCalendarPreview = {
   participantLabel: string;
 };
 
+export type TradeCrmCustomerTimelineItem = {
+  id: string;
+  occurredAt: string;
+  type: string;
+  title: string;
+  description: string | null;
+  actorName: string | null;
+  sourceObjectName: string | null;
+  sourceRecordId: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
+export type TradeCrmCustomerOperationHistoryItem = {
+  id: string;
+  operatedAt: string | null;
+  operationSummary: string;
+  operationType: string | null;
+  operatorName: string | null;
+};
+
 export type TradeCrmCustomerWorkspaceFilters = {
   stageLabel?: string | null;
   sourceLabel?: string | null;
@@ -111,12 +131,32 @@ type CustomerWorkspaceListQuery = {
   };
 };
 
+type CustomerPublicPoolListQuery = {
+  customerPublicPoolList: {
+    records: CustomerWorkspaceListRecord[];
+    totalCount: number;
+    stageSummary: TradeCrmCustomerSummaryItem[];
+    groupSummary: TradeCrmCustomerSummaryItem[];
+    sourceSummary: TradeCrmCustomerSummaryItem[];
+    tagSummary: TradeCrmCustomerSummaryItem[];
+  };
+};
+
 type CustomerWorkspaceListQueryVariables = {
   searchTerm?: string;
   sourceValue?: string;
   stageValue?: string;
   tagValue?: string;
   publicPoolStateValue?: string;
+  limit?: number;
+};
+
+type CustomerPublicPoolListQueryVariables = {
+  searchTerm?: string;
+  sourceValue?: string;
+  stageValue?: string;
+  tagValue?: string;
+  publicPoolGroupValue?: string;
   limit?: number;
 };
 
@@ -130,8 +170,90 @@ type CustomerDetailQuery = {
   };
 };
 
+type CustomerTimelineQuery = {
+  customerTimeline: {
+    items: TradeCrmCustomerTimelineItem[];
+    totalCount: number;
+  };
+};
+
+type CustomerOperationHistoryQuery = {
+  customerOperationHistory: {
+    items: TradeCrmCustomerOperationHistoryItem[];
+    totalCount: number;
+  };
+};
+
+type CreateCustomerFollowUpMutation = {
+  createCustomerFollowUp: {
+    lastFollowUpAt: string;
+    timelineItem: TradeCrmCustomerTimelineItem;
+  };
+};
+
+type CreateCustomerContactMutation = {
+  createCustomerContact: {
+    record: Record<string, unknown> & {
+      id: string;
+    };
+  };
+};
+
+type CustomerPublicPoolActionMutation = {
+  claimPublicPoolCustomer?: {
+    customerIds: string[];
+    affectedCount: number;
+    publicPoolState: string;
+  };
+  moveCustomersToPublicPool?: {
+    customerIds: string[];
+    affectedCount: number;
+    publicPoolState: string;
+  };
+};
+
 type CustomerDetailQueryVariables = {
   customerId: string;
+};
+
+type CustomerTimelineQueryVariables = {
+  customerId: string;
+  limit?: number;
+};
+
+type CustomerOperationHistoryQueryVariables = {
+  customerId: string;
+  limit?: number;
+};
+
+type CreateCustomerFollowUpMutationVariables = {
+  input: {
+    customerId: string;
+    body: string;
+  };
+};
+
+type CreateCustomerContactMutationVariables = {
+  input: {
+    customerId: string;
+    nickname?: string;
+    email?: string;
+    phone?: string;
+  };
+};
+
+type ClaimPublicPoolCustomerMutationVariables = {
+  input: {
+    customerId: string;
+  };
+};
+
+type MoveCustomersToPublicPoolMutationVariables = {
+  input: {
+    customerIds: string[];
+    publicPoolGroup?: string;
+    reason?: string;
+  };
 };
 
 const GET_CUSTOMER_WORKSPACE_LIST = gql`
@@ -198,6 +320,69 @@ const GET_CUSTOMER_WORKSPACE_LIST = gql`
   }
 `;
 
+const GET_CUSTOMER_PUBLIC_POOL_LIST = gql`
+  query GetCustomerPublicPoolList(
+    $searchTerm: String
+    $sourceValue: String
+    $stageValue: String
+    $tagValue: String
+    $publicPoolGroupValue: String
+    $limit: Int
+  ) {
+    customerPublicPoolList(
+      searchTerm: $searchTerm
+      sourceValue: $sourceValue
+      stageValue: $stageValue
+      tagValue: $tagValue
+      publicPoolGroupValue: $publicPoolGroupValue
+      limit: $limit
+    ) {
+      totalCount
+      records {
+        id
+        name
+        shortName
+        country
+        address
+        website
+        domainName
+        accountOwner
+        owner
+        customerStage
+        customerGroup
+        customerSource
+        customerTags
+        customerStar
+        customerScore
+        customerCode
+        lastContactAt
+        lastFollowUpAt
+        lastWonAt
+        totalWonAmount
+        publicPoolState
+        publicPoolGroup
+        publicPoolEnteredAt
+      }
+      stageSummary {
+        label
+        count
+      }
+      groupSummary {
+        label
+        count
+      }
+      sourceSummary {
+        label
+        count
+      }
+      tagSummary {
+        label
+        count
+      }
+    }
+  }
+`;
+
 const GET_CUSTOMER_DETAIL = gql`
   query GetCustomerDetail($customerId: UUID!) {
     customerDetail(customerId: $customerId) {
@@ -206,6 +391,87 @@ const GET_CUSTOMER_DETAIL = gql`
       opportunities
       contactCount
       opportunityCount
+    }
+  }
+`;
+
+const GET_CUSTOMER_TIMELINE = gql`
+  query GetCustomerTimeline($customerId: UUID!, $limit: Int) {
+    customerTimeline(customerId: $customerId, limit: $limit) {
+      totalCount
+      items {
+        id
+        occurredAt
+        type
+        title
+        description
+        actorName
+        sourceObjectName
+        sourceRecordId
+        metadata
+      }
+    }
+  }
+`;
+
+const GET_CUSTOMER_OPERATION_HISTORY = gql`
+  query GetCustomerOperationHistory($customerId: UUID!, $limit: Int) {
+    customerOperationHistory(customerId: $customerId, limit: $limit) {
+      totalCount
+      items {
+        id
+        operatedAt
+        operationSummary
+        operationType
+        operatorName
+      }
+    }
+  }
+`;
+
+const CREATE_CUSTOMER_FOLLOW_UP = gql`
+  mutation CreateCustomerFollowUp($input: CreateCustomerFollowUpInput!) {
+    createCustomerFollowUp(input: $input) {
+      lastFollowUpAt
+      timelineItem {
+        id
+        occurredAt
+        type
+        title
+        description
+        actorName
+        sourceObjectName
+        sourceRecordId
+        metadata
+      }
+    }
+  }
+`;
+
+const CREATE_CUSTOMER_CONTACT = gql`
+  mutation CreateCustomerContact($input: CreateCustomerContactInput!) {
+    createCustomerContact(input: $input) {
+      record
+    }
+  }
+`;
+
+const CLAIM_PUBLIC_POOL_CUSTOMER = gql`
+  mutation ClaimPublicPoolCustomer($input: ClaimPublicPoolCustomerInput!) {
+    claimPublicPoolCustomer(input: $input) {
+      customerIds
+      affectedCount
+      publicPoolState
+    }
+  }
+`;
+
+const MOVE_CUSTOMERS_TO_PUBLIC_POOL = gql`
+  mutation MoveCustomersToPublicPool($input: MoveCustomersToPublicPoolInput!) {
+    moveCustomersToPublicPool(input: $input) {
+      customerIds
+      affectedCount
+      publicPoolState
     }
   }
 `;
@@ -533,7 +799,10 @@ export const useTradeCrmCustomerWorkspaceData = (
 
   const companyFilter = buildCompanyFilter(filters);
   const peopleFilter = buildPeopleFilter(filters);
-  const shouldUseCustomerWorkspaceList = !customerRouteId;
+  const shouldUseCustomerPublicPoolList =
+    !customerRouteId && filters?.publicPoolStateLabel === 'Public Pool';
+  const shouldUseCustomerWorkspaceList =
+    !customerRouteId && !shouldUseCustomerPublicPoolList;
   const customerStageValue = filters?.stageLabel
     ? getTradeCrmCustomerStageValueForLabel(filters.stageLabel)
     : null;
@@ -546,6 +815,21 @@ export const useTradeCrmCustomerWorkspaceData = (
   const publicPoolStateValue = filters?.publicPoolStateLabel
     ? getTradeCrmPublicPoolStateValueForLabel(filters.publicPoolStateLabel)
     : null;
+  const customerWorkspaceListVariables = {
+    limit: 50,
+    publicPoolStateValue: publicPoolStateValue ?? undefined,
+    searchTerm: filters?.searchTerm?.trim() || undefined,
+    sourceValue: customerSourceValue ?? undefined,
+    stageValue: customerStageValue ?? undefined,
+    tagValue: customerTagValue ?? undefined,
+  };
+  const customerPublicPoolListVariables = {
+    limit: 50,
+    searchTerm: filters?.searchTerm?.trim() || undefined,
+    sourceValue: customerSourceValue ?? undefined,
+    stageValue: customerStageValue ?? undefined,
+    tagValue: customerTagValue ?? undefined,
+  };
 
   const {
     data: customerWorkspaceListData,
@@ -557,24 +841,35 @@ export const useTradeCrmCustomerWorkspaceData = (
     client: apolloCoreClient,
     errorPolicy: 'all',
     skip: !shouldUseCustomerWorkspaceList,
-    variables: {
-      limit: 50,
-      searchTerm: filters?.searchTerm?.trim() || undefined,
-      sourceValue: customerSourceValue ?? undefined,
-      stageValue: customerStageValue ?? undefined,
-      tagValue: customerTagValue ?? undefined,
-      publicPoolStateValue: publicPoolStateValue ?? undefined,
-    },
+    variables: customerWorkspaceListVariables,
   });
 
   useSnackBarOnQueryError(customerWorkspaceListError);
+
+  const {
+    data: customerPublicPoolListData,
+    error: customerPublicPoolListError,
+  } = useQuery<
+    CustomerPublicPoolListQuery,
+    CustomerPublicPoolListQueryVariables
+  >(GET_CUSTOMER_PUBLIC_POOL_LIST, {
+    client: apolloCoreClient,
+    errorPolicy: 'all',
+    skip: !shouldUseCustomerPublicPoolList,
+    variables: customerPublicPoolListVariables,
+  });
+
+  useSnackBarOnQueryError(customerPublicPoolListError);
 
   const { records: companyRecordsFallback, totalCount: companyTotalCountFallback } =
     useFindManyRecords<GenericRecord>({
       objectNameSingular: CoreObjectNameSingular.Company,
       filter: companyFilter,
       limit: 8,
-      skip: !hasCompanyObject || shouldUseCustomerWorkspaceList,
+      skip:
+        !hasCompanyObject ||
+        shouldUseCustomerWorkspaceList ||
+        shouldUseCustomerPublicPoolList,
     });
 
   const { records: peopleRecords, totalCount: peopleTotalCount } =
@@ -630,11 +925,15 @@ export const useTradeCrmCustomerWorkspaceData = (
     objectNameSingular: CoreObjectNameSingular.Task,
   });
   const companyRecords =
-    customerWorkspaceListData?.customerWorkspaceList.records.map((record) => ({
+    (
+      customerPublicPoolListData?.customerPublicPoolList.records ??
+      customerWorkspaceListData?.customerWorkspaceList.records
+    )?.map((record) => ({
       ...record,
       __typename: 'Company',
     })) ?? companyRecordsFallback;
   const companyTotalCount =
+    customerPublicPoolListData?.customerPublicPoolList.totalCount ??
     customerWorkspaceListData?.customerWorkspaceList.totalCount ??
     companyTotalCountFallback ??
     0;
@@ -665,6 +964,93 @@ export const useTradeCrmCustomerWorkspaceData = (
   );
 
   useSnackBarOnQueryError(customerDetailAggregateError);
+
+  const {
+    data: customerTimelineData,
+    error: customerTimelineError,
+  } = useQuery<CustomerTimelineQuery, CustomerTimelineQueryVariables>(
+    GET_CUSTOMER_TIMELINE,
+    {
+      client: apolloCoreClient,
+      errorPolicy: 'all',
+      skip:
+        !shouldUseCustomerDetailAggregate || !resolvedCustomerRoute?.recordId,
+      variables: {
+        customerId: resolvedCustomerRoute?.recordId ?? '',
+        limit: 20,
+      },
+    },
+  );
+
+  useSnackBarOnQueryError(customerTimelineError);
+
+  const {
+    data: customerOperationHistoryData,
+    error: customerOperationHistoryError,
+  } = useQuery<
+    CustomerOperationHistoryQuery,
+    CustomerOperationHistoryQueryVariables
+  >(GET_CUSTOMER_OPERATION_HISTORY, {
+    client: apolloCoreClient,
+    errorPolicy: 'all',
+    skip:
+      resolvedCustomerRoute?.kind !== 'organization' ||
+      !resolvedCustomerRoute.recordId,
+    variables: {
+      customerId: resolvedCustomerRoute?.recordId ?? '',
+      limit: 20,
+    },
+  });
+
+  useSnackBarOnQueryError(customerOperationHistoryError);
+
+  const [
+    createCustomerFollowUpMutation,
+    { loading: createCustomerFollowUpLoading },
+  ] = useMutation<
+    CreateCustomerFollowUpMutation,
+    CreateCustomerFollowUpMutationVariables
+  >(CREATE_CUSTOMER_FOLLOW_UP, {
+      client: apolloCoreClient,
+    });
+  const [
+    createCustomerContactMutation,
+    { error: createCustomerContactError, loading: createCustomerContactLoading },
+  ] = useMutation<
+    CreateCustomerContactMutation,
+    CreateCustomerContactMutationVariables
+  >(CREATE_CUSTOMER_CONTACT, {
+    client: apolloCoreClient,
+  });
+
+  useSnackBarOnQueryError(createCustomerContactError);
+  const [
+    claimPublicPoolCustomerMutation,
+    {
+      error: claimPublicPoolCustomerError,
+      loading: claimPublicPoolCustomerLoading,
+    },
+  ] = useMutation<
+    CustomerPublicPoolActionMutation,
+    ClaimPublicPoolCustomerMutationVariables
+  >(CLAIM_PUBLIC_POOL_CUSTOMER, {
+    client: apolloCoreClient,
+  });
+  const [
+    moveCustomersToPublicPoolMutation,
+    {
+      error: moveCustomersToPublicPoolError,
+      loading: moveCustomersToPublicPoolLoading,
+    },
+  ] = useMutation<
+    CustomerPublicPoolActionMutation,
+    MoveCustomersToPublicPoolMutationVariables
+  >(MOVE_CUSTOMERS_TO_PUBLIC_POOL, {
+    client: apolloCoreClient,
+  });
+
+  useSnackBarOnQueryError(claimPublicPoolCustomerError);
+  useSnackBarOnQueryError(moveCustomersToPublicPoolError);
 
   const { record: companyRecord, loading: companyRecordLoading } =
     useFindOneRecord<GenericRecord>({
@@ -1015,6 +1401,7 @@ export const useTradeCrmCustomerWorkspaceData = (
 
   const customerStageSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerPublicPoolListData?.customerPublicPoolList.stageSummary ??
       customerWorkspaceListData?.customerWorkspaceList.stageSummary ??
       countLabels(
         (companyRecords ?? []).map((record, index) =>
@@ -1024,11 +1411,12 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords, customerWorkspaceListData],
+    [companyRecords, customerPublicPoolListData, customerWorkspaceListData],
   );
 
   const customerGroupSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerPublicPoolListData?.customerPublicPoolList.groupSummary ??
       customerWorkspaceListData?.customerWorkspaceList.groupSummary ??
       countLabels(
         (companyRecords ?? []).map((record, index) =>
@@ -1038,11 +1426,12 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords, customerWorkspaceListData],
+    [companyRecords, customerPublicPoolListData, customerWorkspaceListData],
   );
 
   const customerSourceSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerPublicPoolListData?.customerPublicPoolList.sourceSummary ??
       customerWorkspaceListData?.customerWorkspaceList.sourceSummary ??
       countLabels(
         (companyRecords ?? []).map((record, index) =>
@@ -1052,11 +1441,12 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords, customerWorkspaceListData],
+    [companyRecords, customerPublicPoolListData, customerWorkspaceListData],
   );
 
   const customerTagSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerPublicPoolListData?.customerPublicPoolList.tagSummary ??
       customerWorkspaceListData?.customerWorkspaceList.tagSummary ??
       countLabels(
         (companyRecords ?? []).flatMap((record, index) =>
@@ -1066,7 +1456,7 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords, customerWorkspaceListData],
+    [companyRecords, customerPublicPoolListData, customerWorkspaceListData],
   );
 
   const publicPoolRecords = useMemo(
@@ -1195,6 +1585,128 @@ export const useTradeCrmCustomerWorkspaceData = (
     };
   }, [customerDetailRecord, resolvedCustomerRoute]);
 
+  const createCustomerFollowUp = async (body: string) => {
+    if (
+      resolvedCustomerRoute?.kind !== 'organization' ||
+      !resolvedCustomerRoute.recordId
+    ) {
+      return;
+    }
+
+    const customerId = resolvedCustomerRoute.recordId;
+
+    await createCustomerFollowUpMutation({
+      variables: {
+        input: {
+          customerId,
+          body,
+        },
+      },
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_TIMELINE,
+          variables: {
+            customerId,
+            limit: 20,
+          },
+        },
+        {
+          query: GET_CUSTOMER_DETAIL,
+          variables: {
+            customerId,
+          },
+        },
+        {
+          query: GET_CUSTOMER_OPERATION_HISTORY,
+          variables: {
+            customerId,
+            limit: 20,
+          },
+        },
+      ],
+    });
+  };
+
+  const createCustomerContact = async ({
+    email,
+    nickname,
+    phone,
+  }: Omit<CreateCustomerContactMutationVariables['input'], 'customerId'>) => {
+    if (
+      resolvedCustomerRoute?.kind !== 'organization' ||
+      !resolvedCustomerRoute.recordId
+    ) {
+      return;
+    }
+
+    const customerId = resolvedCustomerRoute.recordId;
+
+    await createCustomerContactMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_DETAIL,
+          variables: {
+            customerId,
+          },
+        },
+      ],
+      variables: {
+        input: {
+          customerId,
+          email,
+          nickname,
+          phone,
+        },
+      },
+    });
+  };
+
+  const claimPublicPoolCustomer = async (customerId: string) => {
+    await claimPublicPoolCustomerMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_PUBLIC_POOL_LIST,
+          variables: customerPublicPoolListVariables,
+        },
+        {
+          query: GET_CUSTOMER_WORKSPACE_LIST,
+          variables: customerWorkspaceListVariables,
+        },
+      ],
+      variables: {
+        input: {
+          customerId,
+        },
+      },
+    });
+  };
+
+  const moveCustomersToPublicPool = async ({
+    customerIds,
+    publicPoolGroup,
+    reason,
+  }: MoveCustomersToPublicPoolMutationVariables['input']) => {
+    await moveCustomersToPublicPoolMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_PUBLIC_POOL_LIST,
+          variables: customerPublicPoolListVariables,
+        },
+        {
+          query: GET_CUSTOMER_WORKSPACE_LIST,
+          variables: customerWorkspaceListVariables,
+        },
+      ],
+      variables: {
+        input: {
+          customerIds,
+          publicPoolGroup,
+          reason,
+        },
+      },
+    });
+  };
+
   return {
     companyRecords,
     peopleRecords,
@@ -1237,6 +1749,21 @@ export const useTradeCrmCustomerWorkspaceData = (
     timelineThreadTotalCount,
     timelineCalendarPreviews,
     timelineCalendarTotalCount,
+    customerTimelineItems: customerTimelineData?.customerTimeline.items ?? [],
+    customerTimelineTotalCount:
+      customerTimelineData?.customerTimeline.totalCount ?? 0,
+    customerOperationHistoryItems:
+      customerOperationHistoryData?.customerOperationHistory.items ?? [],
+    customerOperationHistoryTotalCount:
+      customerOperationHistoryData?.customerOperationHistory.totalCount ?? 0,
+    createCustomerFollowUp,
+    createCustomerFollowUpLoading,
+    createCustomerContact,
+    createCustomerContactLoading,
+    claimPublicPoolCustomer,
+    claimPublicPoolCustomerLoading,
+    moveCustomersToPublicPool,
+    moveCustomersToPublicPoolLoading,
     materialAlignmentNotice:
       'Source HTML filenames are unreliable. Build against the screenshots first and validate against the saved OKKI URLs second.',
   };

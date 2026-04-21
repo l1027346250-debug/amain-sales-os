@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { type TradeCrmCustomerTableBadgeTone } from '@/trade-crm/customers/components/TradeCrmCustomerTable';
 import { TradeCrmCustomerTable } from '@/trade-crm/customers/components/TradeCrmCustomerTable';
 import {
+  type TradeCrmCustomerOperationHistoryItem,
+  type TradeCrmCustomerTimelineItem,
+} from '@/trade-crm/customers/hooks/useTradeCrmCustomerWorkspaceData';
+import {
   getTradeCrmCustomerCountryLabel,
   getTradeCrmCustomerGroupLabelForRecord,
   getTradeCrmCustomerJobTitle,
@@ -74,6 +78,18 @@ type TradeCrmCustomerDetailWorkbenchProps = {
   timelineThreadTotalCount: number;
   timelineCalendarPreviews: TradeCrmTimelineCalendarPreview[];
   timelineCalendarTotalCount: number;
+  customerTimelineItems: TradeCrmCustomerTimelineItem[];
+  customerTimelineTotalCount: number;
+  customerOperationHistoryItems: TradeCrmCustomerOperationHistoryItem[];
+  customerOperationHistoryTotalCount: number;
+  createCustomerFollowUp: (body: string) => Promise<void>;
+  createCustomerFollowUpLoading: boolean;
+  createCustomerContact: (input: {
+    email?: string;
+    nickname?: string;
+    phone?: string;
+  }) => Promise<void>;
+  createCustomerContactLoading: boolean;
 };
 
 type DetailTabKey =
@@ -311,6 +327,51 @@ const StyledComposer = styled.div`
   padding: ${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]};
 `;
 
+const StyledComposerTextArea = styled.textarea`
+  background: ${tradeCrmUiTheme.colors.surfaceMuted};
+  border: 1px solid ${tradeCrmUiTheme.colors.border};
+  border-radius: ${tradeCrmUiTheme.radius.control};
+  color: ${tradeCrmUiTheme.colors.ink};
+  font: inherit;
+  min-height: 82px;
+  padding: ${themeCssVariables.spacing[3]};
+  resize: vertical;
+  width: 100%;
+`;
+
+const StyledComposerInput = styled.input`
+  background: ${tradeCrmUiTheme.colors.surfaceMuted};
+  border: 1px solid ${tradeCrmUiTheme.colors.border};
+  border-radius: ${tradeCrmUiTheme.radius.control};
+  color: ${tradeCrmUiTheme.colors.ink};
+  font: inherit;
+  min-height: 38px;
+  padding: 0 ${themeCssVariables.spacing[3]};
+`;
+
+const StyledComposerActions = styled.div`
+  align-items: center;
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: space-between;
+  margin-top: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledComposerButton = styled.button`
+  background: ${tradeCrmUiTheme.colors.borderStrong};
+  border: 1px solid ${tradeCrmUiTheme.colors.borderStrong};
+  border-radius: ${tradeCrmUiTheme.radius.control};
+  color: ${tradeCrmUiTheme.colors.surface};
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 14px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.54;
+  }
+`;
+
 const StyledTabPanel = styled.div`
   padding: 0 ${themeCssVariables.spacing[4]} ${themeCssVariables.spacing[4]};
 `;
@@ -325,11 +386,36 @@ export const TradeCrmCustomerDetailWorkbench = ({
   timelineThreadTotalCount,
   timelineCalendarPreviews,
   timelineCalendarTotalCount,
+  customerTimelineItems,
+  customerTimelineTotalCount,
+  customerOperationHistoryItems,
+  customerOperationHistoryTotalCount,
+  createCustomerFollowUp,
+  createCustomerFollowUpLoading,
+  createCustomerContact,
+  createCustomerContactLoading,
 }: TradeCrmCustomerDetailWorkbenchProps) => {
   const [activeTab, setActiveTab] = useState<DetailTabKey>('activity');
+  const [followUpBody, setFollowUpBody] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
 
   const timelineItems =
-    timelineThreadPreviews.length > 0 || timelineCalendarPreviews.length > 0
+    customerTimelineItems.length > 0
+      ? customerTimelineItems.map((item) => ({
+          id: item.id,
+          time: item.occurredAt.slice(0, 10),
+          title: item.title,
+          description: [
+            item.description,
+            item.actorName ? `Owner: ${item.actorName}` : null,
+            item.sourceObjectName ? `Source: ${item.sourceObjectName}` : null,
+          ]
+            .filter((value): value is string => value !== null)
+            .join(' / '),
+        }))
+      : timelineThreadPreviews.length > 0 || timelineCalendarPreviews.length > 0
       ? [
           ...timelineThreadPreviews.map((thread) => ({
             id: thread.id,
@@ -518,6 +604,8 @@ export const TradeCrmCustomerDetailWorkbench = ({
           {[
             ['Timeline Threads', `${timelineThreadTotalCount}`],
             ['Calendar Events', `${timelineCalendarTotalCount}`],
+            ['Customer Timeline', `${customerTimelineTotalCount}`],
+            ['Operation Logs', `${customerOperationHistoryTotalCount}`],
             ['Contact Coverage', `${contactRows.length}`],
             ['Open Deals', `${dealRows.length}`],
             ['Last Touch', customerDetail?.lastTouchLabel ?? '--'],
@@ -529,6 +617,29 @@ export const TradeCrmCustomerDetailWorkbench = ({
             </StyledMetric>
           ))}
         </StyledProfileGrid>
+      );
+    }
+
+    if (activeTab === 'history') {
+      return (
+        <StyledTimeline>
+          {customerOperationHistoryItems.length > 0 ? (
+            customerOperationHistoryItems.map((item) => (
+              <StyledTimelineItem key={item.id}>
+                <StyledTimelineTime>
+                  {item.operatedAt?.slice(0, 16).replace('T', ' ') ?? '--'} /{' '}
+                  {item.operatorName ?? 'system'}
+                </StyledTimelineTime>
+                <StyledTimelineTitle>
+                  {item.operationType ?? 'CUSTOMER_OPERATION'}
+                </StyledTimelineTitle>
+                <StyledMuted>{item.operationSummary}</StyledMuted>
+              </StyledTimelineItem>
+            ))
+          ) : (
+            <StyledMuted>No operation history is available yet.</StyledMuted>
+          )}
+        </StyledTimeline>
       );
     }
 
@@ -570,6 +681,37 @@ export const TradeCrmCustomerDetailWorkbench = ({
         ))}
       </StyledTimeline>
     );
+  };
+
+  const submitFollowUp = async () => {
+    const trimmedBody = followUpBody.trim();
+
+    if (trimmedBody.length === 0) {
+      return;
+    }
+
+    await createCustomerFollowUp(trimmedBody);
+    setFollowUpBody('');
+    setActiveTab('activity');
+  };
+
+  const submitContact = async () => {
+    const nickname = newContactName.trim();
+    const email = newContactEmail.trim();
+    const phone = newContactPhone.trim();
+
+    if (!nickname && !email && !phone) {
+      return;
+    }
+
+    await createCustomerContact({
+      email: email || undefined,
+      nickname: nickname || undefined,
+      phone: phone || undefined,
+    });
+    setNewContactEmail('');
+    setNewContactName('');
+    setNewContactPhone('');
   };
 
   return (
@@ -691,10 +833,26 @@ export const TradeCrmCustomerDetailWorkbench = ({
             ))}
           </StyledTabRow>
           <StyledComposer>
-            Write follow-up entry, sync mail context, or attach next-step notes here.
-            Current preview: {timelineThreadTotalCount} mail threads and{' '}
-            {timelineCalendarTotalCount} schedule items already resolve for this customer
-            route.
+            <StyledComposerTextArea
+              value={followUpBody}
+              onChange={(event) => setFollowUpBody(event.target.value)}
+              placeholder="Write a follow-up entry for this customer. It will be saved to the customer timeline and update the latest follow-up timestamp."
+            />
+            <StyledComposerActions>
+              <span>
+                {timelineThreadTotalCount} mail threads / {timelineCalendarTotalCount}{' '}
+                schedule items / {customerTimelineTotalCount} timeline events
+              </span>
+              <StyledComposerButton
+                type="button"
+                disabled={
+                  followUpBody.trim().length === 0 || createCustomerFollowUpLoading
+                }
+                onClick={submitFollowUp}
+              >
+                {createCustomerFollowUpLoading ? 'Saving...' : 'Write Follow-up'}
+              </StyledComposerButton>
+            </StyledComposerActions>
           </StyledComposer>
           <StyledTabPanel>{renderActiveTab()}</StyledTabPanel>
         </StyledCard>
@@ -705,6 +863,38 @@ export const TradeCrmCustomerDetailWorkbench = ({
           rows={contactRows}
           emptyState="No contact coverage is visible yet."
         />
+        <StyledComposer>
+          <StyledCardTitle>Add Contact</StyledCardTitle>
+          <StyledComposerActions>
+            <StyledComposerInput
+              value={newContactName}
+              onChange={(event) => setNewContactName(event.target.value)}
+              placeholder="Nickname"
+            />
+            <StyledComposerInput
+              value={newContactEmail}
+              onChange={(event) => setNewContactEmail(event.target.value)}
+              placeholder="Email"
+            />
+            <StyledComposerInput
+              value={newContactPhone}
+              onChange={(event) => setNewContactPhone(event.target.value)}
+              placeholder="Phone"
+            />
+            <StyledComposerButton
+              type="button"
+              disabled={
+                createCustomerContactLoading ||
+                (!newContactName.trim() &&
+                  !newContactEmail.trim() &&
+                  !newContactPhone.trim())
+              }
+              onClick={submitContact}
+            >
+              {createCustomerContactLoading ? 'Adding...' : 'Add Contact'}
+            </StyledComposerButton>
+          </StyledComposerActions>
+        </StyledComposer>
       </StyledColumn>
     </StyledShell>
   );

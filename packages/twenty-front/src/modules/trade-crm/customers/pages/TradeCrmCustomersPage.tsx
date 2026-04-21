@@ -1,9 +1,20 @@
 import { styled } from '@linaria/react';
 import { useMemo, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router-dom';
 
 import { TradeCrmCustomerDetailWorkbench } from '@/trade-crm/customers/components/TradeCrmCustomerDetailWorkbench';
 import { useTradeCrmCustomerConfigDraft } from '@/trade-crm/customers/hooks/useTradeCrmCustomerConfigDraft';
+import { useTradeCrmCustomerDedupSearch } from '@/trade-crm/customers/hooks/useTradeCrmCustomerDedupSearch';
+import { useTradeCrmCustomerImportJobs } from '@/trade-crm/customers/hooks/useTradeCrmCustomerImportJobs';
+import { useTradeCrmCustomerRecordMutations } from '@/trade-crm/customers/hooks/useTradeCrmCustomerRecordMutations';
 import {
   TradeCrmCustomerTable,
   type TradeCrmCustomerTableBadgeTone,
@@ -11,6 +22,7 @@ import {
 import { TradeCrmCustomerWorkspaceLayout } from '@/trade-crm/customers/components/TradeCrmCustomerWorkspaceLayout';
 import { useTradeCrmCustomerWorkspaceData } from '@/trade-crm/customers/hooks/useTradeCrmCustomerWorkspaceData';
 import {
+  getTradeCrmCustomerDetailPath,
   getTradeCrmCustomerConfigPath,
   getTradeCrmCustomerLegacyViewRedirectPath,
   getTradeCrmCustomerPath,
@@ -721,6 +733,9 @@ const getPublicPoolGroupLabels = (
   return labels.length > 0 ? [...new Set(labels)] : ['Default Public Pool'];
 };
 
+const getImportDestinationValue = (destination: string) =>
+  destination === 'public-pool' ? 'PUBLIC_POOL' : 'CUSTOMER_LIST';
+
 const useTradeCrmCustomerRuntimeConfig = (
   workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>,
 ) => {
@@ -765,13 +780,16 @@ const renderConfigContent = ({
   onGroupParentIdChange,
   newTagLabels,
   onNewTagLabelChange,
-  newSourceLabel,
-  onNewSourceLabelChange,
-  publicPoolGroupLabels,
-}: {
-  activeSection: ConfigSection;
-  workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>;
-  configDraft: ReturnType<typeof useTradeCrmCustomerConfigDraft>;
+    newSourceLabel,
+    onNewSourceLabelChange,
+    importFileName,
+    onImportFileNameChange,
+    importJobs,
+    publicPoolGroupLabels,
+  }: {
+    activeSection: ConfigSection;
+    workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>;
+    configDraft: ReturnType<typeof useTradeCrmCustomerConfigDraft>;
   newGroupLabel: string;
   onNewGroupLabelChange: (value: string) => void;
   groupParentId: string | null;
@@ -780,11 +798,14 @@ const renderConfigContent = ({
   onNewTagLabelChange: (
     scope: keyof CustomerConfigTagInputState,
     value: string,
-  ) => void;
-  newSourceLabel: string;
-  onNewSourceLabelChange: (value: string) => void;
-  publicPoolGroupLabels: string[];
-}) => {
+    ) => void;
+    newSourceLabel: string;
+    onNewSourceLabelChange: (value: string) => void;
+    importFileName: string;
+    onImportFileNameChange: (value: string) => void;
+    importJobs: ReturnType<typeof useTradeCrmCustomerImportJobs>;
+    publicPoolGroupLabels: string[];
+  }) => {
   if (activeSection === 'public-pool-rules') {
     return (
       <StyledSplitGrid>
@@ -1143,6 +1164,36 @@ const renderConfigContent = ({
           consistent across customer settings and later import runs.
         </StyledPanelDescription>
         <StyledInlineComposer>
+          <StyledTextInput
+            value={importFileName}
+            onChange={(event) => onImportFileNameChange(event.target.value)}
+            placeholder="Customer import file name"
+          />
+          <StyledControlButton
+            type="button"
+            $tone="primary"
+            disabled={
+              importFileName.trim().length === 0 || importJobs.startLoading
+            }
+            onClick={() => {
+              void importJobs
+                .startCustomerImportJob({
+                  destination: getImportDestinationValue(
+                    configDraft.draft.importConfig.destination,
+                  ),
+                  fileName: importFileName,
+                  selectedFields: configDraft.draft.importConfig.selectedFields,
+                  updateExistingContacts:
+                    configDraft.draft.importConfig.updateExistingContacts,
+                })
+                .then(() => onImportFileNameChange(''))
+                .catch(() => undefined);
+            }}
+          >
+            {importJobs.startLoading ? 'Creating...' : 'Create Import Job'}
+          </StyledControlButton>
+        </StyledInlineComposer>
+        <StyledInlineComposer>
           <StyledFilterButton
             type="button"
             $active={configDraft.draft.importConfig.destination === 'customer-list'}
@@ -1182,10 +1233,40 @@ const renderConfigContent = ({
               <StyledStepText>{text}</StyledStepText>
             </StyledStepItem>
           ))}
-        </StyledStepList>
-      </StyledPanel>
-      <StyledPanel>
-        <StyledPanelTitle>Template Fields</StyledPanelTitle>
+          </StyledStepList>
+        </StyledPanel>
+        <StyledPanel>
+          <StyledPanelTitle>Import Job Records</StyledPanelTitle>
+          <StyledPanelDescription>
+            {importJobs.loading
+              ? 'Loading import jobs...'
+              : `${importJobs.totalCount} persisted import job(s) in this workspace.`}
+          </StyledPanelDescription>
+          <StyledFilterList>
+            {importJobs.jobs.slice(0, 6).map((job) => (
+              <StyledFilterNode key={job.id}>
+                <StyledStack>
+                  <StyledNodeLabel>{job.fileName}</StyledNodeLabel>
+                  <StyledNodeCount>
+                    {job.destination} / {job.status} / success {job.successCount} /
+                    failed {job.failedCount}
+                  </StyledNodeCount>
+                </StyledStack>
+                <StyledNodeCount>
+                  {job.executedAt?.slice(0, 16).replace('T', ' ') ?? '--'}
+                </StyledNodeCount>
+              </StyledFilterNode>
+            ))}
+            {!importJobs.loading && importJobs.jobs.length === 0 ? (
+              <StyledConfigNote>
+                No import job exists yet. Create one above to persist the upload
+                setup before field mapping and commit are implemented.
+              </StyledConfigNote>
+            ) : null}
+          </StyledFilterList>
+        </StyledPanel>
+        <StyledPanel>
+          <StyledPanelTitle>Template Fields</StyledPanelTitle>
         <StyledTokenWrap>
           {configDraft.draft.importConfig.selectedFields.map((field) => (
             <StyledTagButton
@@ -1242,6 +1323,9 @@ const renderConfigContent = ({
 };
 
 const TradeCrmCustomerListWorkspace = () => {
+  const navigate = useNavigate();
+  const customerRecordMutations = useTradeCrmCustomerRecordMutations();
+  const [newCustomerName, setNewCustomerName] = useState('');
   const [filters, setFilters] = useState<CustomerFilterState>({
     searchTerm: '',
     stage: null,
@@ -1273,6 +1357,14 @@ const TradeCrmCustomerListWorkspace = () => {
       }),
     [filters, workspaceData.peopleRecords],
   );
+  const visibleCustomerIds = filteredCompanyRecords
+    .slice(0, 6)
+    .map((record) => record.id);
+  const canMoveVisibleCustomersToPublicPool =
+    visibleCustomerIds.length > 0 && !workspaceData.moveCustomersToPublicPoolLoading;
+  const canCreateCustomer =
+    newCustomerName.trim().length > 0 &&
+    !customerRecordMutations.createCustomerLoading;
 
   return (
     <TradeCrmCustomerWorkspaceLayout
@@ -1398,9 +1490,75 @@ const TradeCrmCustomerListWorkspace = () => {
         <StyledFilterSummary>
           {filteredCompanyRecords.length} companies / {filteredPeopleRecords.length}{' '}
           contacts visible
-        </StyledFilterSummary>
-      </StyledToolbar>
-      <StyledSplitGrid>
+          </StyledFilterSummary>
+        </StyledToolbar>
+        <StyledActionBar>
+          <StyledActionMeta>
+            <span>Create company customer</span>
+            <span>
+              Company is the formal customer master; contacts stay subordinate and can be
+              added from the detail workspace.
+            </span>
+          </StyledActionMeta>
+          <StyledActionButtons>
+            <StyledTextInput
+              value={newCustomerName}
+              onChange={(event) => setNewCustomerName(event.target.value)}
+              placeholder="Company name"
+            />
+            <StyledControlButton
+              type="button"
+              $tone="primary"
+              disabled={!canCreateCustomer}
+              onClick={() => {
+                void customerRecordMutations
+                  .createCustomer({
+                    name: newCustomerName,
+                  })
+                  .then((record) => {
+                    setNewCustomerName('');
+
+                    if (record?.id) {
+                      navigate(getTradeCrmCustomerDetailPath(record.id));
+                    }
+                  })
+                  .catch(() => undefined);
+              }}
+            >
+              {customerRecordMutations.createCustomerLoading
+                ? 'Creating...'
+                : 'Create Customer'}
+            </StyledControlButton>
+          </StyledActionButtons>
+        </StyledActionBar>
+        <StyledActionBar>
+          <StyledActionMeta>
+            <span>Batch public-pool execution</span>
+            <span>
+              Move the first {visibleCustomerIds.length} visible customer(s) into the
+              configured public-pool group and preserve owner audit fields.
+            </span>
+          </StyledActionMeta>
+          <StyledActionButtons>
+            <StyledControlButton
+              type="button"
+              $tone="danger"
+              disabled={!canMoveVisibleCustomersToPublicPool}
+              onClick={() => {
+                void workspaceData.moveCustomersToPublicPool({
+                  customerIds: visibleCustomerIds,
+                  publicPoolGroup: configDraft.draft.publicPoolRule.publicPoolGroup,
+                  reason: 'Manual public-pool move from customer list',
+                });
+              }}
+            >
+              {workspaceData.moveCustomersToPublicPoolLoading
+                ? 'Moving...'
+                : 'Move Visible To Public Pool'}
+            </StyledControlButton>
+          </StyledActionButtons>
+        </StyledActionBar>
+        <StyledSplitGrid>
         <StyledStack>
           <StyledPanel>
             <StyledPanelTitle>Customer Segments</StyledPanelTitle>
@@ -1510,10 +1668,7 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
     searchTerm,
   });
   const { configDraft } = useTradeCrmCustomerRuntimeConfig(workspaceData);
-  const publicPoolBaseRecords =
-    workspaceData.publicPoolRecords.length > 0
-      ? workspaceData.publicPoolRecords
-      : workspaceData.companyRecords;
+  const publicPoolBaseRecords = workspaceData.publicPoolRecords;
   const filteredPublicPoolRecords = useMemo(
     () =>
       filterCompanyRecords({
@@ -1529,6 +1684,10 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
   );
   const publicPoolStageScopeLabel =
     configDraft.draft.publicPoolRule.scopeStages.join(', ') || 'No stage scope selected';
+  const firstClaimablePublicPoolRecord = filteredPublicPoolRecords[0] ?? null;
+  const canClaimFirstPublicPoolCustomer =
+    firstClaimablePublicPoolRecord !== null &&
+    !workspaceData.claimPublicPoolCustomerLoading;
 
   const publicPoolRows = buildCompanyRows(filteredPublicPoolRecords)
     .slice(0, 6)
@@ -1539,25 +1698,33 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
         {
           primary: `Original owner: ${row.cells[1]?.primary ?? 'Unknown'}`,
           secondary: getTradeCrmCustomerSourceLabelForRecord({
-            record: publicPoolBaseRecords?.[index],
+            record: filteredPublicPoolRecords?.[index],
             fallbackIndex: index,
           }),
         },
         {
-          primary: getTradeCrmCustomerCountryLabel(publicPoolBaseRecords?.[index]),
-          secondary: getTradeCrmPublicPoolGroupLabelForRecord(publicPoolBaseRecords?.[index]),
+          primary: getTradeCrmCustomerCountryLabel(filteredPublicPoolRecords?.[index]),
+          secondary: getTradeCrmPublicPoolGroupLabelForRecord(
+            filteredPublicPoolRecords?.[index],
+          ),
         },
         {
           primary: getTradeCrmCustomerLastTouchLabelForRecord({
-            record: publicPoolBaseRecords?.[index],
+            record: filteredPublicPoolRecords?.[index],
             fallbackIndex: index + 2,
           }),
-          secondary: getTradeCrmPublicPoolStateLabelForRecord(publicPoolBaseRecords?.[index]),
-          badgeLabel: getTradeCrmPublicPoolStateLabelForRecord(publicPoolBaseRecords?.[index]),
+          secondary: getTradeCrmPublicPoolStateLabelForRecord(
+            filteredPublicPoolRecords?.[index],
+          ),
+          badgeLabel: getTradeCrmPublicPoolStateLabelForRecord(
+            filteredPublicPoolRecords?.[index],
+          ),
           badgeTone: index % 2 === 0 ? 'amber' : 'red',
         },
         {
-          primary: getTradeCrmCustomerCodeLabelForRecord(publicPoolBaseRecords?.[index]),
+          primary: getTradeCrmCustomerCodeLabelForRecord(
+            filteredPublicPoolRecords?.[index],
+          ),
           secondary: 'Preserve owner audit',
         },
       ],
@@ -1611,11 +1778,47 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search claimable accounts by company, owner, country, or tags"
         />
-        <StyledFilterSummary>
-          {filteredPublicPoolRecords.length} claimable accounts visible
-        </StyledFilterSummary>
-      </StyledToolbar>
-      <StyledSplitGrid>
+          <StyledFilterSummary>
+            {filteredPublicPoolRecords.length} claimable accounts visible
+          </StyledFilterSummary>
+        </StyledToolbar>
+        <StyledActionBar>
+          <StyledActionMeta>
+            <span>
+              {firstClaimablePublicPoolRecord
+                ? `Next claim: ${getTradeCrmRecordName({
+                    kind: 'organization',
+                    record: firstClaimablePublicPoolRecord,
+                  })}`
+                : 'No public-pool customer selected'}
+            </span>
+            <span>
+              Claim writes the current workspace member as owner, clears public-pool
+              state, and logs the operation.
+            </span>
+          </StyledActionMeta>
+          <StyledActionButtons>
+            <StyledControlButton
+              type="button"
+              $tone="primary"
+              disabled={!canClaimFirstPublicPoolCustomer}
+              onClick={() => {
+                if (!firstClaimablePublicPoolRecord) {
+                  return;
+                }
+
+                void workspaceData.claimPublicPoolCustomer(
+                  firstClaimablePublicPoolRecord.id,
+                );
+              }}
+            >
+              {workspaceData.claimPublicPoolCustomerLoading
+                ? 'Claiming...'
+                : 'Claim First Customer'}
+            </StyledControlButton>
+          </StyledActionButtons>
+        </StyledActionBar>
+        <StyledSplitGrid>
         <StyledStack>
           <StyledPanel>
             <StyledPanelTitle>Move to Public Pool Modes</StyledPanelTitle>
@@ -1662,87 +1865,82 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
 
 const TradeCrmCustomerDedupWorkspace = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const workspaceData = useTradeCrmCustomerWorkspaceData(undefined, {
-    searchTerm,
-  });
+  const workspaceData = useTradeCrmCustomerWorkspaceData();
+  const dedupSearch = useTradeCrmCustomerDedupSearch(searchTerm);
   const { configDraft } = useTradeCrmCustomerRuntimeConfig(workspaceData);
-  const dedupCandidateRecords = useMemo(
-    () =>
-      filterCompanyRecords({
-        records: workspaceData.companyRecords,
-        filters: {
-          searchTerm,
-          stage: null,
-          source: null,
-          tag: null,
-        },
-      }),
-    [searchTerm, workspaceData.companyRecords],
-  );
   const rankedMatchingRules = [...configDraft.draft.matchingRules].sort(
     (leftRule, rightRule) => rightRule.weight - leftRule.weight,
   );
-  const matchingRuleLabel = rankedMatchingRules
+  const appliedMatchingRules =
+    dedupSearch.appliedRules.length > 0
+      ? dedupSearch.appliedRules
+      : rankedMatchingRules;
+  const matchingRuleLabel = appliedMatchingRules
     .slice(0, 3)
     .map((rule) => `${rule.field} ${rule.weight}%`)
     .join(' / ');
-  const totalMatchingWeight = rankedMatchingRules.reduce(
+  const totalMatchingWeight = appliedMatchingRules.reduce(
     (totalWeight, rule) => totalWeight + rule.weight,
     0,
   );
+  const mergePrimaryHit = dedupSearch.hits[0] ?? null;
+  const mergeDuplicateIds = dedupSearch.hits
+    .slice(1, 4)
+    .map((hit) => hit.customer.id);
+  const canMergeTopCandidates =
+    mergePrimaryHit !== null &&
+    mergeDuplicateIds.length > 0 &&
+    !dedupSearch.mergeCustomersLoading;
 
-  const dedupRows = dedupCandidateRecords
+  const dedupRows = dedupSearch.hits
     .slice(0, 6)
-    .map((record, index) => ({
-      id: record.id,
+    .map((hit, index) => ({
+      id: hit.customer.id,
       cells: [
         {
           primary: getTradeCrmRecordName({
             kind: 'organization',
-            record,
+            record: hit.customer,
           }),
-          secondary: getTradeCrmCustomerWebsiteLabel(record),
-          badgeLabel: `${78 + index * 3}% match`,
-          badgeTone: index % 2 === 0 ? 'amber' : 'blue',
+          secondary: hit.primaryMatch ?? getTradeCrmCustomerWebsiteLabel(hit.customer),
+          badgeLabel: `${hit.matchScore}% match`,
+          badgeTone: hit.matchScore >= 80 ? 'red' : hit.matchScore >= 55 ? 'amber' : 'blue',
         },
         {
           primary: `${getTradeCrmRecordName({
             kind: 'individual',
-            record: workspaceData.peopleRecords?.[index],
+            record: hit.matchedContact ?? undefined,
           })}`,
-          secondary:
-            typeof workspaceData.peopleRecords?.[index]?.email === 'string'
-              ? (workspaceData.peopleRecords[index].email as string)
-              : 'Email anchor pending',
+          secondary: getTradeCrmCustomerEmailLabel(hit.matchedContact ?? undefined),
         },
         {
-          primary: getTradeCrmCustomerCountryLabel(record),
+          primary: getTradeCrmCustomerCountryLabel(hit.customer),
           secondary: getTradeCrmCustomerSourceLabelForRecord({
-            record,
+            record: hit.customer,
             fallbackIndex: index,
           }),
         },
         {
           primary: getTradeCrmCustomerStageLabelForRecord({
-            record,
+            record: hit.customer,
             fallbackIndex: index,
           }),
-          secondary: `Weights: ${matchingRuleLabel}`,
-          badgeLabel: `${78 + index * 3}% match`,
-          badgeTone: index % 2 === 0 ? 'amber' : 'blue',
+          secondary: `Matched: ${hit.matchedFields.join(', ') || '--'}`,
+          badgeLabel: `${hit.matchScore}% match`,
+          badgeTone: hit.matchScore >= 80 ? 'red' : hit.matchScore >= 55 ? 'amber' : 'blue',
         },
         {
           primary: getTradeCrmCustomerLastTouchLabelForRecord({
-            record,
+            record: hit.customer,
             fallbackIndex: index,
           }),
-          secondary: `Owner ${getTradeCrmCustomerOwnerLabel(record)}`,
+          secondary: `Owner ${getTradeCrmCustomerOwnerLabel(hit.customer)}`,
         },
       ],
       actionLabel: 'Review',
       actionTo: getTradeCrmCustomerRoutePath({
         kind: 'organization',
-        record,
+        record: hit.customer,
       }),
     }));
 
@@ -1752,7 +1950,7 @@ const TradeCrmCustomerDedupWorkspace = () => {
       heroTitle="Make pre-claim and pre-import duplicate checks a first-class customer workflow."
       heroDescription="This route is now the canonical target for matching rules and dedup search. It is positioned to receive import collision review and merge actions without mixing those concerns back into list or settings."
       heroPills={[
-        `${dedupCandidateRecords.length} companies`,
+        `${dedupSearch.totalCount} hits`,
         `${workspaceData.peopleTotalCount} contacts`,
         `${totalMatchingWeight}% configured weight`,
       ]}
@@ -1791,16 +1989,59 @@ const TradeCrmCustomerDedupWorkspace = () => {
           placeholder="Search duplicate candidates by company, email, phone, or country"
         />
         <StyledFilterSummary>
-          {dedupCandidateRecords.length} potential candidates in current scope
+          {searchTerm.trim().length === 0
+            ? 'Enter a company, email, phone, contact, country, or social account'
+            : dedupSearch.loading
+              ? 'Searching duplicate candidates...'
+              : `${dedupSearch.totalCount} potential candidates in current scope`}
         </StyledFilterSummary>
       </StyledToolbar>
+      <StyledActionBar>
+        <StyledActionMeta>
+          <span>
+            {mergePrimaryHit
+              ? `Primary record: ${getTradeCrmRecordName({
+                  kind: 'organization',
+                  record: mergePrimaryHit.customer,
+                })}`
+              : 'Search first to select a primary customer'}
+          </span>
+          <span>
+            {mergeDuplicateIds.length > 0
+              ? `${mergeDuplicateIds.length} top duplicate candidate(s) will be migrated into the primary customer and audit logged.`
+              : 'Merge requires at least two dedup hits.'}
+          </span>
+        </StyledActionMeta>
+        <StyledActionButtons>
+          <StyledControlButton
+            type="button"
+            $tone="danger"
+            disabled={!canMergeTopCandidates}
+            onClick={() => {
+              if (!mergePrimaryHit) {
+                return;
+              }
+
+              void dedupSearch.mergeCustomers({
+                duplicateCustomerIds: mergeDuplicateIds,
+                primaryCustomerId: mergePrimaryHit.customer.id,
+                reason: 'Manual dedup merge from customer module',
+              });
+            }}
+          >
+            {dedupSearch.mergeCustomersLoading
+              ? 'Merging...'
+              : 'Merge Top Candidates'}
+          </StyledControlButton>
+        </StyledActionButtons>
+      </StyledActionBar>
       <StyledCallout>
         <StyledPanelTitle>Dedup Search Scope</StyledPanelTitle>
         <StyledPanelDescription>
           Search company name, short name, contact email, phone, country, and social fields from one bar. This keeps manual dedup and import dedup aligned.
         </StyledPanelDescription>
         <StyledTokenWrap>
-          {['All', ...rankedMatchingRules.map((rule) => rule.field)].map((token) => (
+          {['All', ...appliedMatchingRules.map((rule) => rule.field)].map((token) => (
             <StyledToken key={token}>{token}</StyledToken>
           ))}
         </StyledTokenWrap>
@@ -1824,6 +2065,7 @@ const TradeCrmCustomerConfigWorkspace = ({
   const workspaceData = useTradeCrmCustomerWorkspaceData();
   const { configDraft, publicPoolGroupLabels } =
     useTradeCrmCustomerRuntimeConfig(workspaceData);
+  const importJobs = useTradeCrmCustomerImportJobs();
   const [newGroupLabel, setNewGroupLabel] = useState('');
   const [groupParentId, setGroupParentId] = useState<string | null>(null);
   const [newTagLabels, setNewTagLabels] = useState<CustomerConfigTagInputState>({
@@ -1832,6 +2074,7 @@ const TradeCrmCustomerConfigWorkspace = ({
     subordinate: '',
   });
   const [newSourceLabel, setNewSourceLabel] = useState('');
+  const [importFileName, setImportFileName] = useState('');
 
   return (
     <TradeCrmCustomerWorkspaceLayout
@@ -1914,6 +2157,9 @@ const TradeCrmCustomerConfigWorkspace = ({
           })),
         newSourceLabel,
         onNewSourceLabelChange: setNewSourceLabel,
+        importFileName,
+        onImportFileNameChange: setImportFileName,
+        importJobs,
         publicPoolGroupLabels,
       })}
     </TradeCrmCustomerWorkspaceLayout>
@@ -1984,6 +2230,16 @@ const TradeCrmCustomerDetailWorkspace = () => {
         timelineThreadTotalCount={workspaceData.timelineThreadTotalCount}
         timelineCalendarPreviews={workspaceData.timelineCalendarPreviews}
         timelineCalendarTotalCount={workspaceData.timelineCalendarTotalCount}
+        customerTimelineItems={workspaceData.customerTimelineItems}
+        customerTimelineTotalCount={workspaceData.customerTimelineTotalCount}
+        customerOperationHistoryItems={workspaceData.customerOperationHistoryItems}
+        customerOperationHistoryTotalCount={
+          workspaceData.customerOperationHistoryTotalCount
+        }
+        createCustomerFollowUp={workspaceData.createCustomerFollowUp}
+        createCustomerFollowUpLoading={workspaceData.createCustomerFollowUpLoading}
+        createCustomerContact={workspaceData.createCustomerContact}
+        createCustomerContactLoading={workspaceData.createCustomerContactLoading}
       />
     </TradeCrmCustomerWorkspaceLayout>
   );

@@ -188,6 +188,9 @@ const countLabels = (labels: string[]): CustomerWorkspaceSummaryDTO[] => {
     );
 };
 
+const getSafeLimit = (limit: number | undefined) =>
+  Math.max(1, Math.min(limit ?? 50, 200));
+
 @Injectable()
 export class CustomerWorkspaceListService {
   constructor(
@@ -226,16 +229,20 @@ export class CustomerWorkspaceListService {
         order: {
           updatedAt: 'DESC',
         },
-        take: Math.max(1, Math.min(args.limit ?? 50, 200)),
+        // Filter logic is domain-specific and runs after metadata mapping.
+        // Fetch a wider window first so public-pool and tag filters do not miss
+        // records just because they are not in the first visible page.
+        take: 500,
         relations: ['accountOwner'],
       });
 
       const filteredRecords = records.filter((record) =>
         this.matchesFilters(record, args),
       );
+      const visibleRecords = filteredRecords.slice(0, getSafeLimit(args.limit));
 
       return {
-        records: filteredRecords.map((record) => this.mapRecord(record)),
+        records: visibleRecords.map((record) => this.mapRecord(record)),
         totalCount: filteredRecords.length,
         publicPoolCount: filteredRecords.filter(
           (record) =>
