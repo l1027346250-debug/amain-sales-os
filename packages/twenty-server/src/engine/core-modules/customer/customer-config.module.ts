@@ -1,13 +1,21 @@
 import { Module } from '@nestjs/common';
 
+import { CustomerAiInsightResolver } from 'src/engine/core-modules/customer/customer-ai-insight.resolver';
+import { CustomerAiInsightService } from 'src/engine/core-modules/customer/customer-ai-insight.service';
 import { CustomerConfigResolver } from 'src/engine/core-modules/customer/customer-config.resolver';
 import { CustomerConfigService } from 'src/engine/core-modules/customer/customer-config.service';
+import { CustomerCommercialSummaryResolver } from 'src/engine/core-modules/customer/customer-commercial-summary.resolver';
+import { CustomerCommercialSummaryService } from 'src/engine/core-modules/customer/customer-commercial-summary.service';
 import { CustomerDedupSearchResolver } from 'src/engine/core-modules/customer/customer-dedup-search.resolver';
 import { CustomerDedupSearchService } from 'src/engine/core-modules/customer/customer-dedup-search.service';
 import { CustomerDetailResolver } from 'src/engine/core-modules/customer/customer-detail.resolver';
 import { CustomerDetailService } from 'src/engine/core-modules/customer/customer-detail.service';
+import { CustomerDocumentResolver } from 'src/engine/core-modules/customer/customer-document.resolver';
+import { CustomerDocumentService } from 'src/engine/core-modules/customer/customer-document.service';
 import { CustomerImportJobResolver } from 'src/engine/core-modules/customer/customer-import-job.resolver';
 import { CustomerImportJobService } from 'src/engine/core-modules/customer/customer-import-job.service';
+import { CustomerLeadConversionResolver } from 'src/engine/core-modules/customer/customer-lead-conversion.resolver';
+import { CustomerLeadConversionService } from 'src/engine/core-modules/customer/customer-lead-conversion.service';
 import { CustomerMergeResolver } from 'src/engine/core-modules/customer/customer-merge.resolver';
 import { CustomerMergeService } from 'src/engine/core-modules/customer/customer-merge.service';
 import { CustomerOperationHistoryResolver } from 'src/engine/core-modules/customer/customer-operation-history.resolver';
@@ -16,6 +24,8 @@ import { CustomerPublicPoolActionResolver } from 'src/engine/core-modules/custom
 import { CustomerPublicPoolActionService } from 'src/engine/core-modules/customer/customer-public-pool-action.service';
 import { CustomerPublicPoolListResolver } from 'src/engine/core-modules/customer/customer-public-pool-list.resolver';
 import { CustomerPublicPoolListService } from 'src/engine/core-modules/customer/customer-public-pool-list.service';
+import { CustomerPublicPoolRuleExecutionResolver } from 'src/engine/core-modules/customer/customer-public-pool-rule-execution.resolver';
+import { CustomerPublicPoolRuleExecutionService } from 'src/engine/core-modules/customer/customer-public-pool-rule-execution.service';
 import { CustomerRecordMutationResolver } from 'src/engine/core-modules/customer/customer-record-mutation.resolver';
 import { CustomerRecordMutationService } from 'src/engine/core-modules/customer/customer-record-mutation.service';
 import { CustomerTimelineResolver } from 'src/engine/core-modules/customer/customer-timeline.resolver';
@@ -27,14 +37,22 @@ import { ObjectMetadataModule } from 'src/engine/metadata-modules/object-metadat
 @Module({
   imports: [ObjectMetadataModule],
   providers: [
+    CustomerAiInsightResolver,
+    CustomerAiInsightService,
     CustomerConfigResolver,
     CustomerConfigService,
+    CustomerCommercialSummaryResolver,
+    CustomerCommercialSummaryService,
     CustomerDedupSearchResolver,
     CustomerDedupSearchService,
     CustomerDetailResolver,
     CustomerDetailService,
+    CustomerDocumentResolver,
+    CustomerDocumentService,
     CustomerImportJobResolver,
     CustomerImportJobService,
+    CustomerLeadConversionResolver,
+    CustomerLeadConversionService,
     CustomerMergeResolver,
     CustomerMergeService,
     CustomerOperationHistoryResolver,
@@ -43,6 +61,8 @@ import { ObjectMetadataModule } from 'src/engine/metadata-modules/object-metadat
     CustomerPublicPoolActionService,
     CustomerPublicPoolListResolver,
     CustomerPublicPoolListService,
+    CustomerPublicPoolRuleExecutionResolver,
+    CustomerPublicPoolRuleExecutionService,
     CustomerRecordMutationResolver,
     CustomerRecordMutationService,
     CustomerTimelineResolver,

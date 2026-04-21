@@ -121,6 +121,35 @@ const getCurrencyLabel = (value: unknown) => {
   )}`;
 };
 
+const getTimelineActivityTitle = (name: string | null) => {
+  switch (name) {
+    case 'customer.contact.created':
+      return 'Customer contact created';
+    case 'customer.contact.updated':
+      return 'Customer contact updated';
+    case 'customer.created':
+      return 'Customer created';
+    case 'customer.follow_up.created':
+      return 'Follow-up created';
+    case 'customer.import.created':
+      return 'Customer imported';
+    case 'customer.merged':
+      return 'Customer merge completed';
+    case 'customer.public_pool.claimed':
+      return 'Customer claimed from public pool';
+    case 'customer.public_pool.moved':
+      return 'Customer moved to public pool';
+    case 'customer.public_pool.rule_executed':
+      return 'Public-pool rule executed';
+    case 'customer.updated':
+      return 'Customer updated';
+    case 'lead.converted_to_customer':
+      return 'Lead converted to customer';
+    default:
+      return name ?? 'Customer activity';
+  }
+};
+
 @Injectable()
 export class CustomerTimelineService {
   constructor(
@@ -319,10 +348,8 @@ export class CustomerTimelineService {
     const occurredAt =
       normalizeDateString(record.happensAt) ??
       new Date(0).toISOString();
-    const title =
-      normalizeString(record.name) ??
-      normalizeString(record.linkedRecordCachedName) ??
-      'Customer activity';
+    const activityName = normalizeString(record.name);
+    const title = getTimelineActivityTitle(activityName);
 
     return {
       id: record.id,

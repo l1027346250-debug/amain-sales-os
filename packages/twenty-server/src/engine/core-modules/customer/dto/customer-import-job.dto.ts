@@ -8,6 +8,12 @@ export class CustomerImportJobsArgs {
   limit?: number;
 }
 
+@ArgsType()
+export class CustomerImportJobResultArgs {
+  @Field(() => UUIDScalarType)
+  jobId: string;
+}
+
 @InputType()
 export class StartCustomerImportJobInput {
   @Field(() => String)
@@ -21,6 +27,45 @@ export class StartCustomerImportJobInput {
 
   @Field(() => [String])
   selectedFields: string[];
+}
+
+@InputType()
+export class SaveCustomerImportMappingInput {
+  @Field(() => UUIDScalarType)
+  jobId: string;
+
+  @Field(() => [String])
+  mappedFields: string[];
+}
+
+@InputType()
+export class CommitCustomerImportJobInput {
+  @Field(() => UUIDScalarType)
+  jobId: string;
+}
+
+@ObjectType('CustomerImportRowItem')
+export class CustomerImportRowItemDTO {
+  @Field(() => UUIDScalarType)
+  id: string;
+
+  @Field(() => String)
+  rowLabel: string;
+
+  @Field(() => Int)
+  rowNumber: number;
+
+  @Field(() => String, { nullable: true })
+  companyName: string | null;
+
+  @Field(() => String, { nullable: true })
+  contactEmail: string | null;
+
+  @Field(() => String)
+  status: string;
+
+  @Field(() => String, { nullable: true })
+  errorMessage: string | null;
 }
 
 @ObjectType('CustomerImportJobItem')
@@ -60,4 +105,13 @@ export class CustomerImportJobsDTO {
 
   @Field(() => Int)
   totalCount: number;
+}
+
+@ObjectType('CustomerImportJobResult')
+export class CustomerImportJobResultDTO {
+  @Field(() => CustomerImportJobItemDTO, { nullable: true })
+  job: CustomerImportJobItemDTO | null;
+
+  @Field(() => [CustomerImportRowItemDTO])
+  rows: CustomerImportRowItemDTO[];
 }

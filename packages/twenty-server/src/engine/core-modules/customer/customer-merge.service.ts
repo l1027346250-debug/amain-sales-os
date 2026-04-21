@@ -35,6 +35,20 @@ type WorkspaceCustomerOperationLogRecord = ObjectLiteral & {
   operatedAt?: string | null;
 };
 
+type WorkspaceTimelineActivityRecord = ObjectLiteral & {
+  id: string;
+  createdAt?: string | null;
+  happensAt?: string | null;
+  linkedObjectMetadataId?: string | null;
+  linkedRecordCachedName?: string | null;
+  linkedRecordId?: string | null;
+  name?: string | null;
+  properties?: Record<string, unknown> | null;
+  targetCompanyId?: string | null;
+  updatedAt?: string | null;
+  workspaceMemberId?: string | null;
+};
+
 type RelationMigrationConfig = {
   objectNameSingular: string;
   fieldName: string;
@@ -173,6 +187,18 @@ export class CustomerMergeService {
         workspaceMemberId,
         primaryCustomerId,
         duplicateCustomerIds,
+        now,
+      });
+      await this.createTimelineEvent({
+        workspaceId,
+        workspaceMemberId,
+        primaryCustomer,
+        duplicateCustomerIds,
+        mergeLogId,
+        migratedRecordCount: Object.values(migrationCounts).reduce(
+          (totalCount, count) => totalCount + count,
+          0,
+        ),
         now,
       });
 
@@ -341,6 +367,61 @@ export class CustomerMergeService {
         operatedAt: now,
       })),
     ]);
+  }
+
+  private async createTimelineEvent({
+    workspaceId,
+    workspaceMemberId,
+    primaryCustomer,
+    duplicateCustomerIds,
+    mergeLogId,
+    migratedRecordCount,
+    now,
+  }: {
+    workspaceId: string;
+    workspaceMemberId: string | undefined;
+    primaryCustomer: WorkspaceCompanyRecord;
+    duplicateCustomerIds: string[];
+    mergeLogId: string | null;
+    migratedRecordCount: number;
+    now: string;
+  }) {
+    const hasTimelineActivityObject = await this.hasWorkspaceObject(
+      workspaceId,
+      'timelineActivity',
+    );
+
+    if (!hasTimelineActivityObject) {
+      return;
+    }
+
+    const timelineActivityRepository =
+      await this.globalWorkspaceOrmManager.getRepository<WorkspaceTimelineActivityRecord>(
+        workspaceId,
+        'timelineActivity',
+        { shouldBypassPermissionChecks: true },
+      );
+
+    await timelineActivityRepository.insert({
+      id: v4(),
+      createdAt: now,
+      happensAt: now,
+      linkedObjectMetadataId: null,
+      linkedRecordCachedName: `Merged ${
+        duplicateCustomerIds.length
+      } customer(s) into ${normalizeString(primaryCustomer.name) ?? primaryCustomer.id}`,
+      linkedRecordId: primaryCustomer.id,
+      name: 'customer.merged',
+      properties: {
+        duplicateCustomerIds,
+        mergeLogId,
+        migratedRecordCount,
+        primaryCustomerId: primaryCustomer.id,
+      },
+      targetCompanyId: primaryCustomer.id,
+      updatedAt: now,
+      workspaceMemberId: workspaceMemberId ?? null,
+    });
   }
 
   private async hasWorkspaceObject(

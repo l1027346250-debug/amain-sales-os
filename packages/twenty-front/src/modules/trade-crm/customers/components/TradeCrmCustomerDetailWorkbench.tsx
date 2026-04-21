@@ -1,14 +1,17 @@
 import { styled } from '@linaria/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { type TradeCrmCustomerTableBadgeTone } from '@/trade-crm/customers/components/TradeCrmCustomerTable';
 import { TradeCrmCustomerTable } from '@/trade-crm/customers/components/TradeCrmCustomerTable';
 import {
+  type TradeCrmCustomerDocumentItem,
+  type TradeCrmCustomerAiInsight,
   type TradeCrmCustomerOperationHistoryItem,
   type TradeCrmCustomerTimelineItem,
 } from '@/trade-crm/customers/hooks/useTradeCrmCustomerWorkspaceData';
 import {
   getTradeCrmCustomerCountryLabel,
+  getTradeCrmCustomerEmailLabel,
   getTradeCrmCustomerGroupLabelForRecord,
   getTradeCrmCustomerJobTitle,
   getTradeCrmCustomerLastTouchLabelForRecord,
@@ -82,6 +85,9 @@ type TradeCrmCustomerDetailWorkbenchProps = {
   customerTimelineTotalCount: number;
   customerOperationHistoryItems: TradeCrmCustomerOperationHistoryItem[];
   customerOperationHistoryTotalCount: number;
+  customerDocumentItems: TradeCrmCustomerDocumentItem[];
+  customerDocumentTotalCount: number;
+  customerAiInsight: TradeCrmCustomerAiInsight | null;
   createCustomerFollowUp: (body: string) => Promise<void>;
   createCustomerFollowUpLoading: boolean;
   createCustomerContact: (input: {
@@ -90,6 +96,24 @@ type TradeCrmCustomerDetailWorkbenchProps = {
     phone?: string;
   }) => Promise<void>;
   createCustomerContactLoading: boolean;
+  updateCustomer: (input: {
+    addressLine?: string;
+    country?: string;
+    name?: string;
+    shortName?: string;
+    websiteUrl?: string;
+  }) => Promise<void>;
+  updateCustomerLoading: boolean;
+  updateCustomerContact: (input: {
+    contactId: string;
+    email?: string;
+    nickname?: string;
+    phone?: string;
+    position?: string;
+  }) => Promise<void>;
+  updateCustomerContactLoading: boolean;
+  refreshCustomerCommercialSummary: () => Promise<void>;
+  refreshCustomerCommercialSummaryLoading: boolean;
 };
 
 type DetailTabKey =
@@ -376,6 +400,17 @@ const StyledTabPanel = styled.div`
   padding: 0 ${themeCssVariables.spacing[4]} ${themeCssVariables.spacing[4]};
 `;
 
+const getTimelineSourceLabel = (sourceObjectName: string | null) => {
+  switch (sourceObjectName) {
+    case 'opportunity':
+      return 'Opportunity';
+    case 'timelineActivity':
+      return 'CRM Activity';
+    default:
+      return sourceObjectName;
+  }
+};
+
 export const TradeCrmCustomerDetailWorkbench = ({
   customerDetail,
   customerDetailLoading,
@@ -390,16 +425,60 @@ export const TradeCrmCustomerDetailWorkbench = ({
   customerTimelineTotalCount,
   customerOperationHistoryItems,
   customerOperationHistoryTotalCount,
+  customerDocumentItems,
+  customerDocumentTotalCount,
+  customerAiInsight,
   createCustomerFollowUp,
   createCustomerFollowUpLoading,
   createCustomerContact,
   createCustomerContactLoading,
+  updateCustomer,
+  updateCustomerLoading,
+  updateCustomerContact,
+  updateCustomerContactLoading,
+  refreshCustomerCommercialSummary,
+  refreshCustomerCommercialSummaryLoading,
 }: TradeCrmCustomerDetailWorkbenchProps) => {
   const [activeTab, setActiveTab] = useState<DetailTabKey>('activity');
   const [followUpBody, setFollowUpBody] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
   const [newContactName, setNewContactName] = useState('');
   const [newContactPhone, setNewContactPhone] = useState('');
+  const [editContactEmail, setEditContactEmail] = useState('');
+  const [editContactName, setEditContactName] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
+  const [editContactPosition, setEditContactPosition] = useState('');
+  const [profileAddressLine, setProfileAddressLine] = useState('');
+  const [profileCountry, setProfileCountry] = useState('');
+  const [profileName, setProfileName] = useState('');
+  const [profileShortName, setProfileShortName] = useState('');
+  const [profileWebsiteUrl, setProfileWebsiteUrl] = useState('');
+
+  useEffect(() => {
+    setProfileAddressLine(customerDetail?.addressLabel ?? '');
+    setProfileCountry(customerDetail?.countryLabel ?? '');
+    setProfileName(customerDetail?.displayName ?? '');
+    setProfileShortName(customerDetail?.shortNameLabel ?? '');
+    setProfileWebsiteUrl(customerDetail?.websiteLabel ?? '');
+  }, [customerDetail]);
+
+  const primaryContactRecord = peopleRecords?.[0] ?? null;
+
+  useEffect(() => {
+    setEditContactEmail(getTradeCrmCustomerEmailLabel(primaryContactRecord ?? undefined));
+    setEditContactName(
+      primaryContactRecord
+        ? getTradeCrmRecordName({
+            kind: 'individual',
+            record: primaryContactRecord,
+          })
+        : '',
+    );
+    setEditContactPhone(getTradeCrmCustomerPhoneLabel(primaryContactRecord ?? undefined));
+    setEditContactPosition(
+      primaryContactRecord ? getTradeCrmCustomerJobTitle(primaryContactRecord) : '',
+    );
+  }, [primaryContactRecord]);
 
   const timelineItems =
     customerTimelineItems.length > 0
@@ -410,7 +489,9 @@ export const TradeCrmCustomerDetailWorkbench = ({
           description: [
             item.description,
             item.actorName ? `Owner: ${item.actorName}` : null,
-            item.sourceObjectName ? `Source: ${item.sourceObjectName}` : null,
+            getTimelineSourceLabel(item.sourceObjectName)
+              ? `Source: ${getTimelineSourceLabel(item.sourceObjectName)}`
+              : null,
           ]
             .filter((value): value is string => value !== null)
             .join(' / '),
@@ -432,25 +513,11 @@ export const TradeCrmCustomerDetailWorkbench = ({
         ]
       : [
           {
-            id: 'fallback-today',
-            time: 'Today',
-            title: 'Follow-up plan queued for account owner handoff',
+            id: 'empty-timeline',
+            time: '--',
+            title: 'No customer activity yet',
             description:
-              'Use this timeline shell for follow-up notes, deal events, mail linkage, and scheduling.',
-          },
-          {
-            id: 'fallback-yesterday',
-            time: 'Yesterday',
-            title: 'Opportunity summary updated',
-            description:
-              'Commercial events should remain visible beside customer profile and contacts.',
-          },
-          {
-            id: 'fallback-earlier',
-            time: 'Earlier',
-            title: 'Customer profile reviewed',
-            description:
-              'This detail route is the permanent target for future customer aggregate data.',
+              'Write a follow-up, convert a lead, import a customer, move public-pool ownership, or link an opportunity to populate this timeline.',
           },
         ];
 
@@ -543,29 +610,79 @@ export const TradeCrmCustomerDetailWorkbench = ({
   const renderActiveTab = () => {
     if (activeTab === 'profile') {
       return (
-        <StyledProfileGrid>
-          {[
-            ['Stage', customerDetail?.customerStageLabel ?? '--'],
-            ['Group', customerDetail?.customerGroupLabel ?? '--'],
-            ['Source', customerDetail?.customerSourceLabel ?? '--'],
-            ['Short Name', customerDetail?.shortNameLabel ?? '--'],
-            ['Website', customerDetail?.websiteLabel ?? '--'],
-            ['Country', customerDetail?.countryLabel ?? '--'],
-            ['Owner', customerDetail?.ownerLabel ?? '--'],
-            ['Score', customerDetail?.customerScoreLabel ?? '--'],
-            ['Email', customerDetail?.emailLabel ?? '--'],
-            ['Phone', customerDetail?.phoneLabel ?? '--'],
-            ['Address', customerDetail?.addressLabel ?? '--'],
-            ['Last Contact', customerDetail?.lastContactLabel ?? '--'],
-            ['Last Won', customerDetail?.lastWonLabel ?? '--'],
-            ['Won Revenue', customerDetail?.totalWonAmountLabel ?? '--'],
-          ].map(([label, value]) => (
-            <StyledMetric key={label}>
-              <StyledMetricLabel>{label}</StyledMetricLabel>
-              <StyledMetricValue>{value}</StyledMetricValue>
-            </StyledMetric>
-          ))}
-        </StyledProfileGrid>
+        <>
+          <StyledComposer>
+            <StyledCardTitle>Edit Customer Master Data</StyledCardTitle>
+            <StyledProfileGrid>
+              <StyledComposerInput
+                value={profileName}
+                onChange={(event) => setProfileName(event.target.value)}
+                placeholder="Company name"
+              />
+              <StyledComposerInput
+                value={profileShortName}
+                onChange={(event) => setProfileShortName(event.target.value)}
+                placeholder="Short name"
+              />
+              <StyledComposerInput
+                value={profileCountry}
+                onChange={(event) => setProfileCountry(event.target.value)}
+                placeholder="Country / region"
+              />
+              <StyledComposerInput
+                value={profileWebsiteUrl}
+                onChange={(event) => setProfileWebsiteUrl(event.target.value)}
+                placeholder="Website"
+              />
+              <StyledComposerInput
+                value={profileAddressLine}
+                onChange={(event) => setProfileAddressLine(event.target.value)}
+                placeholder="Address"
+              />
+            </StyledProfileGrid>
+            <StyledComposerActions>
+              <span>Save updates into the company customer master record.</span>
+              <StyledComposerButton
+                type="button"
+                disabled={profileName.trim().length === 0 || updateCustomerLoading}
+                onClick={() => {
+                  void updateCustomer({
+                    addressLine: profileAddressLine.trim() || undefined,
+                    country: profileCountry.trim() || undefined,
+                    name: profileName.trim(),
+                    shortName: profileShortName.trim() || undefined,
+                    websiteUrl: profileWebsiteUrl.trim() || undefined,
+                  });
+                }}
+              >
+                {updateCustomerLoading ? 'Saving...' : 'Save Profile'}
+              </StyledComposerButton>
+            </StyledComposerActions>
+          </StyledComposer>
+          <StyledProfileGrid>
+            {[
+              ['Stage', customerDetail?.customerStageLabel ?? '--'],
+              ['Group', customerDetail?.customerGroupLabel ?? '--'],
+              ['Source', customerDetail?.customerSourceLabel ?? '--'],
+              ['Short Name', customerDetail?.shortNameLabel ?? '--'],
+              ['Website', customerDetail?.websiteLabel ?? '--'],
+              ['Country', customerDetail?.countryLabel ?? '--'],
+              ['Owner', customerDetail?.ownerLabel ?? '--'],
+              ['Score', customerDetail?.customerScoreLabel ?? '--'],
+              ['Email', customerDetail?.emailLabel ?? '--'],
+              ['Phone', customerDetail?.phoneLabel ?? '--'],
+              ['Address', customerDetail?.addressLabel ?? '--'],
+              ['Last Contact', customerDetail?.lastContactLabel ?? '--'],
+              ['Last Won', customerDetail?.lastWonLabel ?? '--'],
+              ['Won Revenue', customerDetail?.totalWonAmountLabel ?? '--'],
+            ].map(([label, value]) => (
+              <StyledMetric key={label}>
+                <StyledMetricLabel>{label}</StyledMetricLabel>
+                <StyledMetricValue>{value}</StyledMetricValue>
+              </StyledMetric>
+            ))}
+          </StyledProfileGrid>
+        </>
       );
     }
 
@@ -584,16 +701,20 @@ export const TradeCrmCustomerDetailWorkbench = ({
     if (activeTab === 'documents') {
       return (
         <StyledTimeline>
-          {['Customer briefing', 'Sample agreement', 'Factory notes'].map((name) => (
-            <StyledTimelineItem key={name}>
-              <StyledTimelineTime>Document</StyledTimelineTime>
-              <StyledTimelineTitle>{name}</StyledTimelineTitle>
-              <StyledMuted>
-                The document tab is reserved for attachments, mail exports, and customer
-                supporting files.
-              </StyledMuted>
-            </StyledTimelineItem>
-          ))}
+          {customerDocumentItems.length > 0 ? (
+            customerDocumentItems.map((documentItem) => (
+              <StyledTimelineItem key={documentItem.id}>
+                <StyledTimelineTime>
+                  {documentItem.createdAt?.slice(0, 10) ?? 'Document'} /{' '}
+                  {documentItem.fileCategory ?? 'file'}
+                </StyledTimelineTime>
+                <StyledTimelineTitle>{documentItem.name}</StyledTimelineTitle>
+                <StyledMuted>{documentItem.fullPath ?? 'No file path available'}</StyledMuted>
+              </StyledTimelineItem>
+            ))
+          ) : (
+            <StyledMuted>No customer documents are attached yet.</StyledMuted>
+          )}
         </StyledTimeline>
       );
     }
@@ -606,6 +727,7 @@ export const TradeCrmCustomerDetailWorkbench = ({
             ['Calendar Events', `${timelineCalendarTotalCount}`],
             ['Customer Timeline', `${customerTimelineTotalCount}`],
             ['Operation Logs', `${customerOperationHistoryTotalCount}`],
+            ['Documents', `${customerDocumentTotalCount}`],
             ['Contact Coverage', `${contactRows.length}`],
             ['Open Deals', `${dealRows.length}`],
             ['Last Touch', customerDetail?.lastTouchLabel ?? '--'],
@@ -670,6 +792,30 @@ export const TradeCrmCustomerDetailWorkbench = ({
       );
     }
 
+    if (activeTab === 'ai') {
+      return (
+        <StyledTimeline>
+          <StyledTimelineItem>
+            <StyledTimelineTime>
+              {customerAiInsight?.status ?? 'AI container ready'}
+            </StyledTimelineTime>
+            <StyledTimelineTitle>AI Research Container</StyledTimelineTitle>
+            <StyledMuted>
+              {customerAiInsight?.summary ??
+                'AI research is reserved for phase two. The data contract is ready and will not require a detail-page rewrite.'}
+            </StyledMuted>
+          </StyledTimelineItem>
+          {(customerAiInsight?.signals ?? []).map((signal) => (
+            <StyledTimelineItem key={signal.label}>
+              <StyledTimelineTime>Signal</StyledTimelineTime>
+              <StyledTimelineTitle>{signal.label}</StyledTimelineTitle>
+              <StyledMuted>{signal.value}</StyledMuted>
+            </StyledTimelineItem>
+          ))}
+        </StyledTimeline>
+      );
+    }
+
     return (
       <StyledTimeline>
         {timelineItems.map((item) => (
@@ -712,6 +858,20 @@ export const TradeCrmCustomerDetailWorkbench = ({
     setNewContactEmail('');
     setNewContactName('');
     setNewContactPhone('');
+  };
+
+  const submitContactUpdate = async () => {
+    if (!primaryContactRecord) {
+      return;
+    }
+
+    await updateCustomerContact({
+      contactId: primaryContactRecord.id,
+      email: editContactEmail.trim() || undefined,
+      nickname: editContactName.trim() || undefined,
+      phone: editContactPhone.trim() || undefined,
+      position: editContactPosition.trim() || undefined,
+    });
   };
 
   return (
@@ -761,31 +921,67 @@ export const TradeCrmCustomerDetailWorkbench = ({
         <StyledCard>
           <StyledCardTitle>AI Customer Analysis</StyledCardTitle>
           <StyledMuted>
-            This panel reserves the OKKI-style AI area. In phase one it stays as a
-            structured container for research, risk notes, and follow-up suggestions.
+            {customerAiInsight?.summary ??
+              'AI research is reserved for phase two. The customer data contract and container are already wired.'}
           </StyledMuted>
+          <StyledProfileGrid>
+            {(customerAiInsight?.signals ?? [
+              {
+                label: 'Contacts',
+                value: `${contactRows.length}`,
+              },
+              {
+                label: 'Open Deals',
+                value: `${dealRows.length}`,
+              },
+            ]).map((signal) => (
+              <StyledMetric key={signal.label}>
+                <StyledMetricLabel>{signal.label}</StyledMetricLabel>
+                <StyledMetricValue>{signal.value}</StyledMetricValue>
+              </StyledMetric>
+            ))}
+          </StyledProfileGrid>
         </StyledCard>
       </StyledRail>
       <StyledColumn>
         <StyledCard>
-          <StyledCardTitle>In-Progress Opportunities</StyledCardTitle>
+          <StyledComposerActions>
+            <StyledCardTitle>In-Progress Opportunities</StyledCardTitle>
+            <StyledComposerButton
+              type="button"
+              disabled={refreshCustomerCommercialSummaryLoading}
+              onClick={() => {
+                void refreshCustomerCommercialSummary();
+              }}
+            >
+              {refreshCustomerCommercialSummaryLoading
+                ? 'Refreshing...'
+                : 'Refresh Commercial Summary'}
+            </StyledComposerButton>
+          </StyledComposerActions>
           <StyledDealStrip>
-            {(opportunityRecords ?? []).slice(0, 3).map((record, index) => (
-              <StyledDealCard key={record.id}>
-                <StyledDealStage>
-                  {getTradeCrmCustomerStageLabelForRecord({
-                    record,
-                    fallbackIndex: index,
-                  })}
-                </StyledDealStage>
-                <StyledDealName>
-                  {typeof record.name === 'string' ? record.name : `Opportunity ${index + 1}`}
-                </StyledDealName>
-                <StyledMuted>{`${getOpportunityAmountLabel(record, index)} / ${
-                  getTradeCrmCustomerOwnerLabel(record)
-                }`}</StyledMuted>
-              </StyledDealCard>
-            ))}
+            {(opportunityRecords ?? []).length > 0 ? (
+              (opportunityRecords ?? []).slice(0, 3).map((record, index) => (
+                <StyledDealCard key={record.id}>
+                  <StyledDealStage>
+                    {getTradeCrmCustomerStageLabelForRecord({
+                      record,
+                      fallbackIndex: index,
+                    })}
+                  </StyledDealStage>
+                  <StyledDealName>
+                    {typeof record.name === 'string'
+                      ? record.name
+                      : `Opportunity ${index + 1}`}
+                  </StyledDealName>
+                  <StyledMuted>{`${getOpportunityAmountLabel(record, index)} / ${
+                    getTradeCrmCustomerOwnerLabel(record)
+                  }`}</StyledMuted>
+                </StyledDealCard>
+              ))
+            ) : (
+              <StyledMuted>No in-progress opportunity is linked yet.</StyledMuted>
+            )}
           </StyledDealStrip>
         </StyledCard>
         <StyledCard>
@@ -892,6 +1088,38 @@ export const TradeCrmCustomerDetailWorkbench = ({
               onClick={submitContact}
             >
               {createCustomerContactLoading ? 'Adding...' : 'Add Contact'}
+            </StyledComposerButton>
+          </StyledComposerActions>
+        </StyledComposer>
+        <StyledComposer>
+          <StyledCardTitle>Edit Primary Contact</StyledCardTitle>
+          <StyledComposerActions>
+            <StyledComposerInput
+              value={editContactName}
+              onChange={(event) => setEditContactName(event.target.value)}
+              placeholder="Nickname"
+            />
+            <StyledComposerInput
+              value={editContactEmail}
+              onChange={(event) => setEditContactEmail(event.target.value)}
+              placeholder="Email"
+            />
+            <StyledComposerInput
+              value={editContactPhone}
+              onChange={(event) => setEditContactPhone(event.target.value)}
+              placeholder="Phone"
+            />
+            <StyledComposerInput
+              value={editContactPosition}
+              onChange={(event) => setEditContactPosition(event.target.value)}
+              placeholder="Position"
+            />
+            <StyledComposerButton
+              type="button"
+              disabled={!primaryContactRecord || updateCustomerContactLoading}
+              onClick={submitContactUpdate}
+            >
+              {updateCustomerContactLoading ? 'Saving...' : 'Save Contact'}
             </StyledComposerButton>
           </StyledComposerActions>
         </StyledComposer>

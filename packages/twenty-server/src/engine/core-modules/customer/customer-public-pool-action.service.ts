@@ -16,6 +16,7 @@ import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system
 type WorkspaceCompanyRecord = ObjectLiteral & {
   id: string;
   accountOwnerId?: string | null;
+  name?: string | null;
 };
 
 type WorkspaceCustomerOperationLogRecord = ObjectLiteral & {
@@ -25,6 +26,20 @@ type WorkspaceCustomerOperationLogRecord = ObjectLiteral & {
   operationType?: string | null;
   operatorName?: string | null;
   operatedAt?: string | null;
+};
+
+type WorkspaceTimelineActivityRecord = ObjectLiteral & {
+  id: string;
+  createdAt?: string | null;
+  happensAt?: string | null;
+  linkedObjectMetadataId?: string | null;
+  linkedRecordCachedName?: string | null;
+  linkedRecordId?: string | null;
+  name?: string | null;
+  properties?: Record<string, unknown> | null;
+  targetCompanyId?: string | null;
+  updatedAt?: string | null;
+  workspaceMemberId?: string | null;
 };
 
 const PRIVATE_STATE = 'PRIVATE';
@@ -54,19 +69,27 @@ export class CustomerPublicPoolActionService {
     workspaceMemberId: string | undefined;
     input: ClaimPublicPoolCustomerInput;
   }): Promise<CustomerPublicPoolActionResultDTO> {
-    const customerId = input.customerId.trim();
+    const customerIds = dedupeIds([
+      ...(input.customerId ? [input.customerId] : []),
+      ...(input.customerIds ?? []),
+    ]);
 
-    if (customerId.length === 0) {
-      throw new BadRequestException('Customer is required for public-pool claim.');
+    if (customerIds.length === 0) {
+      throw new BadRequestException(
+        'At least one customer is required for public-pool claim.',
+      );
     }
 
     return this.updatePublicPoolState({
       workspaceId,
       workspaceMemberId,
-      customerIds: [customerId],
+      customerIds,
       publicPoolState: PRIVATE_STATE,
       publicPoolGroup: null,
-      operationType: 'CLAIM_PUBLIC_POOL_CUSTOMER',
+      operationType:
+        customerIds.length === 1
+          ? 'CLAIM_PUBLIC_POOL_CUSTOMER'
+          : 'CLAIM_PUBLIC_POOL_CUSTOMERS',
       reason: null,
     });
   }
@@ -143,26 +166,27 @@ export class CustomerPublicPoolActionService {
       }
 
       const now = new Date().toISOString();
-      const updatePayload =
+      const affectedCount =
         publicPoolState === PUBLIC_POOL_STATE
-          ? {
-              publicPoolState,
+          ? await this.moveCompanyRecordsToPublicPool({
+              companyRecords,
+              companyRepository,
+              now,
               publicPoolGroup,
-              publicPoolEnteredAt: now,
-              publicPoolOriginalOwnerId: companyRecords[0]?.accountOwnerId ?? null,
-            }
-          : {
-              publicPoolState,
-              publicPoolGroup: null,
-              publicPoolEnteredAt: null,
-              ...(workspaceMemberId ? { accountOwnerId: workspaceMemberId } : {}),
-            };
-      const updateResult = await companyRepository.update(
-        {
-          id: In(customerIds),
-        },
-        updatePayload as unknown as QueryDeepPartialEntity<WorkspaceCompanyRecord>,
-      );
+            })
+          : (
+              await companyRepository.update(
+                {
+                  id: In(customerIds),
+                },
+                {
+                  publicPoolState,
+                  publicPoolGroup: null,
+                  publicPoolEnteredAt: null,
+                  ...(workspaceMemberId ? { accountOwnerId: workspaceMemberId } : {}),
+                } as unknown as QueryDeepPartialEntity<WorkspaceCompanyRecord>,
+              )
+            ).affected ?? 0;
 
       await this.createOperationLogs({
         workspaceId,
@@ -172,13 +196,55 @@ export class CustomerPublicPoolActionService {
         reason,
         now,
       });
+      await this.createTimelineEvents({
+        workspaceId,
+        workspaceMemberId,
+        companyRecords,
+        operationType,
+        publicPoolGroup,
+        publicPoolState,
+        reason,
+        now,
+      });
 
       return {
         customerIds,
-        affectedCount: updateResult.affected ?? 0,
+        affectedCount,
         publicPoolState,
       };
     }, authContext);
+  }
+
+  private async moveCompanyRecordsToPublicPool({
+    companyRecords,
+    companyRepository,
+    now,
+    publicPoolGroup,
+  }: {
+    companyRecords: WorkspaceCompanyRecord[];
+    companyRepository: {
+      update: (
+        id: string,
+        payload: QueryDeepPartialEntity<WorkspaceCompanyRecord>,
+      ) => Promise<{ affected?: number | null }>;
+    };
+    now: string;
+    publicPoolGroup: string | null;
+  }) {
+    let affectedCount = 0;
+
+    for (const companyRecord of companyRecords) {
+      const updateResult = await companyRepository.update(companyRecord.id, {
+        publicPoolEnteredAt: now,
+        publicPoolGroup,
+        publicPoolOriginalOwnerId: companyRecord.accountOwnerId ?? null,
+        publicPoolState: PUBLIC_POOL_STATE,
+      } as unknown as QueryDeepPartialEntity<WorkspaceCompanyRecord>);
+
+      affectedCount += updateResult.affected ?? 0;
+    }
+
+    return affectedCount;
   }
 
   private async createOperationLogs({
@@ -221,6 +287,73 @@ export class CustomerPublicPoolActionService {
         operationType,
         operatorName: workspaceMemberId ?? 'system',
         operatedAt: now,
+      })),
+    );
+  }
+
+  private async createTimelineEvents({
+    workspaceId,
+    workspaceMemberId,
+    companyRecords,
+    operationType,
+    publicPoolState,
+    publicPoolGroup,
+    reason,
+    now,
+  }: {
+    workspaceId: string;
+    workspaceMemberId: string | undefined;
+    companyRecords: WorkspaceCompanyRecord[];
+    operationType: string;
+    publicPoolState: string;
+    publicPoolGroup: string | null;
+    reason: string | null;
+    now: string;
+  }) {
+    const hasTimelineActivityObject = await this.hasWorkspaceObject(
+      workspaceId,
+      'timelineActivity',
+    );
+
+    if (!hasTimelineActivityObject) {
+      return;
+    }
+
+    const timelineActivityRepository =
+      await this.globalWorkspaceOrmManager.getRepository<WorkspaceTimelineActivityRecord>(
+        workspaceId,
+        'timelineActivity',
+        { shouldBypassPermissionChecks: true },
+      );
+    const actionLabel =
+      publicPoolState === PUBLIC_POOL_STATE
+        ? 'Customer moved to public pool'
+        : 'Customer claimed from public pool';
+
+    await timelineActivityRepository.insert(
+      companyRecords.map((companyRecord) => ({
+        id: v4(),
+        createdAt: now,
+        happensAt: now,
+        linkedObjectMetadataId: null,
+        linkedRecordCachedName: `${actionLabel}: ${
+          normalizeString(companyRecord.name) ?? companyRecord.id
+        }`,
+        linkedRecordId: companyRecord.id,
+        name:
+          publicPoolState === PUBLIC_POOL_STATE
+            ? 'customer.public_pool.moved'
+            : 'customer.public_pool.claimed',
+        properties: {
+          customerId: companyRecord.id,
+          operationType,
+          publicPoolGroup,
+          publicPoolState,
+          reason,
+        },
+        targetCompanyId: companyRecord.id,
+        updatedAt: now,
+        workspaceMemberId: workspaceMemberId ?? null,
       })),
     );
   }

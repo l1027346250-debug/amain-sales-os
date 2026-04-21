@@ -4,8 +4,11 @@ import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/
 
 @InputType()
 export class ClaimPublicPoolCustomerInput {
-  @Field(() => UUIDScalarType)
-  customerId: string;
+  @Field(() => UUIDScalarType, { nullable: true })
+  customerId?: string;
+
+  @Field(() => [UUIDScalarType], { nullable: true })
+  customerIds?: string[];
 }
 
 @InputType()

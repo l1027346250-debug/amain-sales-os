@@ -38,6 +38,20 @@ type WorkspaceCustomerOperationLogRecord = ObjectLiteral & {
   operatedAt?: string | null;
 };
 
+type WorkspaceTimelineActivityRecord = ObjectLiteral & {
+  id: string;
+  createdAt?: string | null;
+  happensAt?: string | null;
+  linkedObjectMetadataId?: string | null;
+  linkedRecordCachedName?: string | null;
+  linkedRecordId?: string | null;
+  name?: string | null;
+  properties?: Record<string, unknown> | null;
+  targetCompanyId?: string | null;
+  updatedAt?: string | null;
+  workspaceMemberId?: string | null;
+};
+
 const PRIVATE_PUBLIC_POOL_STATE = 'PRIVATE';
 
 const normalizeString = (value: unknown) =>
@@ -142,6 +156,17 @@ export class CustomerRecordMutationService {
         operationType: 'CREATE_CUSTOMER',
         operationSummary: `Created customer ${customerName}`,
       });
+      await this.createTimelineEvent({
+        workspaceId,
+        workspaceMemberId,
+        customerId: record.id,
+        eventName: 'customer.created',
+        summary: `Created customer ${customerName}`,
+        metadata: {
+          customerId: record.id,
+          name: customerName,
+        },
+      });
 
       return {
         record,
@@ -192,6 +217,19 @@ export class CustomerRecordMutationService {
         customerId,
         operationType: 'UPDATE_CUSTOMER',
         operationSummary: `Updated customer ${customerId}`,
+      });
+      await this.createTimelineEvent({
+        workspaceId,
+        workspaceMemberId,
+        customerId,
+        eventName: 'customer.updated',
+        summary: `Updated customer ${
+          normalizeString(input.name) ?? normalizeString(existingRecord.name) ?? customerId
+        }`,
+        metadata: {
+          customerId,
+          updatedFields: Object.keys(updatePayload),
+        },
       });
 
       return {
@@ -245,6 +283,19 @@ export class CustomerRecordMutationService {
         operationType: 'CREATE_CUSTOMER_CONTACT',
         operationSummary: `Created contact for customer ${customerId}`,
       });
+      await this.createTimelineEvent({
+        workspaceId,
+        workspaceMemberId,
+        customerId,
+        eventName: 'customer.contact.created',
+        summary: `Created contact ${
+          normalizeString(input.nickname) ?? normalizeString(input.email) ?? record.id
+        }`,
+        metadata: {
+          contactId: record.id,
+          customerId,
+        },
+      });
 
       return {
         record,
@@ -296,6 +347,22 @@ export class CustomerRecordMutationService {
         operationType: 'UPDATE_CUSTOMER_CONTACT',
         operationSummary: `Updated customer contact ${contactId}`,
       });
+      const customerId = normalizeString(existingRecord.companyId);
+
+      if (customerId) {
+        await this.createTimelineEvent({
+          workspaceId,
+          workspaceMemberId,
+          customerId,
+          eventName: 'customer.contact.updated',
+          summary: `Updated customer contact ${contactId}`,
+          metadata: {
+            contactId,
+            customerId,
+            updatedFields: Object.keys(updatePayload),
+          },
+        });
+      }
 
       return {
         record: {
@@ -436,6 +503,53 @@ export class CustomerRecordMutationService {
       operationSummary,
       operationType,
       operatorName: workspaceMemberId ?? 'system',
+    });
+  }
+
+  private async createTimelineEvent({
+    workspaceId,
+    workspaceMemberId,
+    customerId,
+    eventName,
+    summary,
+    metadata,
+  }: {
+    workspaceId: string;
+    workspaceMemberId: string | undefined;
+    customerId: string;
+    eventName: string;
+    summary: string;
+    metadata: Record<string, unknown>;
+  }) {
+    const hasTimelineActivityObject = await this.hasWorkspaceObject(
+      workspaceId,
+      'timelineActivity',
+    );
+
+    if (!hasTimelineActivityObject) {
+      return;
+    }
+
+    const timelineActivityRepository =
+      await this.globalWorkspaceOrmManager.getRepository<WorkspaceTimelineActivityRecord>(
+        workspaceId,
+        'timelineActivity',
+        { shouldBypassPermissionChecks: true },
+      );
+    const now = new Date().toISOString();
+
+    await timelineActivityRepository.insert({
+      id: v4(),
+      createdAt: now,
+      happensAt: now,
+      linkedObjectMetadataId: null,
+      linkedRecordCachedName: summary,
+      linkedRecordId: customerId,
+      name: eventName,
+      properties: metadata,
+      targetCompanyId: customerId,
+      updatedAt: now,
+      workspaceMemberId: workspaceMemberId ?? null,
     });
   }
 

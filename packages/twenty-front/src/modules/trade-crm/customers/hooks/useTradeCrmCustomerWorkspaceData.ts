@@ -111,6 +111,26 @@ export type TradeCrmCustomerOperationHistoryItem = {
   operatorName: string | null;
 };
 
+export type TradeCrmCustomerDocumentItem = {
+  id: string;
+  name: string;
+  fileCategory: string | null;
+  fullPath: string | null;
+  createdAt: string | null;
+};
+
+export type TradeCrmCustomerAiInsight = {
+  customerId: string;
+  status: string;
+  summary: string;
+  contactCount: number;
+  opportunityCount: number;
+  signals: Array<{
+    label: string;
+    value: string;
+  }>;
+};
+
 export type TradeCrmCustomerWorkspaceFilters = {
   stageLabel?: string | null;
   sourceLabel?: string | null;
@@ -184,6 +204,17 @@ type CustomerOperationHistoryQuery = {
   };
 };
 
+type CustomerDocumentsQuery = {
+  customerDocuments: {
+    items: TradeCrmCustomerDocumentItem[];
+    totalCount: number;
+  };
+};
+
+type CustomerAiInsightQuery = {
+  customerAiInsight: TradeCrmCustomerAiInsight;
+};
+
 type CreateCustomerFollowUpMutation = {
   createCustomerFollowUp: {
     lastFollowUpAt: string;
@@ -196,6 +227,31 @@ type CreateCustomerContactMutation = {
     record: Record<string, unknown> & {
       id: string;
     };
+  };
+};
+
+type UpdateCustomerMutation = {
+  updateCustomer: {
+    record: Record<string, unknown> & {
+      id: string;
+    };
+  };
+};
+
+type UpdateCustomerContactMutation = {
+  updateCustomerContact: {
+    record: Record<string, unknown> & {
+      id: string;
+    };
+  };
+};
+
+type RefreshCustomerCommercialSummaryMutation = {
+  refreshCustomerCommercialSummary: {
+    customerId: string;
+    totalWonAmount: number;
+    lastWonAt: string | null;
+    opportunityCount: number;
   };
 };
 
@@ -212,6 +268,14 @@ type CustomerPublicPoolActionMutation = {
   };
 };
 
+type ExecuteCustomerPublicPoolRulesMutation = {
+  executeCustomerPublicPoolRules: {
+    customerIds: string[];
+    affectedCount: number;
+    evaluatedRuleCount: number;
+  };
+};
+
 type CustomerDetailQueryVariables = {
   customerId: string;
 };
@@ -224,6 +288,15 @@ type CustomerTimelineQueryVariables = {
 type CustomerOperationHistoryQueryVariables = {
   customerId: string;
   limit?: number;
+};
+
+type CustomerDocumentsQueryVariables = {
+  customerId: string;
+  limit?: number;
+};
+
+type CustomerAiInsightQueryVariables = {
+  customerId: string;
 };
 
 type CreateCustomerFollowUpMutationVariables = {
@@ -242,9 +315,41 @@ type CreateCustomerContactMutationVariables = {
   };
 };
 
-type ClaimPublicPoolCustomerMutationVariables = {
+type UpdateCustomerMutationVariables = {
   input: {
     customerId: string;
+    name?: string;
+    shortName?: string;
+    country?: string;
+    websiteUrl?: string;
+    addressLine?: string;
+    customerStage?: string;
+    customerGroup?: string;
+    customerSource?: string;
+    customerScore?: number;
+  };
+};
+
+type UpdateCustomerContactMutationVariables = {
+  input: {
+    contactId: string;
+    nickname?: string;
+    email?: string;
+    phone?: string;
+    position?: string;
+  };
+};
+
+type RefreshCustomerCommercialSummaryMutationVariables = {
+  input: {
+    customerId: string;
+  };
+};
+
+type ClaimPublicPoolCustomerMutationVariables = {
+  input: {
+    customerId?: string;
+    customerIds?: string[];
   };
 };
 
@@ -429,6 +534,37 @@ const GET_CUSTOMER_OPERATION_HISTORY = gql`
   }
 `;
 
+const GET_CUSTOMER_DOCUMENTS = gql`
+  query GetCustomerDocuments($customerId: UUID!, $limit: Int) {
+    customerDocuments(customerId: $customerId, limit: $limit) {
+      totalCount
+      items {
+        id
+        name
+        fileCategory
+        fullPath
+        createdAt
+      }
+    }
+  }
+`;
+
+const GET_CUSTOMER_AI_INSIGHT = gql`
+  query GetCustomerAiInsight($customerId: UUID!) {
+    customerAiInsight(customerId: $customerId) {
+      customerId
+      status
+      summary
+      contactCount
+      opportunityCount
+      signals {
+        label
+        value
+      }
+    }
+  }
+`;
+
 const CREATE_CUSTOMER_FOLLOW_UP = gql`
   mutation CreateCustomerFollowUp($input: CreateCustomerFollowUpInput!) {
     createCustomerFollowUp(input: $input) {
@@ -456,6 +592,35 @@ const CREATE_CUSTOMER_CONTACT = gql`
   }
 `;
 
+const UPDATE_CUSTOMER = gql`
+  mutation UpdateCustomer($input: UpdateCustomerInput!) {
+    updateCustomer(input: $input) {
+      record
+    }
+  }
+`;
+
+const UPDATE_CUSTOMER_CONTACT = gql`
+  mutation UpdateCustomerContact($input: UpdateCustomerContactInput!) {
+    updateCustomerContact(input: $input) {
+      record
+    }
+  }
+`;
+
+const REFRESH_CUSTOMER_COMMERCIAL_SUMMARY = gql`
+  mutation RefreshCustomerCommercialSummary(
+    $input: RefreshCustomerCommercialSummaryInput!
+  ) {
+    refreshCustomerCommercialSummary(input: $input) {
+      customerId
+      totalWonAmount
+      lastWonAt
+      opportunityCount
+    }
+  }
+`;
+
 const CLAIM_PUBLIC_POOL_CUSTOMER = gql`
   mutation ClaimPublicPoolCustomer($input: ClaimPublicPoolCustomerInput!) {
     claimPublicPoolCustomer(input: $input) {
@@ -472,6 +637,16 @@ const MOVE_CUSTOMERS_TO_PUBLIC_POOL = gql`
       customerIds
       affectedCount
       publicPoolState
+    }
+  }
+`;
+
+const EXECUTE_CUSTOMER_PUBLIC_POOL_RULES = gql`
+  mutation ExecuteCustomerPublicPoolRules {
+    executeCustomerPublicPoolRules {
+      customerIds
+      affectedCount
+      evaluatedRuleCount
     }
   }
 `;
@@ -1004,6 +1179,45 @@ export const useTradeCrmCustomerWorkspaceData = (
 
   useSnackBarOnQueryError(customerOperationHistoryError);
 
+  const {
+    data: customerDocumentsData,
+    error: customerDocumentsError,
+  } = useQuery<CustomerDocumentsQuery, CustomerDocumentsQueryVariables>(
+    GET_CUSTOMER_DOCUMENTS,
+    {
+      client: apolloCoreClient,
+      errorPolicy: 'all',
+      skip:
+        resolvedCustomerRoute?.kind !== 'organization' ||
+        !resolvedCustomerRoute.recordId,
+      variables: {
+        customerId: resolvedCustomerRoute?.recordId ?? '',
+        limit: 20,
+      },
+    },
+  );
+
+  useSnackBarOnQueryError(customerDocumentsError);
+
+  const {
+    data: customerAiInsightData,
+    error: customerAiInsightError,
+  } = useQuery<CustomerAiInsightQuery, CustomerAiInsightQueryVariables>(
+    GET_CUSTOMER_AI_INSIGHT,
+    {
+      client: apolloCoreClient,
+      errorPolicy: 'all',
+      skip:
+        resolvedCustomerRoute?.kind !== 'organization' ||
+        !resolvedCustomerRoute.recordId,
+      variables: {
+        customerId: resolvedCustomerRoute?.recordId ?? '',
+      },
+    },
+  );
+
+  useSnackBarOnQueryError(customerAiInsightError);
+
   const [
     createCustomerFollowUpMutation,
     { loading: createCustomerFollowUpLoading },
@@ -1022,8 +1236,44 @@ export const useTradeCrmCustomerWorkspaceData = (
   >(CREATE_CUSTOMER_CONTACT, {
     client: apolloCoreClient,
   });
+  const [
+    updateCustomerMutation,
+    { error: updateCustomerError, loading: updateCustomerLoading },
+  ] = useMutation<UpdateCustomerMutation, UpdateCustomerMutationVariables>(
+    UPDATE_CUSTOMER,
+    {
+      client: apolloCoreClient,
+    },
+  );
+  const [
+    updateCustomerContactMutation,
+    {
+      error: updateCustomerContactError,
+      loading: updateCustomerContactLoading,
+    },
+  ] = useMutation<
+    UpdateCustomerContactMutation,
+    UpdateCustomerContactMutationVariables
+  >(UPDATE_CUSTOMER_CONTACT, {
+    client: apolloCoreClient,
+  });
+  const [
+    refreshCustomerCommercialSummaryMutation,
+    {
+      error: refreshCustomerCommercialSummaryError,
+      loading: refreshCustomerCommercialSummaryLoading,
+    },
+  ] = useMutation<
+    RefreshCustomerCommercialSummaryMutation,
+    RefreshCustomerCommercialSummaryMutationVariables
+  >(REFRESH_CUSTOMER_COMMERCIAL_SUMMARY, {
+    client: apolloCoreClient,
+  });
 
   useSnackBarOnQueryError(createCustomerContactError);
+  useSnackBarOnQueryError(updateCustomerError);
+  useSnackBarOnQueryError(updateCustomerContactError);
+  useSnackBarOnQueryError(refreshCustomerCommercialSummaryError);
   const [
     claimPublicPoolCustomerMutation,
     {
@@ -1048,9 +1298,22 @@ export const useTradeCrmCustomerWorkspaceData = (
   >(MOVE_CUSTOMERS_TO_PUBLIC_POOL, {
     client: apolloCoreClient,
   });
+  const [
+    executeCustomerPublicPoolRulesMutation,
+    {
+      error: executeCustomerPublicPoolRulesError,
+      loading: executeCustomerPublicPoolRulesLoading,
+    },
+  ] = useMutation<ExecuteCustomerPublicPoolRulesMutation>(
+    EXECUTE_CUSTOMER_PUBLIC_POOL_RULES,
+    {
+      client: apolloCoreClient,
+    },
+  );
 
   useSnackBarOnQueryError(claimPublicPoolCustomerError);
   useSnackBarOnQueryError(moveCustomersToPublicPoolError);
+  useSnackBarOnQueryError(executeCustomerPublicPoolRulesError);
 
   const { record: companyRecord, loading: companyRecordLoading } =
     useFindOneRecord<GenericRecord>({
@@ -1661,6 +1924,104 @@ export const useTradeCrmCustomerWorkspaceData = (
     });
   };
 
+  const updateCustomer = async (
+    input: Omit<UpdateCustomerMutationVariables['input'], 'customerId'>,
+  ) => {
+    if (
+      resolvedCustomerRoute?.kind !== 'organization' ||
+      !resolvedCustomerRoute.recordId
+    ) {
+      return;
+    }
+
+    const customerId = resolvedCustomerRoute.recordId;
+
+    await updateCustomerMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_DETAIL,
+          variables: {
+            customerId,
+          },
+        },
+        {
+          query: GET_CUSTOMER_OPERATION_HISTORY,
+          variables: {
+            customerId,
+            limit: 20,
+          },
+        },
+      ],
+      variables: {
+        input: {
+          ...input,
+          customerId,
+        },
+      },
+    });
+  };
+
+  const updateCustomerContact = async (
+    input: UpdateCustomerContactMutationVariables['input'],
+  ) => {
+    if (
+      resolvedCustomerRoute?.kind !== 'organization' ||
+      !resolvedCustomerRoute.recordId
+    ) {
+      return;
+    }
+
+    const customerId = resolvedCustomerRoute.recordId;
+
+    await updateCustomerContactMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_DETAIL,
+          variables: {
+            customerId,
+          },
+        },
+        {
+          query: GET_CUSTOMER_OPERATION_HISTORY,
+          variables: {
+            customerId,
+            limit: 20,
+          },
+        },
+      ],
+      variables: {
+        input,
+      },
+    });
+  };
+
+  const refreshCustomerCommercialSummary = async () => {
+    if (
+      resolvedCustomerRoute?.kind !== 'organization' ||
+      !resolvedCustomerRoute.recordId
+    ) {
+      return;
+    }
+
+    const customerId = resolvedCustomerRoute.recordId;
+
+    await refreshCustomerCommercialSummaryMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_DETAIL,
+          variables: {
+            customerId,
+          },
+        },
+      ],
+      variables: {
+        input: {
+          customerId,
+        },
+      },
+    });
+  };
+
   const claimPublicPoolCustomer = async (customerId: string) => {
     await claimPublicPoolCustomerMutation({
       refetchQueries: [
@@ -1676,6 +2037,26 @@ export const useTradeCrmCustomerWorkspaceData = (
       variables: {
         input: {
           customerId,
+        },
+      },
+    });
+  };
+
+  const claimPublicPoolCustomers = async (customerIds: string[]) => {
+    await claimPublicPoolCustomerMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_PUBLIC_POOL_LIST,
+          variables: customerPublicPoolListVariables,
+        },
+        {
+          query: GET_CUSTOMER_WORKSPACE_LIST,
+          variables: customerWorkspaceListVariables,
+        },
+      ],
+      variables: {
+        input: {
+          customerIds,
         },
       },
     });
@@ -1704,6 +2085,21 @@ export const useTradeCrmCustomerWorkspaceData = (
           reason,
         },
       },
+    });
+  };
+
+  const executeCustomerPublicPoolRules = async () => {
+    await executeCustomerPublicPoolRulesMutation({
+      refetchQueries: [
+        {
+          query: GET_CUSTOMER_PUBLIC_POOL_LIST,
+          variables: customerPublicPoolListVariables,
+        },
+        {
+          query: GET_CUSTOMER_WORKSPACE_LIST,
+          variables: customerWorkspaceListVariables,
+        },
+      ],
     });
   };
 
@@ -1756,14 +2152,27 @@ export const useTradeCrmCustomerWorkspaceData = (
       customerOperationHistoryData?.customerOperationHistory.items ?? [],
     customerOperationHistoryTotalCount:
       customerOperationHistoryData?.customerOperationHistory.totalCount ?? 0,
+    customerDocumentItems: customerDocumentsData?.customerDocuments.items ?? [],
+    customerDocumentTotalCount:
+      customerDocumentsData?.customerDocuments.totalCount ?? 0,
+    customerAiInsight: customerAiInsightData?.customerAiInsight ?? null,
     createCustomerFollowUp,
     createCustomerFollowUpLoading,
     createCustomerContact,
     createCustomerContactLoading,
+    updateCustomer,
+    updateCustomerLoading,
+    updateCustomerContact,
+    updateCustomerContactLoading,
+    refreshCustomerCommercialSummary,
+    refreshCustomerCommercialSummaryLoading,
     claimPublicPoolCustomer,
+    claimPublicPoolCustomers,
     claimPublicPoolCustomerLoading,
     moveCustomersToPublicPool,
     moveCustomersToPublicPoolLoading,
+    executeCustomerPublicPoolRules,
+    executeCustomerPublicPoolRulesLoading,
     materialAlignmentNotice:
       'Source HTML filenames are unreliable. Build against the screenshots first and validate against the saved OKKI URLs second.',
   };

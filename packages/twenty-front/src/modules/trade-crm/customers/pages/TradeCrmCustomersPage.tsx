@@ -13,7 +13,11 @@ import {
 import { TradeCrmCustomerDetailWorkbench } from '@/trade-crm/customers/components/TradeCrmCustomerDetailWorkbench';
 import { useTradeCrmCustomerConfigDraft } from '@/trade-crm/customers/hooks/useTradeCrmCustomerConfigDraft';
 import { useTradeCrmCustomerDedupSearch } from '@/trade-crm/customers/hooks/useTradeCrmCustomerDedupSearch';
-import { useTradeCrmCustomerImportJobs } from '@/trade-crm/customers/hooks/useTradeCrmCustomerImportJobs';
+import {
+  type TradeCrmCustomerImportJobResult,
+  useTradeCrmCustomerImportJobs,
+} from '@/trade-crm/customers/hooks/useTradeCrmCustomerImportJobs';
+import { useTradeCrmLeadConversion } from '@/trade-crm/customers/hooks/useTradeCrmLeadConversion';
 import { useTradeCrmCustomerRecordMutations } from '@/trade-crm/customers/hooks/useTradeCrmCustomerRecordMutations';
 import {
   TradeCrmCustomerTable,
@@ -736,6 +740,42 @@ const getPublicPoolGroupLabels = (
 const getImportDestinationValue = (destination: string) =>
   destination === 'public-pool' ? 'PUBLIC_POOL' : 'CUSTOMER_LIST';
 
+const escapeCsvCell = (value: number | string | null | undefined) => {
+  const normalizedValue = value === null || value === undefined ? '' : String(value);
+
+  return `"${normalizedValue.replace(/"/g, '""')}"`;
+};
+
+const getImportResultCsvContent = (result: TradeCrmCustomerImportJobResult) =>
+  [
+    ['rowNumber', 'rowLabel', 'companyName', 'contactEmail', 'status', 'message'],
+    ...result.rows.map((row) => [
+      row.rowNumber,
+      row.rowLabel,
+      row.companyName,
+      row.contactEmail,
+      row.status,
+      row.errorMessage,
+    ]),
+  ]
+    .map((row) => row.map(escapeCsvCell).join(','))
+    .join('\n');
+
+const downloadImportResultCsv = (result: TradeCrmCustomerImportJobResult) => {
+  const blob = new Blob([getImportResultCsvContent(result)], {
+    type: 'text/csv;charset=utf-8;',
+  });
+  const url = window.URL.createObjectURL(blob);
+  const anchorElement = document.createElement('a');
+
+  anchorElement.href = url;
+  anchorElement.download = `customer-import-${
+    result.job?.id ?? 'result'
+  }-rows.csv`;
+  anchorElement.click();
+  window.URL.revokeObjectURL(url);
+};
+
 const useTradeCrmCustomerRuntimeConfig = (
   workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>,
 ) => {
@@ -920,6 +960,24 @@ const renderConfigContent = ({
                 </StyledStepItem>
               ))}
             </StyledStepList>
+            <StyledActionButtons>
+              <StyledControlButton
+                type="button"
+                $tone="primary"
+                disabled={workspaceData.executeCustomerPublicPoolRulesLoading}
+                onClick={() => {
+                  void workspaceData.executeCustomerPublicPoolRules();
+                }}
+              >
+                {workspaceData.executeCustomerPublicPoolRulesLoading
+                  ? 'Executing Rule Scan'
+                  : 'Execute Rule Scan'}
+              </StyledControlButton>
+            </StyledActionButtons>
+            <StyledConfigNote>
+              Runs the saved public-pool rules against current customer records and
+              refreshes both private and public-pool lists after execution.
+            </StyledConfigNote>
           </StyledPanel>
         </StyledStack>
       </StyledSplitGrid>
@@ -1243,20 +1301,64 @@ const renderConfigContent = ({
               : `${importJobs.totalCount} persisted import job(s) in this workspace.`}
           </StyledPanelDescription>
           <StyledFilterList>
-            {importJobs.jobs.slice(0, 6).map((job) => (
-              <StyledFilterNode key={job.id}>
-                <StyledStack>
-                  <StyledNodeLabel>{job.fileName}</StyledNodeLabel>
+              {importJobs.jobs.slice(0, 6).map((job) => (
+                <StyledFilterNode key={job.id}>
+                  <StyledStack>
+                    <StyledNodeLabel>{job.fileName}</StyledNodeLabel>
+                    <StyledNodeCount>
+                      {job.destination} / {job.status} / success {job.successCount} /
+                      failed {job.failedCount}
+                    </StyledNodeCount>
+                  </StyledStack>
+                  <StyledActionButtons>
+                    <StyledControlButton
+                      type="button"
+                      disabled={importJobs.saveMappingLoading}
+                      onClick={() => {
+                        void importJobs
+                          .saveCustomerImportMapping({
+                            jobId: job.id,
+                            mappedFields:
+                              configDraft.draft.importConfig.selectedFields,
+                          })
+                          .catch(() => undefined);
+                      }}
+                    >
+                      {importJobs.saveMappingLoading ? 'Saving...' : 'Save Mapping'}
+                    </StyledControlButton>
+                    <StyledControlButton
+                      type="button"
+                      $tone="primary"
+                      disabled={importJobs.commitLoading}
+                      onClick={() => {
+                        void importJobs
+                          .commitCustomerImportJob({
+                            jobId: job.id,
+                          })
+                          .catch(() => undefined);
+                      }}
+                    >
+                      {importJobs.commitLoading ? 'Committing...' : 'Commit'}
+                    </StyledControlButton>
+                    <StyledControlButton
+                      type="button"
+                      disabled={importJobs.resultLoading}
+                      onClick={() => {
+                        void importJobs
+                          .getCustomerImportJobResult({
+                            jobId: job.id,
+                          })
+                          .catch(() => undefined);
+                      }}
+                    >
+                      {importJobs.resultLoading ? 'Loading...' : 'View Result'}
+                    </StyledControlButton>
+                  </StyledActionButtons>
                   <StyledNodeCount>
-                    {job.destination} / {job.status} / success {job.successCount} /
-                    failed {job.failedCount}
+                    {job.executedAt?.slice(0, 16).replace('T', ' ') ?? '--'}
                   </StyledNodeCount>
-                </StyledStack>
-                <StyledNodeCount>
-                  {job.executedAt?.slice(0, 16).replace('T', ' ') ?? '--'}
-                </StyledNodeCount>
-              </StyledFilterNode>
-            ))}
+                </StyledFilterNode>
+              ))}
             {!importJobs.loading && importJobs.jobs.length === 0 ? (
               <StyledConfigNote>
                 No import job exists yet. Create one above to persist the upload
@@ -1264,6 +1366,56 @@ const renderConfigContent = ({
               </StyledConfigNote>
             ) : null}
           </StyledFilterList>
+          {importJobs.activeResult ? (
+            <StyledPanel>
+              <StyledPanelTitle>
+                Import Result: {importJobs.activeResult.job?.fileName ?? 'Unknown job'}
+              </StyledPanelTitle>
+              <StyledPanelDescription>
+                {importJobs.activeResult.job
+                  ? `Success ${importJobs.activeResult.job.successCount}, failed ${importJobs.activeResult.job.failedCount}, status ${importJobs.activeResult.job.status}.`
+                  : 'The selected import job is no longer available.'}
+              </StyledPanelDescription>
+              <StyledActionButtons>
+                <StyledControlButton
+                  type="button"
+                  disabled={importJobs.activeResult.rows.length === 0}
+                  onClick={() => {
+                    if (!importJobs.activeResult) {
+                      return;
+                    }
+
+                    downloadImportResultCsv(importJobs.activeResult);
+                  }}
+                >
+                  Download Result CSV
+                </StyledControlButton>
+              </StyledActionButtons>
+              <StyledFilterList>
+                {importJobs.activeResult.rows.map((row) => (
+                  <StyledFilterNode key={row.id}>
+                    <StyledStack>
+                      <StyledNodeLabel>
+                        #{row.rowNumber} {row.rowLabel}
+                      </StyledNodeLabel>
+                      <StyledNodeCount>
+                        {row.companyName ?? 'Company pending'} /{' '}
+                        {row.contactEmail ?? 'No contact email'} / {row.status}
+                      </StyledNodeCount>
+                    </StyledStack>
+                    <StyledNodeCount>
+                      {row.errorMessage ?? 'No row issue'}
+                    </StyledNodeCount>
+                  </StyledFilterNode>
+                ))}
+                {importJobs.activeResult.rows.length === 0 ? (
+                  <StyledConfigNote>
+                    No row-level import result has been recorded for this job yet.
+                  </StyledConfigNote>
+                ) : null}
+              </StyledFilterList>
+            </StyledPanel>
+          ) : null}
         </StyledPanel>
         <StyledPanel>
           <StyledPanelTitle>Template Fields</StyledPanelTitle>
@@ -1325,7 +1477,9 @@ const renderConfigContent = ({
 const TradeCrmCustomerListWorkspace = () => {
   const navigate = useNavigate();
   const customerRecordMutations = useTradeCrmCustomerRecordMutations();
+  const leadConversion = useTradeCrmLeadConversion();
   const [newCustomerName, setNewCustomerName] = useState('');
+  const [leadIdToConvert, setLeadIdToConvert] = useState('');
   const [filters, setFilters] = useState<CustomerFilterState>({
     searchTerm: '',
     stage: null,
@@ -1365,6 +1519,9 @@ const TradeCrmCustomerListWorkspace = () => {
   const canCreateCustomer =
     newCustomerName.trim().length > 0 &&
     !customerRecordMutations.createCustomerLoading;
+  const canConvertLead =
+    leadIdToConvert.trim().length > 0 &&
+    !leadConversion.convertLeadToCustomerLoading;
 
   return (
     <TradeCrmCustomerWorkspaceLayout
@@ -1533,6 +1690,43 @@ const TradeCrmCustomerListWorkspace = () => {
         </StyledActionBar>
         <StyledActionBar>
           <StyledActionMeta>
+            <span>Convert lead to customer</span>
+            <span>
+              Creates the company master and first contact from a lead, then writes the
+              conversion into customer timeline and operation history.
+            </span>
+          </StyledActionMeta>
+          <StyledActionButtons>
+            <StyledTextInput
+              value={leadIdToConvert}
+              onChange={(event) => setLeadIdToConvert(event.target.value)}
+              placeholder="Lead record ID"
+            />
+            <StyledControlButton
+              type="button"
+              $tone="primary"
+              disabled={!canConvertLead}
+              onClick={() => {
+                void leadConversion
+                  .convertLeadToCustomer(leadIdToConvert.trim())
+                  .then((result) => {
+                    setLeadIdToConvert('');
+
+                    if (result?.customerId) {
+                      navigate(getTradeCrmCustomerDetailPath(result.customerId));
+                    }
+                  })
+                  .catch(() => undefined);
+              }}
+            >
+              {leadConversion.convertLeadToCustomerLoading
+                ? 'Converting...'
+                : 'Convert Lead'}
+            </StyledControlButton>
+          </StyledActionButtons>
+        </StyledActionBar>
+        <StyledActionBar>
+          <StyledActionMeta>
             <span>Batch public-pool execution</span>
             <span>
               Move the first {visibleCustomerIds.length} visible customer(s) into the
@@ -1685,8 +1879,14 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
   const publicPoolStageScopeLabel =
     configDraft.draft.publicPoolRule.scopeStages.join(', ') || 'No stage scope selected';
   const firstClaimablePublicPoolRecord = filteredPublicPoolRecords[0] ?? null;
+  const visiblePublicPoolCustomerIds = filteredPublicPoolRecords
+    .slice(0, 20)
+    .map((record) => record.id);
   const canClaimFirstPublicPoolCustomer =
     firstClaimablePublicPoolRecord !== null &&
+    !workspaceData.claimPublicPoolCustomerLoading;
+  const canClaimVisiblePublicPoolCustomers =
+    visiblePublicPoolCustomerIds.length > 0 &&
     !workspaceData.claimPublicPoolCustomerLoading;
 
   const publicPoolRows = buildCompanyRows(filteredPublicPoolRecords)
@@ -1815,6 +2015,19 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
               {workspaceData.claimPublicPoolCustomerLoading
                 ? 'Claiming...'
                 : 'Claim First Customer'}
+            </StyledControlButton>
+            <StyledControlButton
+              type="button"
+              disabled={!canClaimVisiblePublicPoolCustomers}
+              onClick={() => {
+                void workspaceData.claimPublicPoolCustomers(
+                  visiblePublicPoolCustomerIds,
+                );
+              }}
+            >
+              {workspaceData.claimPublicPoolCustomerLoading
+                ? 'Claiming...'
+                : `Claim Visible (${visiblePublicPoolCustomerIds.length})`}
             </StyledControlButton>
           </StyledActionButtons>
         </StyledActionBar>
@@ -2236,10 +2449,23 @@ const TradeCrmCustomerDetailWorkspace = () => {
         customerOperationHistoryTotalCount={
           workspaceData.customerOperationHistoryTotalCount
         }
+        customerDocumentItems={workspaceData.customerDocumentItems}
+        customerDocumentTotalCount={workspaceData.customerDocumentTotalCount}
+        customerAiInsight={workspaceData.customerAiInsight}
         createCustomerFollowUp={workspaceData.createCustomerFollowUp}
         createCustomerFollowUpLoading={workspaceData.createCustomerFollowUpLoading}
         createCustomerContact={workspaceData.createCustomerContact}
         createCustomerContactLoading={workspaceData.createCustomerContactLoading}
+        updateCustomer={workspaceData.updateCustomer}
+        updateCustomerLoading={workspaceData.updateCustomerLoading}
+        updateCustomerContact={workspaceData.updateCustomerContact}
+        updateCustomerContactLoading={workspaceData.updateCustomerContactLoading}
+        refreshCustomerCommercialSummary={
+          workspaceData.refreshCustomerCommercialSummary
+        }
+        refreshCustomerCommercialSummaryLoading={
+          workspaceData.refreshCustomerCommercialSummaryLoading
+        }
       />
     </TradeCrmCustomerWorkspaceLayout>
   );
