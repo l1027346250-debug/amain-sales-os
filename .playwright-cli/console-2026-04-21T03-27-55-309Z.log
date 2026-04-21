@@ -1896,3 +1896,14 @@ For more information about these options, please refer to the documentation:
 [21479977ms] [LOG] UNAUTHENTICATED, triggering token renewal @ http://localhost:3001/src/modules/apollo/services/apollo.factory.ts?t=1776742292598:205
 [21487743ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
 [21488237ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[34773761ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[34773818ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[34773818ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[34773826ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[34773850ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[34778583ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/chunk-I476ZSYT.js?v=75da7a92:21608
+[34778913ms] [LOG] I18nProvider rendered `null`. A call to `i18n.activate` needs to happen in order for translations to be activated and for the I18nProvider to render.This is not an error but an informational message logged only in development. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/@lingui_react.js?v=75da7a92:182
+[34779018ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:3001/@fs/G:/codex/twentyCRM/amainCRM/node_modules/.vite/packages/twenty-front/deps/react-router-dom.js?v=75da7a92:4435
+[34783887ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0
+[34784539ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://twenty-icons.com/sales-workbench:0
+[34785270ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/enterprise/fields?entityType=lead:0

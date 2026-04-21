@@ -539,3 +539,9 @@
 [32m[Nest] 17192  - [39m2026/04/21 11:37:36 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mJob 229 with name CallWebhookJobsForMetadataJob processed on queue webhook-queue in 0.35ms[39m
 [32m[Nest] 17192  - [39m2026/04/21 11:38:13 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mProcessing job 1 with name EnterpriseCustomerExportJob on queue workspace-queue[39m
 [32m[Nest] 17192  - [39m2026/04/21 11:38:13 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mJob 1 with name EnterpriseCustomerExportJob processed on queue workspace-queue in 434.93ms[39m
+[32m[Nest] 17192  - [39m2026/04/21 12:42:38 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mProcessing job 230 with name CallWebhookJobsForMetadataJob on queue webhook-queue[39m
+[32m[Nest] 17192  - [39m2026/04/21 12:42:38 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mJob 230 with name CallWebhookJobsForMetadataJob processed on queue webhook-queue in 78.41ms[39m
+[32m[Nest] 17192  - [39m2026/04/21 12:44:35 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mProcessing job 231 with name CallWebhookJobsForMetadataJob on queue webhook-queue[39m
+[32m[Nest] 17192  - [39m2026/04/21 12:44:35 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mJob 231 with name CallWebhookJobsForMetadataJob processed on queue webhook-queue in 2.16ms[39m
+[32m[Nest] 17192  - [39m2026/04/21 12:51:08 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mProcessing job 232 with name CallWebhookJobsForMetadataJob on queue webhook-queue[39m
+[32m[Nest] 17192  - [39m2026/04/21 12:51:08 [32m    LOG[39m [38;5;3m[BullMQDriver] [39m[32mJob 232 with name CallWebhookJobsForMetadataJob processed on queue webhook-queue in 1.68ms[39m
