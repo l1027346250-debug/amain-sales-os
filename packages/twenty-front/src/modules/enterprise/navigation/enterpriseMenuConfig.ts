@@ -1,4 +1,4 @@
-import { AppPath } from 'twenty-shared/types';
+﻿import { AppPath } from 'twenty-shared/types';
 
 export type EnterpriseMenuItem = {
   key: string;
@@ -56,3 +56,4 @@ export const enterpriseMenuConfig: EnterpriseMenuItem[] = [
     ],
   },
 ];
+

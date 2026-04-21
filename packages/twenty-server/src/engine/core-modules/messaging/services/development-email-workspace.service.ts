@@ -184,7 +184,6 @@ export class DevelopmentEmailWorkspaceService {
               provider: true,
               accessToken: true,
               refreshToken: true,
-              connectionParameters: true,
               authFailedAt: true,
               createdAt: true,
               updatedAt: true,

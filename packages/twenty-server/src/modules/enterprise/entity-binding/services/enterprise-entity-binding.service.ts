@@ -93,6 +93,26 @@ export class EnterpriseEntityBindingService {
     return this.enterpriseEntityBindingRepository.save(createdBinding);
   }
 
+  async resolveBindingByIdOrFail(
+    workspaceId: string,
+    bindingId: string,
+  ): Promise<EnterpriseEntityBindingEntity> {
+    const binding = await this.enterpriseEntityBindingRepository.findOne({
+      where: {
+        id: bindingId,
+        workspaceId,
+      },
+    });
+
+    if (!binding) {
+      throw new NotFoundException(
+        `Enterprise entity binding ${bindingId} was not found`,
+      );
+    }
+
+    return binding;
+  }
+
   getBindingConfig(
     entityType: EnterpriseEntityType,
   ): EnterpriseEntityBindingConfig | undefined {

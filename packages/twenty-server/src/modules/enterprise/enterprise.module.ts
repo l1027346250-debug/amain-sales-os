@@ -6,6 +6,10 @@ import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { EnterpriseConfigAuditLogEntity } from 'src/modules/enterprise/audit/enterprise-config-audit-log.entity';
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
+import { EnterpriseCustomerExportController } from 'src/modules/enterprise/customer-export/controllers/enterprise-customer-export.controller';
+import { EnterpriseCustomerExportJobEntity } from 'src/modules/enterprise/customer-export/enterprise-customer-export-job.entity';
+import { EnterpriseCustomerExportQueueJob } from 'src/modules/enterprise/customer-export/jobs/enterprise-customer-export.job';
+import { EnterpriseCustomerExportService } from 'src/modules/enterprise/customer-export/services/enterprise-customer-export.service';
 import { EnterpriseEntityBindingController } from 'src/modules/enterprise/entity-binding/controllers/enterprise-entity-binding.controller';
 import { EnterpriseEntityBindingEntity } from 'src/modules/enterprise/entity-binding/enterprise-entity-binding.entity';
 import { EnterpriseEntityBindingService } from 'src/modules/enterprise/entity-binding/services/enterprise-entity-binding.service';
@@ -33,6 +37,7 @@ import { EnterpriseMetadataProjectionService } from 'src/modules/enterprise/proj
       EnterpriseFieldOptionEntity,
       EnterpriseFieldLayoutConfigEntity,
       EnterpriseFieldValueEntity,
+      EnterpriseCustomerExportJobEntity,
       EnterpriseConfigAuditLogEntity,
     ]),
   ],
@@ -41,10 +46,13 @@ import { EnterpriseMetadataProjectionService } from 'src/modules/enterprise/proj
     EnterpriseFieldDefinitionController,
     EnterpriseFieldLayoutController,
     EnterpriseFieldValueController,
+    EnterpriseCustomerExportController,
   ],
   providers: [
     EnterpriseEntityBindingService,
     EnterpriseConfigAuditService,
+    EnterpriseCustomerExportService,
+    EnterpriseCustomerExportQueueJob,
     EnterpriseFieldOptionService,
     EnterpriseMetadataProjectionService,
     EnterpriseFieldDefinitionService,

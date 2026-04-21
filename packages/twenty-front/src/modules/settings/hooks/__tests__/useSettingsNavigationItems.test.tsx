@@ -91,6 +91,7 @@ describe('useSettingsNavigationItems', () => {
       [PermissionFlagType.ROLES]: false,
       [PermissionFlagType.SECURITY]: false,
       [PermissionFlagType.CONNECTED_ACCOUNTS]: false,
+      [PermissionFlagType.ENTERPRISE]: false,
     }));
 
     const { result } = renderHook(() => useSettingsNavigationItems(), {
@@ -113,6 +114,7 @@ describe('useSettingsNavigationItems', () => {
       [PermissionFlagType.ROLES]: true,
       [PermissionFlagType.SECURITY]: true,
       [PermissionFlagType.CONNECTED_ACCOUNTS]: true,
+      [PermissionFlagType.ENTERPRISE]: true,
     }));
 
     const { result } = renderHook(() => useSettingsNavigationItems(), {
@@ -135,6 +137,7 @@ describe('useSettingsNavigationItems', () => {
       [PermissionFlagType.ROLES]: false,
       [PermissionFlagType.SECURITY]: false,
       [PermissionFlagType.CONNECTED_ACCOUNTS]: false,
+      [PermissionFlagType.ENTERPRISE]: false,
     }));
 
     const { result } = renderHook(() => useSettingsNavigationItems(), {

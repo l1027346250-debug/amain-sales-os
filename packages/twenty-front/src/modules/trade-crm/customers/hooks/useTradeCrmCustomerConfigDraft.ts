@@ -1,5 +1,9 @@
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useSnackBarOnQueryError } from '@/apollo/hooks/useSnackBarOnQueryError';
+import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
 import { useCreateOneRecord } from '@/object-record/hooks/useCreateOneRecord';
 import { useDeleteOneRecord } from '@/object-record/hooks/useDeleteOneRecord';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
@@ -107,6 +111,112 @@ type CustomerImportJobRecord = TimestampedObjectRecord & {
   selectedFields?: string[] | null;
   status?: string | null;
 };
+
+type CustomerConfigAggregateQuery = {
+  customerConfig: {
+    groups: Array<{
+      id: string;
+      label: string;
+      parentId: string | null;
+      level: number;
+      sortOrder: number | null;
+      isEnabled: boolean;
+    }>;
+    tags: Array<{
+      id: string;
+      label: string;
+      color: string | null;
+      scope: string | null;
+      objectScope: string | null;
+      sortOrder: number | null;
+      isEnabled: boolean;
+    }>;
+    sources: Array<{
+      id: string;
+      label: string;
+      code: string | null;
+      sortOrder: number | null;
+      isEnabled: boolean;
+    }>;
+    publicPoolRules: Array<{
+      id: string;
+      ruleName: string;
+      inactivityDays: number | null;
+      notifyOwnersFirst: boolean;
+      scopeStageValues: string[];
+      publicPoolGroupValue: string | null;
+      isEnabled: boolean;
+    }>;
+    matchingRules: Array<{
+      id: string;
+      field: string;
+      weight: number | null;
+      priority: number | null;
+      isEnabled: boolean;
+    }>;
+    importDefaults: {
+      id: string | null;
+      destinationValue: string | null;
+      updateExistingContacts: boolean;
+      selectedFields: string[];
+      status: string | null;
+    };
+  };
+};
+
+const GET_CUSTOMER_CONFIG_AGGREGATE = gql`
+  query GetCustomerConfigAggregate {
+    customerConfig {
+      groups {
+        id
+        label
+        parentId
+        level
+        sortOrder
+        isEnabled
+      }
+      tags {
+        id
+        label
+        color
+        scope
+        objectScope
+        sortOrder
+        isEnabled
+      }
+      sources {
+        id
+        label
+        code
+        sortOrder
+        isEnabled
+      }
+      publicPoolRules {
+        id
+        ruleName
+        inactivityDays
+        notifyOwnersFirst
+        scopeStageValues
+        publicPoolGroupValue
+        isEnabled
+      }
+      matchingRules {
+        id
+        field
+        weight
+        priority
+        isEnabled
+      }
+      importDefaults {
+        id
+        destinationValue
+        updateExistingContacts
+        selectedFields
+        status
+      }
+    }
+  }
+`;
 
 const CUSTOMER_IMPORT_DEFAULT_CONFIG_FILE_NAME = '__CUSTOMER_IMPORT_DEFAULTS__';
 
@@ -455,12 +565,168 @@ const buildDraftFromRecords = ({
   };
 };
 
+const buildDraftFromAggregate = ({
+  aggregate,
+  fallbackDraft,
+}: {
+  aggregate: CustomerConfigAggregateQuery['customerConfig'];
+  fallbackDraft: TradeCrmCustomerConfigDraft;
+}): TradeCrmCustomerConfigDraft => {
+  const hasPersistedConfig =
+    aggregate.groups.length > 0 ||
+    aggregate.tags.length > 0 ||
+    aggregate.sources.length > 0 ||
+    aggregate.publicPoolRules.length > 0 ||
+    aggregate.matchingRules.length > 0 ||
+    aggregate.importDefaults.id !== null;
+
+  if (!hasPersistedConfig) {
+    return fallbackDraft;
+  }
+
+  const groups = [...aggregate.groups]
+    .sort((left, right) => {
+      const leftOrder = normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder =
+        normalizeNumber(right.sortOrder) ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return left.label.localeCompare(right.label);
+    })
+    .map((group) => ({
+      id: group.id,
+      label: normalizeString(group.label) ?? 'Unnamed Group',
+      level:
+        normalizeNumber(group.level) === 2 || normalizeString(group.parentId)
+          ? (2 as const)
+          : (1 as const),
+      parentId: normalizeString(group.parentId),
+    }));
+
+  const tags = aggregate.tags.reduce<
+    Record<TradeCrmCustomerConfigTagScope, string[]>
+  >(
+    (accumulator, tag) => {
+      const scope = CUSTOMER_TAG_SCOPE_BY_VALUE[normalizeString(tag.scope) ?? ''] ?? null;
+      const tagLabel = normalizeString(tag.label);
+
+      if (!scope || !tagLabel) {
+        return accumulator;
+      }
+
+      accumulator[scope].push(tagLabel);
+
+      return accumulator;
+    },
+    {
+      company: [],
+      mine: [],
+      subordinate: [],
+    },
+  );
+
+  const sources = [...aggregate.sources]
+    .sort((left, right) => {
+      const leftOrder = normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder =
+        normalizeNumber(right.sortOrder) ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return left.label.localeCompare(right.label);
+    })
+    .map((source) => normalizeString(source.label))
+    .filter((source): source is string => source !== null);
+
+  const latestPublicPoolRule = aggregate.publicPoolRules[0] ?? null;
+  const publicPoolRule = latestPublicPoolRule
+    ? {
+        ruleName:
+          normalizeString(latestPublicPoolRule.ruleName) ??
+          fallbackDraft.publicPoolRule.ruleName,
+        inactivityDays:
+          normalizeNumber(latestPublicPoolRule.inactivityDays) ??
+          fallbackDraft.publicPoolRule.inactivityDays,
+        notifyOwnersFirst:
+          latestPublicPoolRule.notifyOwnersFirst ??
+          fallbackDraft.publicPoolRule.notifyOwnersFirst,
+        scopeStages:
+          latestPublicPoolRule.scopeStageValues.length > 0
+            ? latestPublicPoolRule.scopeStageValues.map(
+                (stageValue) =>
+                  getTradeCrmCustomerStageLabelForValue(stageValue) ?? stageValue,
+              )
+            : fallbackDraft.publicPoolRule.scopeStages,
+        publicPoolGroup:
+          getTradeCrmPublicPoolGroupLabelForValue(
+            normalizeString(latestPublicPoolRule.publicPoolGroupValue),
+          ) ?? fallbackDraft.publicPoolRule.publicPoolGroup,
+      }
+    : fallbackDraft.publicPoolRule;
+
+  const matchingRules = [...aggregate.matchingRules]
+    .sort((left, right) => {
+      const leftOrder = normalizeNumber(left.priority) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder =
+        normalizeNumber(right.priority) ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return left.field.localeCompare(right.field);
+    })
+    .map((rule) => ({
+      field: normalizeString(rule.field) ?? 'Unnamed Field',
+      weight: normalizeNumber(rule.weight) ?? 0,
+    }));
+
+  const importConfig = {
+    destination:
+      CUSTOMER_IMPORT_DESTINATION_BY_VALUE[
+        normalizeString(aggregate.importDefaults.destinationValue) ?? ''
+      ] ?? fallbackDraft.importConfig.destination,
+    updateExistingContacts:
+      aggregate.importDefaults.updateExistingContacts ??
+      fallbackDraft.importConfig.updateExistingContacts,
+    selectedFields:
+      aggregate.importDefaults.selectedFields.length > 0
+        ? aggregate.importDefaults.selectedFields
+        : fallbackDraft.importConfig.selectedFields,
+  };
+
+  return {
+    publicPoolRule,
+    groups,
+    tags,
+    sources,
+    matchingRules,
+    importConfig,
+  };
+};
+
 const dedupeLabels = (labels: string[]) => [...new Set(labels)];
 
 export const useTradeCrmCustomerConfigDraft = (
   options: UseTradeCrmCustomerConfigDraftOptions,
 ) => {
+  const apolloCoreClient = useApolloCoreClient();
   const fallbackDraft = useMemo(() => buildDefaultDraft(options), [options]);
+  const {
+    data: customerConfigAggregateData,
+    error: customerConfigAggregateError,
+    refetch: refetchCustomerConfigAggregate,
+  } = useQuery<CustomerConfigAggregateQuery>(GET_CUSTOMER_CONFIG_AGGREGATE, {
+    client: apolloCoreClient,
+    errorPolicy: 'all',
+  });
+
+  useSnackBarOnQueryError(customerConfigAggregateError);
 
   const { records: customerGroupRecords = [] } =
     useFindManyRecords<CustomerGroupRecord>({
@@ -539,8 +805,17 @@ export const useTradeCrmCustomerConfigDraft = (
   const { updateOneRecord } = useUpdateOneRecord();
 
   const hydratedDraft = useMemo(
-    () =>
-      buildDraftFromRecords({
+    () => {
+      const customerConfigAggregate = customerConfigAggregateData?.customerConfig;
+
+      if (customerConfigAggregate) {
+        return buildDraftFromAggregate({
+          aggregate: customerConfigAggregate,
+          fallbackDraft,
+        });
+      }
+
+      return buildDraftFromRecords({
         fallbackDraft,
         groupRecords: customerGroupRecords,
         tagRecords: sortByOptionalNumber(customerTagRecords, 'sortOrder'),
@@ -548,8 +823,10 @@ export const useTradeCrmCustomerConfigDraft = (
         publicPoolRuleRecords: customerPublicPoolRuleRecords,
         matchingRuleRecords: customerMatchingRuleRecords,
         importDefaultRecords: customerImportDefaultRecords,
-      }),
+      });
+    },
     [
+      customerConfigAggregateData,
       customerGroupRecords,
       customerImportDefaultRecords,
       customerMatchingRuleRecords,
@@ -771,6 +1048,8 @@ export const useTradeCrmCustomerConfigDraft = (
       ...draft,
       groups: persistedGroups,
     };
+
+    await refetchCustomerConfigAggregate();
 
     setSavedDraft(nextSavedDraft);
     setDraft(nextSavedDraft);

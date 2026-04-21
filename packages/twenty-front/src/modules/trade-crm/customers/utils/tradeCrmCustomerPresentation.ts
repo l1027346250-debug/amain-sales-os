@@ -425,10 +425,12 @@ export const getTradeCrmCustomerRoutePath = ({
   record: TradeCrmCustomerPresentationRecord;
 }) =>
   getTradeCrmCustomerDetailPath(
-    buildTradeCrmCustomerRouteId({
-      kind,
-      recordId: record.id,
-    }),
+    kind === 'organization'
+      ? record.id
+      : buildTradeCrmCustomerRouteId({
+          kind,
+          recordId: record.id,
+        }),
   );
 
 export const getTradeCrmCustomerStageLabelForRecord = ({

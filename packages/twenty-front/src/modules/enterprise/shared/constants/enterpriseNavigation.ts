@@ -1,4 +1,4 @@
-export const enterpriseNavigationGroups = [
+﻿export const enterpriseNavigationGroups = [
   {
     label: '销售管理',
     items: [
@@ -29,3 +29,4 @@ export const enterpriseNavigationGroups = [
     items: [{ label: '销售助手管理', key: 'sales-playbook' }],
   },
 ];
+

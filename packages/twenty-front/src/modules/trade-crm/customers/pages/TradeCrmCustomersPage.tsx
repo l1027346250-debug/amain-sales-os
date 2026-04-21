@@ -1924,15 +1924,17 @@ const TradeCrmCustomerDetailWorkspace = () => {
   const { customerId = '' } = useParams();
   const workspaceData = useTradeCrmCustomerWorkspaceData(customerId);
 
+  if (workspaceData.customerDetailRedirectPath) {
+    return <Navigate replace to={workspaceData.customerDetailRedirectPath} />;
+  }
+
   return (
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
       heroTitle={workspaceData.customerDetail?.displayName ?? 'Customer detail'}
-      heroDescription="This routed detail page is now the stable customer-module handoff into live company and person records. It is where the later customer aggregate, timeline merge, public-pool state, and import audit will surface together."
+      heroDescription="This routed detail page is now the stable customer-module handoff into company customer records. It is where the later customer aggregate, timeline merge, public-pool state, and import audit will surface together."
       heroPills={[
-        workspaceData.customerDetail?.kind === 'individual'
-          ? 'Individual customer'
-          : 'Organization customer',
+        'Company customer',
         workspaceData.customerDetail?.countryLabel ?? 'Country pending',
         workspaceData.customerDetail?.ownerLabel ?? 'Owner pending',
         `${workspaceData.customerDetailOpportunityRecords.length} related deals`,
@@ -1949,16 +1951,13 @@ const TradeCrmCustomerDetailWorkspace = () => {
           label: 'Route payload',
           value: customerId,
           description:
-            'The current route already supports organization and individual prefixes so the frontend can move first.',
+            'Person-prefixed legacy routes now resolve into the linked company customer detail or fall back to the customer list.',
         },
         {
           label: 'Source record',
-          value:
-            workspaceData.customerDetail?.kind === 'individual'
-              ? 'Person'
-              : 'Company',
+          value: 'Company',
           description:
-            'This detail shell stays anchored to live core records instead of building a second temporary master-data system.',
+            'This detail shell stays anchored to live company records, with people rendered as contact coverage instead of parallel customer masters.',
         },
         {
           label: 'Scoped records',

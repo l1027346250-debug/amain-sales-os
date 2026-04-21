@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+﻿import { useLocation } from 'react-router-dom';
 
 import { currentUserState } from '@/auth/states/currentUserState';
 import { enterpriseMenuConfig } from '@/enterprise/navigation/enterpriseMenuConfig';
@@ -101,3 +101,4 @@ export const EnterpriseNavigationSection = () => {
     </NavigationDrawerSection>
   );
 };
+

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
 import { UpsertEnterpriseFieldLayoutsDto } from 'src/modules/enterprise/field-layout/dtos/upsert-enterprise-field-layouts.dto';
@@ -33,7 +33,7 @@ export class EnterpriseFieldLayoutService {
         workspaceId,
         entityBindingId: binding.id,
         pageScene,
-        roleId: roleId ?? null,
+        roleId: roleId ?? IsNull(),
       },
       order: {
         sortOrder: 'ASC',
@@ -57,7 +57,7 @@ export class EnterpriseFieldLayoutService {
         workspaceId,
         entityBindingId: binding.id,
         pageScene: dto.pageScene,
-        roleId: dto.roleId ?? null,
+        roleId: dto.roleId ?? IsNull(),
       },
     });
 

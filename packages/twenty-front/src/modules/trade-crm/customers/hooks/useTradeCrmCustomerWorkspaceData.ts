@@ -1,12 +1,15 @@
+import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { useMemo } from 'react';
 
+import { useSnackBarOnQueryError } from '@/apollo/hooks/useSnackBarOnQueryError';
+import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { useFindOneRecord } from '@/object-record/hooks/useFindOneRecord';
 import {
-  buildTradeCrmCustomerRouteId,
   getTradeCrmCustomerDetailPath,
+  getTradeCrmCustomerPath,
   type TradeCrmCustomerKind,
   parseTradeCrmCustomerRouteId,
 } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
@@ -58,6 +61,14 @@ type GenericRecord = Record<string, unknown> & {
   __typename: string;
 };
 
+type CustomerWorkspaceListRecord = Record<string, unknown> & {
+  id: string;
+};
+
+type CustomerDetailRecord = Record<string, unknown> & {
+  id: string;
+};
+
 export type TradeCrmCustomerSummaryItem = {
   label: string;
   count: number;
@@ -88,9 +99,124 @@ export type TradeCrmCustomerWorkspaceFilters = {
   tagLabel?: string | null;
 };
 
+type CustomerWorkspaceListQuery = {
+  customerWorkspaceList: {
+    records: CustomerWorkspaceListRecord[];
+    totalCount: number;
+    publicPoolCount: number;
+    stageSummary: TradeCrmCustomerSummaryItem[];
+    groupSummary: TradeCrmCustomerSummaryItem[];
+    sourceSummary: TradeCrmCustomerSummaryItem[];
+    tagSummary: TradeCrmCustomerSummaryItem[];
+  };
+};
+
+type CustomerWorkspaceListQueryVariables = {
+  searchTerm?: string;
+  sourceValue?: string;
+  stageValue?: string;
+  tagValue?: string;
+  publicPoolStateValue?: string;
+  limit?: number;
+};
+
+type CustomerDetailQuery = {
+  customerDetail: {
+    customer: CustomerDetailRecord | null;
+    contacts: CustomerDetailRecord[];
+    opportunities: CustomerDetailRecord[];
+    contactCount: number;
+    opportunityCount: number;
+  };
+};
+
+type CustomerDetailQueryVariables = {
+  customerId: string;
+};
+
+const GET_CUSTOMER_WORKSPACE_LIST = gql`
+  query GetCustomerWorkspaceList(
+    $searchTerm: String
+    $sourceValue: String
+    $stageValue: String
+    $tagValue: String
+    $publicPoolStateValue: String
+    $limit: Int
+  ) {
+    customerWorkspaceList(
+      searchTerm: $searchTerm
+      sourceValue: $sourceValue
+      stageValue: $stageValue
+      tagValue: $tagValue
+      publicPoolStateValue: $publicPoolStateValue
+      limit: $limit
+    ) {
+      totalCount
+      publicPoolCount
+      records {
+        id
+        name
+        shortName
+        country
+        address
+        website
+        domainName
+        accountOwner
+        owner
+        customerStage
+        customerGroup
+        customerSource
+        customerTags
+        customerStar
+        customerScore
+        customerCode
+        lastContactAt
+        lastFollowUpAt
+        lastWonAt
+        totalWonAmount
+        publicPoolState
+        publicPoolGroup
+        publicPoolEnteredAt
+      }
+      stageSummary {
+        label
+        count
+      }
+      groupSummary {
+        label
+        count
+      }
+      sourceSummary {
+        label
+        count
+      }
+      tagSummary {
+        label
+        count
+      }
+    }
+  }
+`;
+
+const GET_CUSTOMER_DETAIL = gql`
+  query GetCustomerDetail($customerId: UUID!) {
+    customerDetail(customerId: $customerId) {
+      customer
+      contacts
+      opportunities
+      contactCount
+      opportunityCount
+    }
+  }
+`;
+
 const TIMELINE_PREVIEW_PAGE_SIZE = 3;
 
 const getLinkValue = (value: unknown) => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -111,7 +237,7 @@ const getDisplayName = ({
   record: GenericRecord | undefined;
 }) => {
   if (!record) {
-    return kind === 'organization' ? 'Customer record' : 'Individual customer';
+    return kind === 'organization' ? 'Customer record' : 'Customer contact';
   }
 
   if (kind === 'organization') {
@@ -390,6 +516,7 @@ export const useTradeCrmCustomerWorkspaceData = (
   customerRouteId?: string,
   filters?: TradeCrmCustomerWorkspaceFilters,
 ) => {
+  const apolloCoreClient = useApolloCoreClient();
   const { objectMetadataItems } = useObjectMetadataItems();
   const hasCompanyObject = objectMetadataItems.some(
     (item) => item.nameSingular === CoreObjectNameSingular.Company,
@@ -406,13 +533,48 @@ export const useTradeCrmCustomerWorkspaceData = (
 
   const companyFilter = buildCompanyFilter(filters);
   const peopleFilter = buildPeopleFilter(filters);
+  const shouldUseCustomerWorkspaceList = !customerRouteId;
+  const customerStageValue = filters?.stageLabel
+    ? getTradeCrmCustomerStageValueForLabel(filters.stageLabel)
+    : null;
+  const customerSourceValue = filters?.sourceLabel
+    ? getTradeCrmCustomerSourceValueForLabel(filters.sourceLabel)
+    : null;
+  const customerTagValue = filters?.tagLabel
+    ? getTradeCrmCustomerTagValueForLabel(filters.tagLabel)
+    : null;
+  const publicPoolStateValue = filters?.publicPoolStateLabel
+    ? getTradeCrmPublicPoolStateValueForLabel(filters.publicPoolStateLabel)
+    : null;
 
-  const { records: companyRecords, totalCount: companyTotalCount } =
+  const {
+    data: customerWorkspaceListData,
+    error: customerWorkspaceListError,
+  } = useQuery<
+    CustomerWorkspaceListQuery,
+    CustomerWorkspaceListQueryVariables
+  >(GET_CUSTOMER_WORKSPACE_LIST, {
+    client: apolloCoreClient,
+    errorPolicy: 'all',
+    skip: !shouldUseCustomerWorkspaceList,
+    variables: {
+      limit: 50,
+      searchTerm: filters?.searchTerm?.trim() || undefined,
+      sourceValue: customerSourceValue ?? undefined,
+      stageValue: customerStageValue ?? undefined,
+      tagValue: customerTagValue ?? undefined,
+      publicPoolStateValue: publicPoolStateValue ?? undefined,
+    },
+  });
+
+  useSnackBarOnQueryError(customerWorkspaceListError);
+
+  const { records: companyRecordsFallback, totalCount: companyTotalCountFallback } =
     useFindManyRecords<GenericRecord>({
       objectNameSingular: CoreObjectNameSingular.Company,
       filter: companyFilter,
       limit: 8,
-      skip: !hasCompanyObject,
+      skip: !hasCompanyObject || shouldUseCustomerWorkspaceList,
     });
 
   const { records: peopleRecords, totalCount: peopleTotalCount } =
@@ -467,26 +629,42 @@ export const useTradeCrmCustomerWorkspaceData = (
   const taskListLink = useTradeCrmObjectViewLink({
     objectNameSingular: CoreObjectNameSingular.Task,
   });
+  const companyRecords =
+    customerWorkspaceListData?.customerWorkspaceList.records.map((record) => ({
+      ...record,
+      __typename: 'Company',
+    })) ?? companyRecordsFallback;
+  const companyTotalCount =
+    customerWorkspaceListData?.customerWorkspaceList.totalCount ??
+    companyTotalCountFallback ??
+    0;
 
   const firstCompanyCustomerPath = companyRecords?.[0]?.id
-    ? getTradeCrmCustomerDetailPath(
-        buildTradeCrmCustomerRouteId({
-          kind: 'organization',
-          recordId: companyRecords[0].id,
-        }),
-      )
-    : undefined;
-
-  const firstIndividualCustomerPath = peopleRecords?.[0]?.id
-    ? getTradeCrmCustomerDetailPath(
-        buildTradeCrmCustomerRouteId({
-          kind: 'individual',
-          recordId: peopleRecords[0].id,
-        }),
-      )
+    ? getTradeCrmCustomerDetailPath(companyRecords[0].id)
     : undefined;
 
   const resolvedCustomerRoute = parseTradeCrmCustomerRouteId(customerRouteId ?? '');
+  const shouldUseCustomerDetailAggregate =
+    resolvedCustomerRoute?.kind === 'organization' && hasCompanyObject;
+
+  const {
+    data: customerDetailAggregateData,
+    error: customerDetailAggregateError,
+    loading: customerDetailAggregateLoading,
+  } = useQuery<CustomerDetailQuery, CustomerDetailQueryVariables>(
+    GET_CUSTOMER_DETAIL,
+    {
+      client: apolloCoreClient,
+      errorPolicy: 'all',
+      skip:
+        !shouldUseCustomerDetailAggregate || !resolvedCustomerRoute?.recordId,
+      variables: {
+        customerId: resolvedCustomerRoute?.recordId ?? '',
+      },
+    },
+  );
+
+  useSnackBarOnQueryError(customerDetailAggregateError);
 
   const { record: companyRecord, loading: companyRecordLoading } =
     useFindOneRecord<GenericRecord>({
@@ -508,8 +686,43 @@ export const useTradeCrmCustomerWorkspaceData = (
       skip: resolvedCustomerRoute?.kind !== 'individual' || !hasPersonObject,
     });
 
+  const customerDetailAggregateRecord = useMemo<GenericRecord | null>(() => {
+    const customerRecord = customerDetailAggregateData?.customerDetail.customer;
+
+    if (!customerRecord) {
+      return null;
+    }
+
+    return {
+      ...customerRecord,
+      __typename: 'Company',
+    };
+  }, [customerDetailAggregateData]);
+
+  const customerDetailAggregatePeopleRecords = useMemo<GenericRecord[]>(
+    () =>
+      (customerDetailAggregateData?.customerDetail.contacts ?? []).map((record) => ({
+        ...record,
+        __typename: 'Person',
+      })),
+    [customerDetailAggregateData],
+  );
+
+  const customerDetailAggregateOpportunityRecords = useMemo<GenericRecord[]>(
+    () =>
+      (customerDetailAggregateData?.customerDetail.opportunities ?? []).map(
+        (record) => ({
+          ...record,
+          __typename: 'Opportunity',
+        }),
+      ),
+    [customerDetailAggregateData],
+  );
+
   const customerDetailRecord =
-    resolvedCustomerRoute?.kind === 'individual' ? personRecord : companyRecord;
+    resolvedCustomerRoute?.kind === 'individual'
+      ? personRecord
+      : customerDetailAggregateRecord ?? companyRecord;
 
   const customerDetailCompanyId =
     resolvedCustomerRoute?.kind === 'organization'
@@ -522,29 +735,71 @@ export const useTradeCrmCustomerWorkspaceData = (
       ? resolvedCustomerRoute.recordId
       : null;
 
-  const { records: customerDetailPeopleRecords } = useFindManyRecords<GenericRecord>({
-    objectNameSingular: CoreObjectNameSingular.Person,
-    filter: customerDetailCompanyId
-      ? {
-          companyId: {
-            eq: customerDetailCompanyId,
-          },
-        }
-      : customerDetailPersonId
+  const customerDetailRedirectPath = useMemo(() => {
+    if (!resolvedCustomerRoute) {
+      return null;
+    }
+
+    if (
+      resolvedCustomerRoute.kind === 'organization' &&
+      customerRouteId?.startsWith('org_')
+    ) {
+      return getTradeCrmCustomerDetailPath(resolvedCustomerRoute.recordId);
+    }
+
+    if (resolvedCustomerRoute.kind !== 'individual') {
+      return null;
+    }
+
+    if (!hasPersonObject) {
+      return getTradeCrmCustomerPath('list');
+    }
+
+    if (personRecordLoading) {
+      return null;
+    }
+
+    const linkedCompanyId =
+      (typeof personRecord?.companyId === 'string' ? personRecord.companyId : null) ??
+      getRelationId(personRecord?.company);
+
+    if (linkedCompanyId) {
+      return getTradeCrmCustomerDetailPath(linkedCompanyId);
+    }
+
+    return getTradeCrmCustomerPath('list');
+  }, [
+    customerRouteId,
+    hasPersonObject,
+    personRecord,
+    personRecordLoading,
+    resolvedCustomerRoute,
+  ]);
+
+  const { records: customerDetailPeopleRecordsFallback } =
+    useFindManyRecords<GenericRecord>({
+      objectNameSingular: CoreObjectNameSingular.Person,
+      filter: customerDetailCompanyId
         ? {
-            id: {
-              eq: customerDetailPersonId,
+            companyId: {
+              eq: customerDetailCompanyId,
             },
           }
-        : undefined,
-    limit: 6,
-    skip:
-      !resolvedCustomerRoute ||
-      !hasPersonObject ||
-      (!customerDetailCompanyId && !customerDetailPersonId),
-  });
+        : customerDetailPersonId
+          ? {
+              id: {
+                eq: customerDetailPersonId,
+              },
+            }
+          : undefined,
+      limit: 6,
+      skip:
+        !resolvedCustomerRoute ||
+        !hasPersonObject ||
+        (!customerDetailCompanyId && !customerDetailPersonId),
+    });
 
-  const { records: customerDetailOpportunityRecords } =
+  const { records: customerDetailOpportunityRecordsFallback } =
     useFindManyRecords<GenericRecord>({
       objectNameSingular: CoreObjectNameSingular.Opportunity,
       filter: customerDetailCompanyId || customerDetailPersonId
@@ -582,6 +837,51 @@ export const useTradeCrmCustomerWorkspaceData = (
         !hasOpportunityObject ||
         (!customerDetailCompanyId && !customerDetailPersonId),
     });
+
+  const customerDetailPeopleRecords = useMemo(() => {
+    if (customerDetailAggregateData?.customerDetail) {
+      return customerDetailAggregatePeopleRecords;
+    }
+
+    if ((customerDetailPeopleRecordsFallback?.length ?? 0) > 0) {
+      return customerDetailPeopleRecordsFallback;
+    }
+
+    if (customerDetailPersonId && personRecord) {
+      return [personRecord];
+    }
+
+    if (customerDetailCompanyId && peopleRecords) {
+      return peopleRecords.filter(
+        (record) =>
+          (typeof record.companyId === 'string' &&
+            record.companyId === customerDetailCompanyId) ||
+          getRelationId(record.company) === customerDetailCompanyId,
+      );
+    }
+
+    return [];
+  }, [
+    customerDetailAggregateData,
+    customerDetailAggregatePeopleRecords,
+    customerDetailCompanyId,
+    customerDetailPeopleRecordsFallback,
+    customerDetailPersonId,
+    peopleRecords,
+    personRecord,
+  ]);
+
+  const customerDetailOpportunityRecords = useMemo(() => {
+    if (customerDetailAggregateData?.customerDetail) {
+      return customerDetailAggregateOpportunityRecords;
+    }
+
+    return customerDetailOpportunityRecordsFallback ?? [];
+  }, [
+    customerDetailAggregateData,
+    customerDetailAggregateOpportunityRecords,
+    customerDetailOpportunityRecordsFallback,
+  ]);
 
   const { data: companyTimelineThreadsData } = useQuery<
     GetTimelineThreadsFromCompanyIdQuery,
@@ -715,6 +1015,7 @@ export const useTradeCrmCustomerWorkspaceData = (
 
   const customerStageSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerWorkspaceListData?.customerWorkspaceList.stageSummary ??
       countLabels(
         (companyRecords ?? []).map((record, index) =>
           getTradeCrmCustomerStageLabelForRecord({
@@ -723,11 +1024,12 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords],
+    [companyRecords, customerWorkspaceListData],
   );
 
   const customerGroupSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerWorkspaceListData?.customerWorkspaceList.groupSummary ??
       countLabels(
         (companyRecords ?? []).map((record, index) =>
           getTradeCrmCustomerGroupLabelForRecord({
@@ -736,11 +1038,12 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords],
+    [companyRecords, customerWorkspaceListData],
   );
 
   const customerSourceSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerWorkspaceListData?.customerWorkspaceList.sourceSummary ??
       countLabels(
         (companyRecords ?? []).map((record, index) =>
           getTradeCrmCustomerSourceLabelForRecord({
@@ -749,11 +1052,12 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords],
+    [companyRecords, customerWorkspaceListData],
   );
 
   const customerTagSummary = useMemo<TradeCrmCustomerSummaryItem[]>(
     () =>
+      customerWorkspaceListData?.customerWorkspaceList.tagSummary ??
       countLabels(
         (companyRecords ?? []).flatMap((record, index) =>
           getTradeCrmCustomerTagsForRecord({
@@ -762,7 +1066,7 @@ export const useTradeCrmCustomerWorkspaceData = (
           }),
         ),
       ),
-    [companyRecords],
+    [companyRecords, customerWorkspaceListData],
   );
 
   const publicPoolRecords = useMemo(
@@ -896,20 +1200,8 @@ export const useTradeCrmCustomerWorkspaceData = (
     peopleRecords,
     opportunityRecords,
     taskRecords,
-    customerDetailPeopleRecords:
-      customerDetailPeopleRecords.length > 0
-        ? customerDetailPeopleRecords
-        : customerDetailPersonId && personRecord
-          ? [personRecord]
-          : customerDetailCompanyId && peopleRecords
-            ? peopleRecords.filter(
-                (record) =>
-                  (typeof record.companyId === 'string' &&
-                    record.companyId === customerDetailCompanyId) ||
-                  getRelationId(record.company) === customerDetailCompanyId,
-              )
-            : [],
-    customerDetailOpportunityRecords: customerDetailOpportunityRecords ?? [],
+    customerDetailPeopleRecords,
+    customerDetailOpportunityRecords,
     customerDetailTaskRecords,
     companyTotalCount: companyTotalCount ?? 0,
     peopleTotalCount: peopleTotalCount ?? 0,
@@ -935,9 +1227,12 @@ export const useTradeCrmCustomerWorkspaceData = (
     customerTagSummary,
     publicPoolRecords,
     firstCompanyCustomerPath,
-    firstIndividualCustomerPath,
+    customerDetailRedirectPath,
     customerDetail,
-    customerDetailLoading: companyRecordLoading || personRecordLoading,
+    customerDetailLoading:
+      companyRecordLoading ||
+      personRecordLoading ||
+      customerDetailAggregateLoading,
     timelineThreadPreviews,
     timelineThreadTotalCount,
     timelineCalendarPreviews,

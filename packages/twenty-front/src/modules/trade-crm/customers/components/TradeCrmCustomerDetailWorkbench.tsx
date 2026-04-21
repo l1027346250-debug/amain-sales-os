@@ -100,6 +100,34 @@ const DETAIL_TABS: { key: DetailTabKey; label: string }[] = [
 const getBadgeTone = (index: number): TradeCrmCustomerTableBadgeTone =>
   index % 3 === 0 ? 'blue' : index % 3 === 1 ? 'amber' : 'green';
 
+const getOpportunityAmountLabel = (
+  record: TradeCrmCustomerPresentationRecord,
+  fallbackIndex: number,
+) => {
+  const amount = record.amount as
+    | {
+        amountMicros?: unknown;
+        currencyCode?: unknown;
+      }
+    | undefined;
+
+  if (amount && typeof amount.amountMicros === 'number') {
+    const currencyCode =
+      typeof amount.currencyCode === 'string' && amount.currencyCode.length > 0
+        ? amount.currencyCode
+        : 'USD';
+
+    return `${currencyCode} ${(amount.amountMicros / 1_000_000).toLocaleString(
+      undefined,
+      {
+        maximumFractionDigits: 2,
+      },
+    )}`;
+  }
+
+  return `USD ${(fallbackIndex + 2) * 18}k`;
+};
+
 const StyledShell = styled.div`
   display: grid;
   gap: ${themeCssVariables.spacing[3]};
@@ -409,7 +437,7 @@ export const TradeCrmCustomerDetailWorkbench = ({
         badgeTone: getBadgeTone(index),
       },
       {
-        primary: `USD ${(index + 2) * 18}k`,
+        primary: getOpportunityAmountLabel(record, index),
         secondary: 'Projected amount',
       },
       {
@@ -553,9 +581,9 @@ export const TradeCrmCustomerDetailWorkbench = ({
             {customerDetailLoading ? 'Loading...' : customerDetail?.displayName ?? 'Unknown'}
           </StyledHeroName>
           <StyledMuted>
-            {customerDetail?.kind === 'individual'
-              ? customerDetail.jobTitle ?? 'Individual customer anchor'
-              : customerDetail?.websiteLabel ?? 'Organization customer anchor'}
+            {customerDetail?.websiteLabel ??
+              customerDetail?.jobTitle ??
+              'Company customer anchor'}
           </StyledMuted>
           <StyledTagRow>
             {(
@@ -611,7 +639,7 @@ export const TradeCrmCustomerDetailWorkbench = ({
                 <StyledDealName>
                   {typeof record.name === 'string' ? record.name : `Opportunity ${index + 1}`}
                 </StyledDealName>
-                <StyledMuted>{`USD ${(index + 2) * 18}k / ${
+                <StyledMuted>{`${getOpportunityAmountLabel(record, index)} / ${
                   getTradeCrmCustomerOwnerLabel(record)
                 }`}</StyledMuted>
               </StyledDealCard>

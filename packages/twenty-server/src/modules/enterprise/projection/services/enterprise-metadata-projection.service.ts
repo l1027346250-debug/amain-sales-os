@@ -7,8 +7,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { randomUUID } from 'crypto';
 
-import { Repository } from 'typeorm';
-import { FieldMetadataType } from 'twenty-shared/types';
+import { DeepPartial, Repository } from 'typeorm';
+import {
+  type FieldMetadataOptions,
+  type FieldMetadataSettings,
+  FieldMetadataType,
+} from 'twenty-shared/types';
 
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
@@ -56,9 +60,9 @@ export class EnterpriseMetadataProjectionService {
 
     try {
       const binding =
-        await this.enterpriseEntityBindingService.resolveBindingOrFail(
+        await this.enterpriseEntityBindingService.resolveBindingByIdOrFail(
           workspaceId,
-          fieldDefinition.entityBindingId as never,
+          fieldDefinition.entityBindingId,
         );
 
       const objectMetadata = await this.objectMetadataRepository.findOne({
@@ -99,7 +103,7 @@ export class EnterpriseMetadataProjectionService {
               },
             });
 
-      const payload = {
+      const payload: DeepPartial<FieldMetadataEntity> = {
         workspaceId,
         applicationId: objectMetadata.applicationId,
         objectMetadataId: objectMetadata.id,
@@ -108,17 +112,11 @@ export class EnterpriseMetadataProjectionService {
         label: fieldDefinition.fieldName,
         description: null,
         icon: null,
-        defaultValue: fieldDefinition.defaultValueJson,
+        defaultValue:
+          fieldDefinition.defaultValueJson as FieldMetadataEntity['defaultValue'],
         standardOverrides: null,
         options: this.mapOptions(fieldDefinition.fieldType, options),
-        settings: {
-          enterpriseManaged: true,
-          enterpriseFieldDefinitionId: fieldDefinition.id,
-          storageBackend: 'enterprise_field_value',
-          enterpriseEntityType: binding.entityType,
-          filterable: fieldDefinition.searchable,
-          exportable: fieldDefinition.exportable,
-        },
+        settings: this.mapSettings(fieldDefinition.fieldType),
         isCustom: true,
         isActive: fieldDefinition.enabled,
         isSystem: false,
@@ -131,14 +129,13 @@ export class EnterpriseMetadataProjectionService {
         morphId: null,
       };
 
-      const savedFieldMetadata = metadataField
+      const savedFieldMetadata: FieldMetadataEntity = metadataField
         ? await this.fieldMetadataRepository.save({
             ...metadataField,
             ...payload,
           })
         : await this.fieldMetadataRepository.save(
             this.fieldMetadataRepository.create({
-              id: undefined,
               universalIdentifier: randomUUID(),
               ...payload,
             }),
@@ -211,7 +208,7 @@ export class EnterpriseMetadataProjectionService {
   private mapOptions(
     fieldType: string,
     options: EnterpriseFieldOptionEntity[],
-  ): unknown {
+  ): FieldMetadataEntity['options'] {
     if (
       fieldType !== EnterpriseFieldType.SELECT &&
       fieldType !== EnterpriseFieldType.MULTI_SELECT
@@ -224,6 +221,26 @@ export class EnterpriseMetadataProjectionService {
       label: option.optionLabel,
       color: option.color,
       position: option.sortOrder,
-    }));
+    })) as FieldMetadataOptions;
+  }
+
+  private mapSettings(fieldType: string): FieldMetadataEntity['settings'] {
+    switch (fieldType) {
+      case EnterpriseFieldType.TEXTAREA:
+        return {
+          displayedMaxRows: 6,
+        } as FieldMetadataSettings;
+      case EnterpriseFieldType.TEXT:
+      case EnterpriseFieldType.NUMBER:
+      case EnterpriseFieldType.SELECT:
+      case EnterpriseFieldType.MULTI_SELECT:
+      case EnterpriseFieldType.BOOLEAN:
+      case EnterpriseFieldType.DATE:
+        return null;
+      default:
+        throw new BadRequestException(
+          `Unsupported enterprise field settings for ${fieldType}`,
+        );
+    }
   }
 }

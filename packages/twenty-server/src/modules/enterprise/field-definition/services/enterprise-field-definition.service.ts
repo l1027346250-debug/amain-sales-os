@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { type Repository } from 'typeorm';
+import { IsNull, type Repository } from 'typeorm';
 
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
 import { EnterpriseEntityBindingService } from 'src/modules/enterprise/entity-binding/services/enterprise-entity-binding.service';
@@ -33,7 +33,7 @@ export class EnterpriseFieldDefinitionService {
       return this.enterpriseFieldDefinitionRepository.find({
         where: {
           workspaceId,
-          deletedAt: null,
+          deletedAt: IsNull(),
         },
         order: {
           sortOrder: 'ASC',
@@ -52,7 +52,7 @@ export class EnterpriseFieldDefinitionService {
       where: {
         workspaceId,
         entityBindingId: binding.id,
-        deletedAt: null,
+        deletedAt: IsNull(),
       },
       order: {
         sortOrder: 'ASC',
@@ -180,36 +180,35 @@ export class EnterpriseFieldDefinitionService {
       enabled: fieldDefinition.enabled,
     };
 
-    await this.enterpriseFieldDefinitionRepository.update(fieldDefinition.id, {
-      fieldName: dto.fieldName ?? fieldDefinition.fieldName,
-      fieldType: dto.fieldType ?? fieldDefinition.fieldType,
-      groupCode:
-        dto.groupCode === undefined ? fieldDefinition.groupCode : dto.groupCode,
-      visibleInModules:
-        dto.visibleInModules === undefined
-          ? fieldDefinition.visibleInModules
-          : dto.visibleInModules,
-      validationJson:
-        dto.validation === undefined
-          ? fieldDefinition.validationJson
-          : dto.validation,
-      defaultValueJson:
-        dto.defaultValue === undefined
-          ? fieldDefinition.defaultValueJson
-          : dto.defaultValue,
-      searchable: dto.searchable ?? fieldDefinition.searchable,
-      exportable: dto.exportable ?? fieldDefinition.exportable,
-      enabled: dto.enabled ?? fieldDefinition.enabled,
-      sortOrder: dto.sortOrder ?? fieldDefinition.sortOrder,
-      syncStatus: EnterpriseSyncStatus.PENDING,
-      syncErrorMessage: null,
-      updatedByWorkspaceMemberId: actorWorkspaceMemberId ?? null,
-    });
-
-    const updatedFieldDefinition = await this.findOneOrFail(
-      workspaceId,
-      fieldDefinition.id,
-    );
+    const updatedFieldDefinition =
+      await this.enterpriseFieldDefinitionRepository.save({
+        ...fieldDefinition,
+        fieldName: dto.fieldName ?? fieldDefinition.fieldName,
+        fieldType: dto.fieldType ?? fieldDefinition.fieldType,
+        groupCode:
+          dto.groupCode === undefined
+            ? fieldDefinition.groupCode
+            : dto.groupCode,
+        visibleInModules:
+          dto.visibleInModules === undefined
+            ? fieldDefinition.visibleInModules
+            : dto.visibleInModules,
+        validationJson:
+          dto.validation === undefined
+            ? fieldDefinition.validationJson
+            : (dto.validation as Record<string, unknown> | null),
+        defaultValueJson:
+          dto.defaultValue === undefined
+            ? fieldDefinition.defaultValueJson
+            : dto.defaultValue,
+        searchable: dto.searchable ?? fieldDefinition.searchable,
+        exportable: dto.exportable ?? fieldDefinition.exportable,
+        enabled: dto.enabled ?? fieldDefinition.enabled,
+        sortOrder: dto.sortOrder ?? fieldDefinition.sortOrder,
+        syncStatus: EnterpriseSyncStatus.PENDING,
+        syncErrorMessage: null,
+        updatedByWorkspaceMemberId: actorWorkspaceMemberId ?? null,
+      });
 
     await this.enterpriseConfigAuditService.createLog({
       workspaceId,
@@ -241,7 +240,8 @@ export class EnterpriseFieldDefinitionService {
   ) {
     const fieldDefinition = await this.findOneOrFail(workspaceId, fieldDefinitionId);
 
-    await this.enterpriseFieldDefinitionRepository.update(fieldDefinition.id, {
+    await this.enterpriseFieldDefinitionRepository.save({
+      ...fieldDefinition,
       enabled: false,
       deletedAt: new Date(),
       syncStatus: EnterpriseSyncStatus.PENDING,
