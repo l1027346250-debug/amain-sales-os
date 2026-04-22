@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useSnackBarOnQueryError } from '@/apollo/hooks/useSnackBarOnQueryError';
 import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
@@ -48,6 +48,14 @@ type TradeCrmCustomerConfigDraft = {
     updateExistingContacts: boolean;
     selectedFields: string[];
   };
+};
+
+type TradeCrmCustomerConfigOperationHistoryItem = {
+  id: string;
+  operatedAt: string | null;
+  operationSummary: string;
+  operationType: string | null;
+  operatorName: string | null;
 };
 
 type UseTradeCrmCustomerConfigDraftOptions = {
@@ -164,6 +172,28 @@ type CustomerConfigAggregateQuery = {
   };
 };
 
+type CustomerConfigOperationHistoryQuery = {
+  customerConfigOperationHistory: {
+    items: TradeCrmCustomerConfigOperationHistoryItem[];
+    totalCount: number;
+  };
+};
+
+type CustomerConfigOperationHistoryQueryVariables = {
+  limit?: number;
+};
+
+type LogCustomerConfigChangeMutation = {
+  logCustomerConfigChange: TradeCrmCustomerConfigOperationHistoryItem;
+};
+
+type LogCustomerConfigChangeMutationVariables = {
+  input: {
+    sectionKeys: string[];
+    summary: string;
+  };
+};
+
 const GET_CUSTOMER_CONFIG_AGGREGATE = gql`
   query GetCustomerConfigAggregate {
     customerConfig {
@@ -214,6 +244,33 @@ const GET_CUSTOMER_CONFIG_AGGREGATE = gql`
         selectedFields
         status
       }
+    }
+  }
+`;
+
+const GET_CUSTOMER_CONFIG_OPERATION_HISTORY = gql`
+  query GetCustomerConfigOperationHistory($limit: Int) {
+    customerConfigOperationHistory(limit: $limit) {
+      totalCount
+      items {
+        id
+        operatedAt
+        operationSummary
+        operationType
+        operatorName
+      }
+    }
+  }
+`;
+
+const LOG_CUSTOMER_CONFIG_CHANGE = gql`
+  mutation LogCustomerConfigChange($input: LogCustomerConfigChangeInput!) {
+    logCustomerConfigChange(input: $input) {
+      id
+      operatedAt
+      operationSummary
+      operationType
+      operatorName
     }
   }
 `;
@@ -344,8 +401,10 @@ const sortByOptionalNumber = <
   fieldName: 'sortOrder' | 'priority',
 ) =>
   [...records].sort((left, right) => {
-    const leftOrder = normalizeNumber(left[fieldName]) ?? Number.MAX_SAFE_INTEGER;
-    const rightOrder = normalizeNumber(right[fieldName]) ?? Number.MAX_SAFE_INTEGER;
+    const leftOrder =
+      normalizeNumber(left[fieldName]) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder =
+      normalizeNumber(right[fieldName]) ?? Number.MAX_SAFE_INTEGER;
 
     if (leftOrder !== rightOrder) {
       return leftOrder - rightOrder;
@@ -466,11 +525,14 @@ const buildDraftFromRecords = ({
         }))
       : [];
 
-  const tags = tagRecords.reduce<Record<TradeCrmCustomerConfigTagScope, string[]>>(
+  const tags = tagRecords.reduce<
+    Record<TradeCrmCustomerConfigTagScope, string[]>
+  >(
     (accumulator, tagRecord) => {
       const scope =
-        CUSTOMER_TAG_SCOPE_BY_VALUE[normalizeString(tagRecord.tagScope) ?? ''] ??
-        null;
+        CUSTOMER_TAG_SCOPE_BY_VALUE[
+          normalizeString(tagRecord.tagScope) ?? ''
+        ] ?? null;
       const tagName = normalizeString(tagRecord.tagName);
 
       if (!scope || !tagName) {
@@ -500,28 +562,29 @@ const buildDraftFromRecords = ({
       ),
     )[0] ?? null;
 
-  const publicPoolRule = latestPublicPoolRuleRecord
-    ? {
-        ruleName:
-          normalizeString(latestPublicPoolRuleRecord.ruleName) ??
-          fallbackDraft.publicPoolRule.ruleName,
-        inactivityDays:
-          normalizeNumber(latestPublicPoolRuleRecord.inactivityDays) ??
-          fallbackDraft.publicPoolRule.inactivityDays,
-        notifyOwnersFirst:
-          normalizeBoolean(latestPublicPoolRuleRecord.notifyOwnersFirst) ??
-          fallbackDraft.publicPoolRule.notifyOwnersFirst,
-        scopeStages:
-          normalizeStringArray(latestPublicPoolRuleRecord.scopeStages).map(
-            (stageValue) =>
-              getTradeCrmCustomerStageLabelForValue(stageValue) ?? stageValue,
-          ) ?? fallbackDraft.publicPoolRule.scopeStages,
-        publicPoolGroup:
-          getTradeCrmPublicPoolGroupLabelForValue(
-            normalizeString(latestPublicPoolRuleRecord.publicPoolGroup),
-          ) ?? fallbackDraft.publicPoolRule.publicPoolGroup,
-      }
-    : fallbackDraft.publicPoolRule;
+  const publicPoolRule =
+    latestPublicPoolRuleRecord !== null
+      ? {
+          ruleName:
+            normalizeString(latestPublicPoolRuleRecord.ruleName) ??
+            fallbackDraft.publicPoolRule.ruleName,
+          inactivityDays:
+            normalizeNumber(latestPublicPoolRuleRecord.inactivityDays) ??
+            fallbackDraft.publicPoolRule.inactivityDays,
+          notifyOwnersFirst:
+            normalizeBoolean(latestPublicPoolRuleRecord.notifyOwnersFirst) ??
+            fallbackDraft.publicPoolRule.notifyOwnersFirst,
+          scopeStages:
+            normalizeStringArray(latestPublicPoolRuleRecord.scopeStages).map(
+              (stageValue) =>
+                getTradeCrmCustomerStageLabelForValue(stageValue) ?? stageValue,
+            ) ?? fallbackDraft.publicPoolRule.scopeStages,
+          publicPoolGroup:
+            getTradeCrmPublicPoolGroupLabelForValue(
+              normalizeString(latestPublicPoolRuleRecord.publicPoolGroup),
+            ) ?? fallbackDraft.publicPoolRule.publicPoolGroup,
+        }
+      : fallbackDraft.publicPoolRule;
 
   const sortedMatchingRuleRecords = sortByOptionalNumber(
     matchingRuleRecords,
@@ -539,21 +602,24 @@ const buildDraftFromRecords = ({
       ),
     )[0] ?? null;
 
-  const importConfig = latestImportDefaultsRecord
-    ? {
-        destination:
-          CUSTOMER_IMPORT_DESTINATION_BY_VALUE[
-            normalizeString(latestImportDefaultsRecord.destination) ?? ''
-          ] ?? fallbackDraft.importConfig.destination,
-        updateExistingContacts:
-          normalizeBoolean(latestImportDefaultsRecord.updateExistingContacts) ??
-          fallbackDraft.importConfig.updateExistingContacts,
-        selectedFields:
-          normalizeStringArray(latestImportDefaultsRecord.selectedFields).length > 0
-            ? normalizeStringArray(latestImportDefaultsRecord.selectedFields)
-            : fallbackDraft.importConfig.selectedFields,
-      }
-    : fallbackDraft.importConfig;
+  const importConfig =
+    latestImportDefaultsRecord !== null
+      ? {
+          destination:
+            CUSTOMER_IMPORT_DESTINATION_BY_VALUE[
+              normalizeString(latestImportDefaultsRecord.destination) ?? ''
+            ] ?? fallbackDraft.importConfig.destination,
+          updateExistingContacts:
+            normalizeBoolean(
+              latestImportDefaultsRecord.updateExistingContacts,
+            ) ?? fallbackDraft.importConfig.updateExistingContacts,
+          selectedFields:
+            normalizeStringArray(latestImportDefaultsRecord.selectedFields)
+              .length > 0
+              ? normalizeStringArray(latestImportDefaultsRecord.selectedFields)
+              : fallbackDraft.importConfig.selectedFields,
+        }
+      : fallbackDraft.importConfig;
 
   return {
     publicPoolRule,
@@ -586,7 +652,8 @@ const buildDraftFromAggregate = ({
 
   const groups = [...aggregate.groups]
     .sort((left, right) => {
-      const leftOrder = normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
+      const leftOrder =
+        normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
       const rightOrder =
         normalizeNumber(right.sortOrder) ?? Number.MAX_SAFE_INTEGER;
 
@@ -610,7 +677,8 @@ const buildDraftFromAggregate = ({
     Record<TradeCrmCustomerConfigTagScope, string[]>
   >(
     (accumulator, tag) => {
-      const scope = CUSTOMER_TAG_SCOPE_BY_VALUE[normalizeString(tag.scope) ?? ''] ?? null;
+      const scope =
+        CUSTOMER_TAG_SCOPE_BY_VALUE[normalizeString(tag.scope) ?? ''] ?? null;
       const tagLabel = normalizeString(tag.label);
 
       if (!scope || !tagLabel) {
@@ -630,7 +698,8 @@ const buildDraftFromAggregate = ({
 
   const sources = [...aggregate.sources]
     .sort((left, right) => {
-      const leftOrder = normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
+      const leftOrder =
+        normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
       const rightOrder =
         normalizeNumber(right.sortOrder) ?? Number.MAX_SAFE_INTEGER;
 
@@ -644,34 +713,37 @@ const buildDraftFromAggregate = ({
     .filter((source): source is string => source !== null);
 
   const latestPublicPoolRule = aggregate.publicPoolRules[0] ?? null;
-  const publicPoolRule = latestPublicPoolRule
-    ? {
-        ruleName:
-          normalizeString(latestPublicPoolRule.ruleName) ??
-          fallbackDraft.publicPoolRule.ruleName,
-        inactivityDays:
-          normalizeNumber(latestPublicPoolRule.inactivityDays) ??
-          fallbackDraft.publicPoolRule.inactivityDays,
-        notifyOwnersFirst:
-          latestPublicPoolRule.notifyOwnersFirst ??
-          fallbackDraft.publicPoolRule.notifyOwnersFirst,
-        scopeStages:
-          latestPublicPoolRule.scopeStageValues.length > 0
-            ? latestPublicPoolRule.scopeStageValues.map(
-                (stageValue) =>
-                  getTradeCrmCustomerStageLabelForValue(stageValue) ?? stageValue,
-              )
-            : fallbackDraft.publicPoolRule.scopeStages,
-        publicPoolGroup:
-          getTradeCrmPublicPoolGroupLabelForValue(
-            normalizeString(latestPublicPoolRule.publicPoolGroupValue),
-          ) ?? fallbackDraft.publicPoolRule.publicPoolGroup,
-      }
-    : fallbackDraft.publicPoolRule;
+  const publicPoolRule =
+    latestPublicPoolRule !== null
+      ? {
+          ruleName:
+            normalizeString(latestPublicPoolRule.ruleName) ??
+            fallbackDraft.publicPoolRule.ruleName,
+          inactivityDays:
+            normalizeNumber(latestPublicPoolRule.inactivityDays) ??
+            fallbackDraft.publicPoolRule.inactivityDays,
+          notifyOwnersFirst:
+            latestPublicPoolRule.notifyOwnersFirst ??
+            fallbackDraft.publicPoolRule.notifyOwnersFirst,
+          scopeStages:
+            latestPublicPoolRule.scopeStageValues.length > 0
+              ? latestPublicPoolRule.scopeStageValues.map(
+                  (stageValue) =>
+                    getTradeCrmCustomerStageLabelForValue(stageValue) ??
+                    stageValue,
+                )
+              : fallbackDraft.publicPoolRule.scopeStages,
+          publicPoolGroup:
+            getTradeCrmPublicPoolGroupLabelForValue(
+              normalizeString(latestPublicPoolRule.publicPoolGroupValue),
+            ) ?? fallbackDraft.publicPoolRule.publicPoolGroup,
+        }
+      : fallbackDraft.publicPoolRule;
 
   const matchingRules = [...aggregate.matchingRules]
     .sort((left, right) => {
-      const leftOrder = normalizeNumber(left.priority) ?? Number.MAX_SAFE_INTEGER;
+      const leftOrder =
+        normalizeNumber(left.priority) ?? Number.MAX_SAFE_INTEGER;
       const rightOrder =
         normalizeNumber(right.priority) ?? Number.MAX_SAFE_INTEGER;
 
@@ -712,6 +784,512 @@ const buildDraftFromAggregate = ({
 
 const dedupeLabels = (labels: string[]) => [...new Set(labels)];
 
+const formatSummaryList = (items: string[], maxItems = 3) => {
+  if (items.length === 0) {
+    return '';
+  }
+
+  const visibleItems = items.slice(0, maxItems).join(', ');
+
+  return items.length > maxItems
+    ? `${visibleItems}, +${items.length - maxItems} more`
+    : visibleItems;
+};
+
+const getAddedLabels = (nextItems: string[], previousItems: string[]) => {
+  const previousItemKeys = new Set(
+    previousItems.map((item) => normalizeLabelKey(item)),
+  );
+
+  return nextItems.filter(
+    (item) => !previousItemKeys.has(normalizeLabelKey(item)),
+  );
+};
+
+const getRemovedLabels = (nextItems: string[], previousItems: string[]) => {
+  const nextItemKeys = new Set(nextItems.map((item) => normalizeLabelKey(item)));
+
+  return previousItems.filter(
+    (item) => !nextItemKeys.has(normalizeLabelKey(item)),
+  );
+};
+
+const getChangedConfigSections = ({
+  draft,
+  savedDraft,
+}: {
+  draft: TradeCrmCustomerConfigDraft;
+  savedDraft: TradeCrmCustomerConfigDraft;
+}) => {
+  const changedSections: Array<{
+    key: string;
+    summary: string;
+  }> = [];
+
+  if (
+    JSON.stringify(draft.publicPoolRule) !==
+    JSON.stringify(savedDraft.publicPoolRule)
+  ) {
+    const publicPoolRuleChanges: string[] = [];
+
+    if (draft.publicPoolRule.inactivityDays !== savedDraft.publicPoolRule.inactivityDays) {
+      publicPoolRuleChanges.push(
+        `inactivity ${savedDraft.publicPoolRule.inactivityDays}d -> ${draft.publicPoolRule.inactivityDays}d`,
+      );
+    }
+
+    if (
+      draft.publicPoolRule.publicPoolGroup !==
+      savedDraft.publicPoolRule.publicPoolGroup
+    ) {
+      publicPoolRuleChanges.push(`pool ${draft.publicPoolRule.publicPoolGroup}`);
+    }
+
+    if (
+      draft.publicPoolRule.notifyOwnersFirst !==
+      savedDraft.publicPoolRule.notifyOwnersFirst
+    ) {
+      publicPoolRuleChanges.push(
+        draft.publicPoolRule.notifyOwnersFirst
+          ? 'owner warning enabled'
+          : 'direct recycle enabled',
+      );
+    }
+
+    const addedStages = getAddedLabels(
+      draft.publicPoolRule.scopeStages,
+      savedDraft.publicPoolRule.scopeStages,
+    );
+    const removedStages = getRemovedLabels(
+      draft.publicPoolRule.scopeStages,
+      savedDraft.publicPoolRule.scopeStages,
+    );
+
+    if (addedStages.length > 0) {
+      publicPoolRuleChanges.push(`stage + ${formatSummaryList(addedStages)}`);
+    }
+
+    if (removedStages.length > 0) {
+      publicPoolRuleChanges.push(`stage - ${formatSummaryList(removedStages)}`);
+    }
+
+    changedSections.push({
+      key: 'public-pool-rules',
+      summary:
+        publicPoolRuleChanges.length > 0
+          ? `Public pool rules: ${publicPoolRuleChanges.join('; ')}`
+          : 'Public pool rules updated',
+    });
+  }
+
+  if (JSON.stringify(draft.groups) !== JSON.stringify(savedDraft.groups)) {
+    const previousGroupById = new Map(
+      savedDraft.groups.map((group) => [group.id, group]),
+    );
+    const nextGroupById = new Map(draft.groups.map((group) => [group.id, group]));
+    const addedGroups = draft.groups
+      .filter((group) => !previousGroupById.has(group.id))
+      .map((group) => group.label);
+    const removedGroups = savedDraft.groups
+      .filter((group) => !nextGroupById.has(group.id))
+      .map((group) => group.label);
+    const renamedGroups = draft.groups
+      .filter((group) => {
+        const previousGroup = previousGroupById.get(group.id);
+
+        return previousGroup !== undefined && previousGroup.label !== group.label;
+      })
+      .map((group) => {
+        const previousGroup = previousGroupById.get(group.id);
+
+        return `${previousGroup?.label ?? group.label} -> ${group.label}`;
+      });
+    const groupChanges = [
+      addedGroups.length > 0 ? `+ ${formatSummaryList(addedGroups)}` : null,
+      removedGroups.length > 0 ? `- ${formatSummaryList(removedGroups)}` : null,
+      renamedGroups.length > 0
+        ? `rename ${formatSummaryList(renamedGroups, 2)}`
+        : null,
+    ].filter((change): change is string => change !== null);
+
+    changedSections.push({
+      key: 'groups',
+      summary:
+        groupChanges.length > 0
+          ? `Groups: ${groupChanges.join('; ')}`
+          : 'Groups updated',
+    });
+  }
+
+  if (JSON.stringify(draft.tags) !== JSON.stringify(savedDraft.tags)) {
+    const tagScopeSummaries = (
+      Object.keys(draft.tags) as TradeCrmCustomerConfigTagScope[]
+    )
+      .map((scope) => {
+        const addedTags = getAddedLabels(draft.tags[scope], savedDraft.tags[scope]);
+        const removedTags = getRemovedLabels(
+          draft.tags[scope],
+          savedDraft.tags[scope],
+        );
+        const scopeChanges = [
+          addedTags.length > 0 ? `+ ${formatSummaryList(addedTags)}` : null,
+          removedTags.length > 0 ? `- ${formatSummaryList(removedTags)}` : null,
+        ].filter((change): change is string => change !== null);
+
+        if (scopeChanges.length === 0) {
+          return null;
+        }
+
+        return `${scope}: ${scopeChanges.join('; ')}`;
+      })
+      .filter((scopeSummary): scopeSummary is string => scopeSummary !== null);
+
+    changedSections.push({
+      key: 'tags',
+      summary:
+        tagScopeSummaries.length > 0
+          ? `Tags: ${tagScopeSummaries.join(' / ')}`
+          : 'Tags updated',
+    });
+  }
+
+  if (JSON.stringify(draft.sources) !== JSON.stringify(savedDraft.sources)) {
+    const addedSources = getAddedLabels(draft.sources, savedDraft.sources);
+    const removedSources = getRemovedLabels(draft.sources, savedDraft.sources);
+    const sourceChanges = [
+      addedSources.length > 0 ? `+ ${formatSummaryList(addedSources)}` : null,
+      removedSources.length > 0 ? `- ${formatSummaryList(removedSources)}` : null,
+    ].filter((change): change is string => change !== null);
+
+    changedSections.push({
+      key: 'sources',
+      summary:
+        sourceChanges.length > 0
+          ? `Sources: ${sourceChanges.join('; ')}`
+          : 'Sources updated',
+    });
+  }
+
+  if (
+    JSON.stringify(draft.matchingRules) !==
+    JSON.stringify(savedDraft.matchingRules)
+  ) {
+    const matchingChanges = draft.matchingRules
+      .map((rule) => {
+        const previousRule = savedDraft.matchingRules.find(
+          (savedRule) => savedRule.field === rule.field,
+        );
+
+        if (previousRule === undefined || previousRule.weight === rule.weight) {
+          return null;
+        }
+
+        return `${rule.field} ${previousRule.weight}% -> ${rule.weight}%`;
+      })
+      .filter((change): change is string => change !== null);
+
+    changedSections.push({
+      key: 'matching',
+      summary:
+        matchingChanges.length > 0
+          ? `Matching: ${formatSummaryList(matchingChanges, 2)}`
+          : 'Matching rules updated',
+    });
+  }
+
+  if (
+    JSON.stringify(draft.importConfig) !==
+    JSON.stringify(savedDraft.importConfig)
+  ) {
+    const importChanges: string[] = [];
+
+    if (
+      draft.importConfig.destination !== savedDraft.importConfig.destination
+    ) {
+      importChanges.push(`destination ${draft.importConfig.destination}`);
+    }
+
+    if (
+      draft.importConfig.updateExistingContacts !==
+      savedDraft.importConfig.updateExistingContacts
+    ) {
+      importChanges.push(
+        draft.importConfig.updateExistingContacts
+          ? 'contact update enabled'
+          : 'contact update disabled',
+      );
+    }
+
+    const addedImportFields = getAddedLabels(
+      draft.importConfig.selectedFields,
+      savedDraft.importConfig.selectedFields,
+    );
+    const removedImportFields = getRemovedLabels(
+      draft.importConfig.selectedFields,
+      savedDraft.importConfig.selectedFields,
+    );
+
+    if (addedImportFields.length > 0) {
+      importChanges.push(`field + ${formatSummaryList(addedImportFields)}`);
+    }
+
+    if (removedImportFields.length > 0) {
+      importChanges.push(`field - ${formatSummaryList(removedImportFields)}`);
+    }
+
+    changedSections.push({
+      key: 'import',
+      summary:
+        importChanges.length > 0
+          ? `Import defaults: ${importChanges.join('; ')}`
+          : 'Import defaults updated',
+    });
+  }
+
+  return changedSections;
+};
+
+const normalizeLabelKey = (label: string) => label.trim().toLocaleLowerCase();
+
+const createEmptyTagScopeRecord = () => ({
+  company: [] as string[],
+  mine: [] as string[],
+  subordinate: [] as string[],
+});
+
+const getGroupValidationMessages = (
+  groups: TradeCrmCustomerConfigDraft['groups'],
+) => {
+  const messages: string[] = [];
+  const seenGroupKeys = new Set<string>();
+
+  for (const group of groups) {
+    const trimmedLabel = group.label.trim();
+
+    if (trimmedLabel.length === 0) {
+      messages.push('Customer groups cannot use an empty label.');
+      continue;
+    }
+
+    if (
+      group.level === 2 &&
+      (group.parentId === null ||
+        !groups.some(
+          (candidateGroup) =>
+            candidateGroup.id === group.parentId && candidateGroup.level === 1,
+        ))
+    ) {
+      messages.push(
+        `Second-level group "${trimmedLabel}" is missing a root group.`,
+      );
+    }
+
+    const groupKey = `${group.parentId ?? 'root'}:${normalizeLabelKey(trimmedLabel)}`;
+
+    if (seenGroupKeys.has(groupKey)) {
+      messages.push(
+        `Duplicate customer group "${trimmedLabel}" exists in the same level.`,
+      );
+      continue;
+    }
+
+    seenGroupKeys.add(groupKey);
+  }
+
+  return [...new Set(messages)];
+};
+
+const getTagValidationMessages = (
+  tags: TradeCrmCustomerConfigDraft['tags'],
+): Record<TradeCrmCustomerConfigTagScope, string[]> => {
+  const messagesByScope = createEmptyTagScopeRecord();
+
+  for (const scope of Object.keys(tags) as TradeCrmCustomerConfigTagScope[]) {
+    const seenTagKeys = new Set<string>();
+
+    for (const label of tags[scope]) {
+      const trimmedLabel = label.trim();
+
+      if (trimmedLabel.length === 0) {
+        messagesByScope[scope].push('Tags cannot use an empty label.');
+        continue;
+      }
+
+      const tagKey = normalizeLabelKey(trimmedLabel);
+
+      if (seenTagKeys.has(tagKey)) {
+        messagesByScope[scope].push(
+          `Duplicate tag "${trimmedLabel}" already exists.`,
+        );
+        continue;
+      }
+
+      seenTagKeys.add(tagKey);
+    }
+  }
+
+  return {
+    company: [...new Set(messagesByScope.company)],
+    mine: [...new Set(messagesByScope.mine)],
+    subordinate: [...new Set(messagesByScope.subordinate)],
+  };
+};
+
+const getSourceValidationMessages = (
+  sources: TradeCrmCustomerConfigDraft['sources'],
+) => {
+  const messages: string[] = [];
+  const seenSourceKeys = new Set<string>();
+
+  for (const label of sources) {
+    const trimmedLabel = label.trim();
+
+    if (trimmedLabel.length === 0) {
+      messages.push('Customer sources cannot use an empty label.');
+      continue;
+    }
+
+    const sourceKey = normalizeLabelKey(trimmedLabel);
+
+    if (seenSourceKeys.has(sourceKey)) {
+      messages.push(`Duplicate source "${trimmedLabel}" already exists.`);
+      continue;
+    }
+
+    seenSourceKeys.add(sourceKey);
+  }
+
+  return [...new Set(messages)];
+};
+
+const getNewGroupValidationMessage = ({
+  groups,
+  label,
+  parentId,
+}: {
+  groups: TradeCrmCustomerConfigDraft['groups'];
+  label: string;
+  parentId: string | null;
+}) => {
+  const trimmedLabel = label.trim();
+
+  if (trimmedLabel.length === 0) {
+    return 'Enter a group label before adding it.';
+  }
+
+  if (
+    parentId !== null &&
+    !groups.some((group) => group.id === parentId && group.level === 1)
+  ) {
+    return 'Second-level groups must be attached to a root group.';
+  }
+
+  const candidateKey = `${parentId ?? 'root'}:${normalizeLabelKey(trimmedLabel)}`;
+  const hasDuplicate = groups.some(
+    (group) =>
+      `${group.parentId ?? 'root'}:${normalizeLabelKey(group.label)}` ===
+      candidateKey,
+  );
+
+  return hasDuplicate
+    ? 'A group with the same label already exists at this level.'
+    : null;
+};
+
+const getNewTagValidationMessage = ({
+  tags,
+  scope,
+  label,
+}: {
+  tags: TradeCrmCustomerConfigDraft['tags'];
+  scope: TradeCrmCustomerConfigTagScope;
+  label: string;
+}) => {
+  const trimmedLabel = label.trim();
+
+  if (trimmedLabel.length === 0) {
+    return 'Enter a tag label before adding it.';
+  }
+
+  const candidateKey = normalizeLabelKey(trimmedLabel);
+  const hasDuplicate = tags[scope].some(
+    (tagLabel) => normalizeLabelKey(tagLabel) === candidateKey,
+  );
+
+  return hasDuplicate ? 'This tag already exists in the current scope.' : null;
+};
+
+const getNewSourceValidationMessage = ({
+  sources,
+  label,
+}: {
+  sources: TradeCrmCustomerConfigDraft['sources'];
+  label: string;
+}) => {
+  const trimmedLabel = label.trim();
+
+  if (trimmedLabel.length === 0) {
+    return 'Enter a source label before adding it.';
+  }
+
+  const candidateKey = normalizeLabelKey(trimmedLabel);
+  const hasDuplicate = sources.some(
+    (sourceLabel) => normalizeLabelKey(sourceLabel) === candidateKey,
+  );
+
+  return hasDuplicate ? 'This source already exists.' : null;
+};
+
+const getRootGroupIds = (
+  groups: TradeCrmCustomerConfigDraft['groups'],
+): string[] =>
+  groups.filter((group) => group.level === 1).map((group) => group.id);
+
+const getRootGroupBounds = (
+  groups: TradeCrmCustomerConfigDraft['groups'],
+  rootGroupId: string,
+) => {
+  const startIndex = groups.findIndex((group) => group.id === rootGroupId);
+
+  if (startIndex < 0) {
+    return null;
+  }
+
+  let endIndex = startIndex;
+
+  for (let index = startIndex + 1; index < groups.length; index += 1) {
+    if (groups[index].level === 1) {
+      break;
+    }
+
+    endIndex = index;
+  }
+
+  return {
+    startIndex,
+    endIndex,
+  };
+};
+
+const moveGroupSlice = <TItem>(
+  items: TItem[],
+  startIndex: number,
+  endIndex: number,
+  nextStartIndex: number,
+) => {
+  const movingItems = items.slice(startIndex, endIndex + 1);
+  const remainingItems = [
+    ...items.slice(0, startIndex),
+    ...items.slice(endIndex + 1),
+  ];
+
+  return [
+    ...remainingItems.slice(0, nextStartIndex),
+    ...movingItems,
+    ...remainingItems.slice(nextStartIndex),
+  ];
+};
+
 export const useTradeCrmCustomerConfigDraft = (
   options: UseTradeCrmCustomerConfigDraftOptions,
 ) => {
@@ -727,6 +1305,31 @@ export const useTradeCrmCustomerConfigDraft = (
   });
 
   useSnackBarOnQueryError(customerConfigAggregateError);
+
+  const {
+    data: customerConfigOperationHistoryData,
+    error: customerConfigOperationHistoryError,
+    refetch: refetchCustomerConfigOperationHistory,
+  } = useQuery<
+    CustomerConfigOperationHistoryQuery,
+    CustomerConfigOperationHistoryQueryVariables
+  >(GET_CUSTOMER_CONFIG_OPERATION_HISTORY, {
+    client: apolloCoreClient,
+    errorPolicy: 'all',
+    variables: {
+      limit: 6,
+    },
+  });
+
+  useSnackBarOnQueryError(customerConfigOperationHistoryError);
+
+  const [logCustomerConfigChangeMutation] = useMutation<
+    LogCustomerConfigChangeMutation,
+    LogCustomerConfigChangeMutationVariables
+  >(LOG_CUSTOMER_CONFIG_CHANGE, {
+    client: apolloCoreClient,
+    errorPolicy: 'all',
+  });
 
   const { records: customerGroupRecords = [] } =
     useFindManyRecords<CustomerGroupRecord>({
@@ -804,38 +1407,35 @@ export const useTradeCrmCustomerConfigDraft = (
 
   const { updateOneRecord } = useUpdateOneRecord();
 
-  const hydratedDraft = useMemo(
-    () => {
-      const customerConfigAggregate = customerConfigAggregateData?.customerConfig;
+  const hydratedDraft = useMemo(() => {
+    const customerConfigAggregate = customerConfigAggregateData?.customerConfig;
 
-      if (customerConfigAggregate) {
-        return buildDraftFromAggregate({
-          aggregate: customerConfigAggregate,
-          fallbackDraft,
-        });
-      }
-
-      return buildDraftFromRecords({
+    if (customerConfigAggregate) {
+      return buildDraftFromAggregate({
+        aggregate: customerConfigAggregate,
         fallbackDraft,
-        groupRecords: customerGroupRecords,
-        tagRecords: sortByOptionalNumber(customerTagRecords, 'sortOrder'),
-        sourceRecords: customerSourceRecords,
-        publicPoolRuleRecords: customerPublicPoolRuleRecords,
-        matchingRuleRecords: customerMatchingRuleRecords,
-        importDefaultRecords: customerImportDefaultRecords,
       });
-    },
-    [
-      customerConfigAggregateData,
-      customerGroupRecords,
-      customerImportDefaultRecords,
-      customerMatchingRuleRecords,
-      customerPublicPoolRuleRecords,
-      customerSourceRecords,
-      customerTagRecords,
+    }
+
+    return buildDraftFromRecords({
       fallbackDraft,
-    ],
-  );
+      groupRecords: customerGroupRecords,
+      tagRecords: sortByOptionalNumber(customerTagRecords, 'sortOrder'),
+      sourceRecords: customerSourceRecords,
+      publicPoolRuleRecords: customerPublicPoolRuleRecords,
+      matchingRuleRecords: customerMatchingRuleRecords,
+      importDefaultRecords: customerImportDefaultRecords,
+    });
+  }, [
+    customerConfigAggregateData,
+    customerGroupRecords,
+    customerImportDefaultRecords,
+    customerMatchingRuleRecords,
+    customerPublicPoolRuleRecords,
+    customerSourceRecords,
+    customerTagRecords,
+    fallbackDraft,
+  ]);
 
   const hydratedLastSavedAt = useMemo(
     () =>
@@ -867,193 +1467,265 @@ export const useTradeCrmCustomerConfigDraft = (
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(
     hydratedLastSavedAt,
   );
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const hasUnsavedChanges =
     JSON.stringify(draft) !== JSON.stringify(savedDraft);
-  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  const groupValidationMessages = useMemo(
+    () => getGroupValidationMessages(draft.groups),
+    [draft.groups],
+  );
+  const tagValidationMessages = useMemo(
+    () => getTagValidationMessages(draft.tags),
+    [draft.tags],
+  );
+  const sourceValidationMessages = useMemo(
+    () => getSourceValidationMessages(draft.sources),
+    [draft.sources],
+  );
+  const validationMessages = useMemo(
+    () => [
+      ...groupValidationMessages,
+      ...tagValidationMessages.company,
+      ...tagValidationMessages.mine,
+      ...tagValidationMessages.subordinate,
+      ...sourceValidationMessages,
+    ],
+    [
+      groupValidationMessages,
+      sourceValidationMessages,
+      tagValidationMessages.company,
+      tagValidationMessages.mine,
+      tagValidationMessages.subordinate,
+    ],
+  );
+  const hasValidationErrors = validationMessages.length > 0;
 
   useEffect(() => {
-    hasUnsavedChangesRef.current = hasUnsavedChanges;
-  }, [hasUnsavedChanges]);
-
-  useEffect(() => {
-    if (hasUnsavedChangesRef.current) {
+    if (hasUnsavedChanges) {
       return;
     }
 
     setSavedDraft(hydratedDraft);
     setDraft(hydratedDraft);
     setLastSavedAt(hydratedLastSavedAt);
-  }, [hydratedDraft, hydratedDraftKey, hydratedLastSavedAt]);
+  }, [hasUnsavedChanges, hydratedDraft, hydratedDraftKey, hydratedLastSavedAt]);
 
   const saveDraft = async () => {
-    for (const customerGroupRecord of customerGroupRecords) {
-      await deleteCustomerGroup(customerGroupRecord.id);
+    if (hasValidationErrors) {
+      setSaveError(
+        validationMessages[0] ?? 'Customer settings contain invalid data.',
+      );
+
+      return;
     }
 
-    const persistedGroupsByLocalId = new Map<string, TradeCrmCustomerConfigGroupItem>();
-    const persistedGroupIdByLocalId = new Map<string, string>();
+    const changedSectionKeys = getChangedConfigSectionKeys({
+      draft,
+      savedDraft,
+    });
 
-    for (const [index, group] of draft.groups.entries()) {
-      if (group.level !== 1) {
-        continue;
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      for (const customerGroupRecord of customerGroupRecords) {
+        await deleteCustomerGroup(customerGroupRecord.id);
       }
 
-      const createdGroup = await createCustomerGroup({
-        groupName: group.label,
-        parentGroupId: null,
-        sortOrder: index,
-        level: 1,
-        isEnabled: true,
-      });
+      const persistedGroupsByLocalId = new Map<
+        string,
+        TradeCrmCustomerConfigGroupItem
+      >();
+      const persistedGroupIdByLocalId = new Map<string, string>();
 
-      persistedGroupIdByLocalId.set(group.id, createdGroup.id);
-      persistedGroupsByLocalId.set(group.id, {
-        ...group,
-        id: createdGroup.id,
-      });
-    }
+      for (const [index, group] of draft.groups.entries()) {
+        if (group.level !== 1) {
+          continue;
+        }
 
-    for (const [index, group] of draft.groups.entries()) {
-      if (group.level !== 2) {
-        continue;
-      }
-
-      const parentGroupId =
-        (group.parentId ? persistedGroupIdByLocalId.get(group.parentId) : null) ??
-        null;
-      const createdGroup = await createCustomerGroup({
-        groupName: group.label,
-        parentGroupId,
-        sortOrder: index,
-        level: 2,
-        isEnabled: true,
-      });
-
-      persistedGroupIdByLocalId.set(group.id, createdGroup.id);
-      persistedGroupsByLocalId.set(group.id, {
-        ...group,
-        id: createdGroup.id,
-        parentId: parentGroupId,
-      });
-    }
-
-    for (const customerTagRecord of customerTagRecords) {
-      await deleteCustomerTag(customerTagRecord.id);
-    }
-
-    for (const scope of Object.keys(draft.tags) as TradeCrmCustomerConfigTagScope[]) {
-      for (const [index, tagLabel] of draft.tags[scope].entries()) {
-        await createCustomerTag({
-          tagName: tagLabel,
-          tagColor: CUSTOMER_TAG_COLORS[index % CUSTOMER_TAG_COLORS.length],
+        const createdGroup = await createCustomerGroup({
+          groupName: group.label,
+          parentGroupId: null,
           sortOrder: index,
-          tagScope: CUSTOMER_TAG_SCOPE_VALUE_BY_SCOPE[scope],
-          objectScope: 'MULTIPLE',
+          level: 1,
+          isEnabled: true,
+        });
+
+        persistedGroupIdByLocalId.set(group.id, createdGroup.id);
+        persistedGroupsByLocalId.set(group.id, {
+          ...group,
+          id: createdGroup.id,
+        });
+      }
+
+      for (const [index, group] of draft.groups.entries()) {
+        if (group.level !== 2) {
+          continue;
+        }
+
+        const parentGroupId =
+          (group.parentId
+            ? persistedGroupIdByLocalId.get(group.parentId)
+            : null) ?? null;
+        const createdGroup = await createCustomerGroup({
+          groupName: group.label,
+          parentGroupId,
+          sortOrder: index,
+          level: 2,
+          isEnabled: true,
+        });
+
+        persistedGroupIdByLocalId.set(group.id, createdGroup.id);
+        persistedGroupsByLocalId.set(group.id, {
+          ...group,
+          id: createdGroup.id,
+          parentId: parentGroupId,
+        });
+      }
+
+      for (const customerTagRecord of customerTagRecords) {
+        await deleteCustomerTag(customerTagRecord.id);
+      }
+
+      for (const scope of Object.keys(
+        draft.tags,
+      ) as TradeCrmCustomerConfigTagScope[]) {
+        for (const [index, tagLabel] of draft.tags[scope].entries()) {
+          await createCustomerTag({
+            tagName: tagLabel,
+            tagColor: CUSTOMER_TAG_COLORS[index % CUSTOMER_TAG_COLORS.length],
+            sortOrder: index,
+            tagScope: CUSTOMER_TAG_SCOPE_VALUE_BY_SCOPE[scope],
+            objectScope: 'MULTIPLE',
+            isEnabled: true,
+          });
+        }
+      }
+
+      for (const customerSourceRecord of customerSourceRecords) {
+        await deleteCustomerSource(customerSourceRecord.id);
+      }
+
+      for (const [index, sourceLabel] of draft.sources.entries()) {
+        await createCustomerSource({
+          sourceName: sourceLabel,
+          sourceCode: sourceLabel.toUpperCase().replace(/[^A-Z0-9]+/g, '_'),
+          sortOrder: index,
           isEnabled: true,
         });
       }
-    }
 
-    for (const customerSourceRecord of customerSourceRecords) {
-      await deleteCustomerSource(customerSourceRecord.id);
-    }
+      const latestPublicPoolRuleRecord =
+        [...customerPublicPoolRuleRecords].sort((left, right) =>
+          (right.updatedAt ?? right.createdAt ?? '').localeCompare(
+            left.updatedAt ?? left.createdAt ?? '',
+          ),
+        )[0] ?? null;
 
-    for (const [index, sourceLabel] of draft.sources.entries()) {
-      await createCustomerSource({
-        sourceName: sourceLabel,
-        sourceCode: sourceLabel.toUpperCase().replace(/[^A-Z0-9]+/g, '_'),
-        sortOrder: index,
+      const publicPoolRuleInput = {
+        ruleName: draft.publicPoolRule.ruleName,
+        inactivityDays: draft.publicPoolRule.inactivityDays,
+        notifyOwnersFirst: draft.publicPoolRule.notifyOwnersFirst,
+        scopeStages: dedupeLabels(draft.publicPoolRule.scopeStages)
+          .map((stageLabel) =>
+            getTradeCrmCustomerStageValueForLabel(stageLabel),
+          )
+          .filter(
+            (stageValue): stageValue is string =>
+              typeof stageValue === 'string',
+          ),
+        publicPoolGroup:
+          getTradeCrmPublicPoolGroupValueForLabel(
+            draft.publicPoolRule.publicPoolGroup,
+          ) ?? 'GENERAL_PUBLIC_POOL',
         isEnabled: true,
-      });
+      };
+
+      if (latestPublicPoolRuleRecord !== null) {
+        await updateOneRecord<CustomerPublicPoolRuleRecord>({
+          objectNameSingular: 'customerPublicPoolRule',
+          idToUpdate: latestPublicPoolRuleRecord.id,
+          updateOneRecordInput: publicPoolRuleInput,
+        });
+      } else {
+        await createCustomerPublicPoolRule(publicPoolRuleInput);
+      }
+
+      for (const customerMatchingRuleRecord of customerMatchingRuleRecords) {
+        await deleteCustomerMatchingRule(customerMatchingRuleRecord.id);
+      }
+
+      for (const [index, matchingRule] of draft.matchingRules.entries()) {
+        await createCustomerMatchingRule({
+          fieldName: matchingRule.field,
+          weight: matchingRule.weight,
+          priority: index,
+          isEnabled: true,
+        });
+      }
+
+      const latestImportDefaultsRecord =
+        [...customerImportDefaultRecords].sort((left, right) =>
+          (right.updatedAt ?? right.createdAt ?? '').localeCompare(
+            left.updatedAt ?? left.createdAt ?? '',
+          ),
+        )[0] ?? null;
+
+      const importDefaultsInput = {
+        fileName: CUSTOMER_IMPORT_DEFAULT_CONFIG_FILE_NAME,
+        destination:
+          CUSTOMER_IMPORT_DESTINATION_VALUE_BY_CONFIG[
+            draft.importConfig.destination
+          ],
+        updateExistingContacts: draft.importConfig.updateExistingContacts,
+        selectedFields: dedupeLabels(draft.importConfig.selectedFields),
+        status: 'DRAFT',
+      };
+
+      if (latestImportDefaultsRecord !== null) {
+        await updateOneRecord<CustomerImportJobRecord>({
+          objectNameSingular: 'customerImportJob',
+          idToUpdate: latestImportDefaultsRecord.id,
+          updateOneRecordInput: importDefaultsInput,
+        });
+      } else {
+        await createCustomerImportJob(importDefaultsInput);
+      }
+
+      const savedAt = new Date().toISOString();
+      const persistedGroups = draft.groups.map(
+        (group) => persistedGroupsByLocalId.get(group.id) ?? group,
+      );
+      const nextSavedDraft = {
+        ...draft,
+        groups: persistedGroups,
+      };
+
+      await refetchCustomerConfigAggregate();
+      if (changedSectionKeys.length > 0) {
+        await logCustomerConfigChangeMutation({
+          variables: {
+            input: {
+              sectionKeys: changedSectionKeys,
+              summary: 'Updated customer settings',
+            },
+          },
+        });
+        await refetchCustomerConfigOperationHistory();
+      }
+
+      setSavedDraft(nextSavedDraft);
+      setDraft(nextSavedDraft);
+      setLastSavedAt(savedAt);
+    } catch {
+      setSaveError(
+        'Saving customer settings failed. Refresh the page state and retry.',
+      );
+    } finally {
+      setIsSaving(false);
     }
-
-    const latestPublicPoolRuleRecord =
-      [...customerPublicPoolRuleRecords].sort((left, right) =>
-        (right.updatedAt ?? right.createdAt ?? '').localeCompare(
-          left.updatedAt ?? left.createdAt ?? '',
-        ),
-      )[0] ?? null;
-
-    const publicPoolRuleInput = {
-      ruleName: draft.publicPoolRule.ruleName,
-      inactivityDays: draft.publicPoolRule.inactivityDays,
-      notifyOwnersFirst: draft.publicPoolRule.notifyOwnersFirst,
-      scopeStages: dedupeLabels(draft.publicPoolRule.scopeStages)
-        .map((stageLabel) => getTradeCrmCustomerStageValueForLabel(stageLabel))
-        .filter((stageValue): stageValue is string => typeof stageValue === 'string'),
-      publicPoolGroup:
-        getTradeCrmPublicPoolGroupValueForLabel(
-          draft.publicPoolRule.publicPoolGroup,
-        ) ?? 'GENERAL_PUBLIC_POOL',
-      isEnabled: true,
-    };
-
-    if (latestPublicPoolRuleRecord) {
-      await updateOneRecord<CustomerPublicPoolRuleRecord>({
-        objectNameSingular: 'customerPublicPoolRule',
-        idToUpdate: latestPublicPoolRuleRecord.id,
-        updateOneRecordInput: publicPoolRuleInput,
-      });
-    } else {
-      await createCustomerPublicPoolRule(publicPoolRuleInput);
-    }
-
-    for (const customerMatchingRuleRecord of customerMatchingRuleRecords) {
-      await deleteCustomerMatchingRule(customerMatchingRuleRecord.id);
-    }
-
-    for (const [index, matchingRule] of draft.matchingRules.entries()) {
-      await createCustomerMatchingRule({
-        fieldName: matchingRule.field,
-        weight: matchingRule.weight,
-        priority: index,
-        isEnabled: true,
-      });
-    }
-
-    const latestImportDefaultsRecord =
-      [...customerImportDefaultRecords].sort((left, right) =>
-        (right.updatedAt ?? right.createdAt ?? '').localeCompare(
-          left.updatedAt ?? left.createdAt ?? '',
-        ),
-      )[0] ?? null;
-
-    const importDefaultsInput = {
-      fileName: CUSTOMER_IMPORT_DEFAULT_CONFIG_FILE_NAME,
-      destination:
-        CUSTOMER_IMPORT_DESTINATION_VALUE_BY_CONFIG[
-          draft.importConfig.destination
-        ],
-      updateExistingContacts: draft.importConfig.updateExistingContacts,
-      selectedFields: dedupeLabels(draft.importConfig.selectedFields),
-      status: 'DRAFT',
-    };
-
-    if (latestImportDefaultsRecord) {
-      await updateOneRecord<CustomerImportJobRecord>({
-        objectNameSingular: 'customerImportJob',
-        idToUpdate: latestImportDefaultsRecord.id,
-        updateOneRecordInput: importDefaultsInput,
-      });
-    } else {
-      await createCustomerImportJob(importDefaultsInput);
-    }
-
-    const savedAt = new Date().toISOString();
-    const persistedGroups = draft.groups.map(
-      (group) => persistedGroupsByLocalId.get(group.id) ?? group,
-    );
-    const nextSavedDraft = {
-      ...draft,
-      groups: persistedGroups,
-    };
-
-    await refetchCustomerConfigAggregate();
-
-    setSavedDraft(nextSavedDraft);
-    setDraft(nextSavedDraft);
-    setLastSavedAt(savedAt);
   };
 
   const resetDraft = () => {
@@ -1077,7 +1749,8 @@ export const useTradeCrmCustomerConfigDraft = (
 
   const togglePublicPoolStage = (stageLabel: string) => {
     setDraft((currentDraft) => {
-      const hasStage = currentDraft.publicPoolRule.scopeStages.includes(stageLabel);
+      const hasStage =
+        currentDraft.publicPoolRule.scopeStages.includes(stageLabel);
 
       return {
         ...currentDraft,
@@ -1100,18 +1773,39 @@ export const useTradeCrmCustomerConfigDraft = (
       return;
     }
 
-    setDraft((currentDraft) => ({
-      ...currentDraft,
-      groups: [
-        ...currentDraft.groups,
-        {
-          id: `group-${Date.now()}-${currentDraft.groups.length + 1}`,
+    setDraft((currentDraft) => {
+      const normalizedParentId =
+        parentId === null
+          ? null
+          : currentDraft.groups.some(
+                (group) => group.id === parentId && group.level === 1,
+              )
+            ? parentId
+            : null;
+
+      if (
+        getNewGroupValidationMessage({
+          groups: currentDraft.groups,
           label: normalizedLabel,
-          level: parentId ? 2 : 1,
-          parentId,
-        },
-      ],
-    }));
+          parentId: normalizedParentId,
+        }) !== null
+      ) {
+        return currentDraft;
+      }
+
+      return {
+        ...currentDraft,
+        groups: [
+          ...currentDraft.groups,
+          {
+            id: `group-${Date.now()}-${currentDraft.groups.length + 1}`,
+            label: normalizedLabel,
+            level: normalizedParentId ? 2 : 1,
+            parentId: normalizedParentId,
+          },
+        ],
+      };
+    });
   };
 
   const renameGroup = (groupId: string, label: string) => {
@@ -1128,30 +1822,166 @@ export const useTradeCrmCustomerConfigDraft = (
     }));
   };
 
-  const moveGroup = (groupId: string, direction: 'up' | 'down') => {
+  const removeGroup = (groupId: string) => {
     setDraft((currentDraft) => {
-      const groupIndex = currentDraft.groups.findIndex((group) => group.id === groupId);
+      const targetGroup =
+        currentDraft.groups.find((group) => group.id === groupId) ?? null;
 
-      if (groupIndex < 0) {
+      if (targetGroup === null) {
         return currentDraft;
       }
 
-      const nextIndex = direction === 'up' ? groupIndex - 1 : groupIndex + 1;
+      const groupIdsToRemove = new Set<string>([groupId]);
 
-      if (nextIndex < 0 || nextIndex >= currentDraft.groups.length) {
-        return currentDraft;
+      if (targetGroup.level === 1) {
+        for (const group of currentDraft.groups) {
+          if (group.parentId === groupId) {
+            groupIdsToRemove.add(group.id);
+          }
+        }
       }
-
-      const reorderedGroups = [...currentDraft.groups];
-      const [groupItem] = reorderedGroups.splice(groupIndex, 1);
-
-      reorderedGroups.splice(nextIndex, 0, groupItem);
 
       return {
         ...currentDraft,
-        groups: reorderedGroups,
+        groups: currentDraft.groups.filter(
+          (group) => !groupIdsToRemove.has(group.id),
+        ),
       };
     });
+  };
+
+  const moveGroup = (groupId: string, direction: 'up' | 'down') => {
+    setDraft((currentDraft) => {
+      const targetGroup =
+        currentDraft.groups.find((group) => group.id === groupId) ?? null;
+
+      if (targetGroup === null) {
+        return currentDraft;
+      }
+
+      if (targetGroup.level === 1) {
+        const rootGroupIds = getRootGroupIds(currentDraft.groups);
+        const currentRootIndex = rootGroupIds.findIndex(
+          (rootGroupId) => rootGroupId === groupId,
+        );
+
+        if (currentRootIndex < 0) {
+          return currentDraft;
+        }
+
+        const adjacentRootIndex =
+          direction === 'up' ? currentRootIndex - 1 : currentRootIndex + 1;
+
+        if (adjacentRootIndex < 0 || adjacentRootIndex >= rootGroupIds.length) {
+          return currentDraft;
+        }
+
+        const currentBounds = getRootGroupBounds(currentDraft.groups, groupId);
+        const adjacentBounds = getRootGroupBounds(
+          currentDraft.groups,
+          rootGroupIds[adjacentRootIndex],
+        );
+
+        if (currentBounds === null || adjacentBounds === null) {
+          return currentDraft;
+        }
+
+        const nextStartIndex =
+          direction === 'up'
+            ? adjacentBounds.startIndex
+            : adjacentBounds.endIndex -
+              (currentBounds.endIndex - currentBounds.startIndex + 1) +
+              1;
+
+        return {
+          ...currentDraft,
+          groups: moveGroupSlice(
+            currentDraft.groups,
+            currentBounds.startIndex,
+            currentBounds.endIndex,
+            nextStartIndex,
+          ),
+        };
+      }
+
+      const siblingGroupIds = currentDraft.groups
+        .filter(
+          (group) =>
+            group.level === 2 && group.parentId === targetGroup.parentId,
+        )
+        .map((group) => group.id);
+      const currentSiblingIndex = siblingGroupIds.findIndex(
+        (siblingGroupId) => siblingGroupId === groupId,
+      );
+
+      if (currentSiblingIndex < 0) {
+        return currentDraft;
+      }
+
+      const adjacentSiblingIndex =
+        direction === 'up' ? currentSiblingIndex - 1 : currentSiblingIndex + 1;
+
+      if (
+        adjacentSiblingIndex < 0 ||
+        adjacentSiblingIndex >= siblingGroupIds.length
+      ) {
+        return currentDraft;
+      }
+
+      const currentIndex = currentDraft.groups.findIndex(
+        (group) => group.id === groupId,
+      );
+      const adjacentIndex = currentDraft.groups.findIndex(
+        (group) => group.id === siblingGroupIds[adjacentSiblingIndex],
+      );
+
+      if (currentIndex < 0 || adjacentIndex < 0) {
+        return currentDraft;
+      }
+
+      return {
+        ...currentDraft,
+        groups: moveGroupSlice(
+          currentDraft.groups,
+          currentIndex,
+          currentIndex,
+          adjacentIndex,
+        ),
+      };
+    });
+  };
+
+  const canMoveGroup = (groupId: string, direction: 'up' | 'down') => {
+    const targetGroup =
+      draft.groups.find((group) => group.id === groupId) ?? null;
+
+    if (targetGroup === null) {
+      return false;
+    }
+
+    if (targetGroup.level === 1) {
+      const rootGroupIds = getRootGroupIds(draft.groups);
+      const rootIndex = rootGroupIds.findIndex(
+        (rootGroupId) => rootGroupId === groupId,
+      );
+
+      return direction === 'up'
+        ? rootIndex > 0
+        : rootIndex >= 0 && rootIndex < rootGroupIds.length - 1;
+    }
+
+    const siblingGroupIds = draft.groups
+      .filter(
+        (group) => group.level === 2 && group.parentId === targetGroup.parentId,
+      )
+      .map((group) => group.id);
+    const siblingIndex = siblingGroupIds.findIndex(
+      (siblingGroupId) => siblingGroupId === groupId,
+    );
+
+    return direction === 'up'
+      ? siblingIndex > 0
+      : siblingIndex >= 0 && siblingIndex < siblingGroupIds.length - 1;
   };
 
   const addTag = (scope: TradeCrmCustomerConfigTagScope, label: string) => {
@@ -1162,7 +1992,13 @@ export const useTradeCrmCustomerConfigDraft = (
     }
 
     setDraft((currentDraft) => {
-      if (currentDraft.tags[scope].includes(normalizedLabel)) {
+      if (
+        getNewTagValidationMessage({
+          tags: currentDraft.tags,
+          scope,
+          label: normalizedLabel,
+        }) !== null
+      ) {
         return currentDraft;
       }
 
@@ -1196,7 +2032,12 @@ export const useTradeCrmCustomerConfigDraft = (
     }
 
     setDraft((currentDraft) => {
-      if (currentDraft.sources.includes(normalizedLabel)) {
+      if (
+        getNewSourceValidationMessage({
+          sources: currentDraft.sources,
+          label: normalizedLabel,
+        }) !== null
+      ) {
         return currentDraft;
       }
 
@@ -1210,7 +2051,9 @@ export const useTradeCrmCustomerConfigDraft = (
   const removeSource = (label: string) => {
     setDraft((currentDraft) => ({
       ...currentDraft,
-      sources: currentDraft.sources.filter((currentLabel) => currentLabel !== label),
+      sources: currentDraft.sources.filter(
+        (currentLabel) => currentLabel !== label,
+      ),
     }));
   };
 
@@ -1271,18 +2114,53 @@ export const useTradeCrmCustomerConfigDraft = (
   return {
     draft,
     hasUnsavedChanges,
+    hasValidationErrors,
+    isSaving,
     lastSavedAt,
+    saveError,
+    validationMessages,
+    groupValidationMessages,
+    tagValidationMessages,
+    sourceValidationMessages,
+    configOperationHistoryItems:
+      customerConfigOperationHistoryData?.customerConfigOperationHistory
+        .items ?? [],
+    configOperationHistoryTotalCount:
+      customerConfigOperationHistoryData?.customerConfigOperationHistory
+        .totalCount ?? 0,
     saveDraft,
     resetDraft,
     setPublicPoolRule,
     togglePublicPoolStage,
     addGroup,
     renameGroup,
+    removeGroup,
     moveGroup,
+    canMoveGroup,
+    getNewGroupValidationMessage: (label: string, parentId: string | null) =>
+      getNewGroupValidationMessage({
+        groups: draft.groups,
+        label,
+        parentId,
+      }),
     addTag,
     removeTag,
+    getNewTagValidationMessage: (
+      scope: TradeCrmCustomerConfigTagScope,
+      label: string,
+    ) =>
+      getNewTagValidationMessage({
+        tags: draft.tags,
+        scope,
+        label,
+      }),
     addSource,
     removeSource,
+    getNewSourceValidationMessage: (label: string) =>
+      getNewSourceValidationMessage({
+        sources: draft.sources,
+        label,
+      }),
     setMatchingWeight,
     setImportDestination,
     setImportUpdateExistingContacts,

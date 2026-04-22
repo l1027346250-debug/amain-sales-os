@@ -91,3 +91,20 @@
 - 前端“最近询盘入站记录”新增“批量重处理异常询盘”按钮，适合修正字段映射或分配规则后一次性重跑异常询盘。
 - 已通过 `nx typecheck twenty-front`、`nx lint:diff-with-main twenty-server`、`nx lint:diff-with-main twenty-front`、`nx build twenty-server`。
 - `nx typecheck twenty-server` 当前被仓库级既有异常类型/测试类型问题阻断，错误集中在 auth、billing、workspace、workflow 等非企业模块；本轮后端构建通过。
+## 2026-04-21 独立站询盘备注同步补充
+- 独立站询盘的留言内容现在会同步生成或更新 CRM Note，避免客户写入后只剩空壳 Person/Company。
+- 同一条询盘的备注采用幂等维护：首次入站创建备注，后续重处理复用同一条 note 并更新内容与挂载目标。
+- 备注正文会写入联系人、邮箱、电话、公司、国家、来源页和原始留言内容；若询盘没有留言，则不创建备注。
+- 备注会同时挂到目标客户和目标公司，前端询盘表格已展示 `noteId`，便于联调确认。
+- 已通过 `nx typecheck twenty-front`、`nx build twenty-server`；`nx typecheck twenty-server` 仍被仓库级既有非企业模块错误阻断。## 2026-04-22 独立站询盘运营台补充
+- 独立站询盘列表从固定最近 50 条升级为可搜索、可状态筛选、可分页的运营列表，后端 `GET /api/enterprise/independent-stations/:id/inquiries` 支持 `page`、`pageSize`、`search`、`statuses` 查询参数。
+- 搜索范围覆盖外部询盘号、姓名、邮箱、公司、来源页；列表返回 `items/page/pageSize/total`，前端补齐总数、页码和每页条数控制。
+- 新增人工处置接口 `PATCH /api/enterprise/independent-stations/:id/inquiries/:inquiryId`，支持手工修改询盘状态与负责人，并把人工覆盖写入 `decisionJson.manualOverride` 与企业管理审计日志。
+- 前端询盘表格已补状态下拉、负责人输入和“保存处置”操作，结合已有“重处理”按钮，形成筛选、人工修正、规则重跑的闭环。
+- 本轮已通过 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front` 与 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx build twenty-server`。
+## 2026-04-22 独立站询盘成员分配与批量处置补充
+- 前端独立站询盘表格已接入 `currentWorkspaceMembersState`，负责人编辑从自由文本升级为真实 workspace 成员下拉，并在列表展示时优先解析为成员姓名。
+- 询盘表格新增本页勾选、全选、批量负责人、批量状态和批量保存处置，支持运营按页批量修正异常询盘。
+- 后端新增批量处置接口 `PATCH /api/enterprise/independent-stations/:id/inquiries`，支持对多条询盘统一更新负责人/状态，并逐条写入 `manualOverride` 与审计日志。
+- 单条询盘人工处置逻辑已抽为共享更新逻辑，保证单条保存与批量保存写入行为一致。
+- 本轮已通过 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front` 与 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx build twenty-server`。

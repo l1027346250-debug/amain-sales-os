@@ -2,13 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { styled } from '@linaria/react';
 
+import { currentWorkspaceMembersState } from '@/auth/states/currentWorkspaceMembersState';
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Button } from 'twenty-ui/input';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
+
+import { type PartialWorkspaceMember } from '@/settings/roles/types/RoleWithPartialMembers';
 
 type WebsiteBinding = {
   id: string;
@@ -56,6 +60,7 @@ type InquiryCrmRecord = {
     | 'restored_person'
     | 'skipped_no_email';
   companyId: string | null;
+  noteId: string | null;
   personId: string | null;
 };
 
@@ -71,6 +76,30 @@ type WebsiteInquiry = {
     missingRequiredFields?: string[];
   } | null;
   createdAt: string;
+};
+
+type WebsiteInquiryListResponse = {
+  items: WebsiteInquiry[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+type InquiryFilters = {
+  page: number;
+  pageSize: number;
+  search: string;
+  statuses: WebsiteInquiry['inquiryStatus'][];
+};
+
+type InquiryDraft = {
+  assignedTo: string;
+  inquiryStatus: WebsiteInquiry['inquiryStatus'];
+};
+
+type WorkspaceMemberOption = {
+  label: string;
+  value: string;
 };
 
 type WebsiteFormState = {
@@ -280,6 +309,43 @@ const StyledActionRow = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
+const StyledToolbar = styled.div`
+  align-items: end;
+  display: grid;
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: minmax(220px, 1fr) 180px 120px auto;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StyledPagination = styled.div`
+  align-items: center;
+  color: ${themeCssVariables.font.color.secondary};
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: space-between;
+`;
+
+const StyledBulkBar = styled.div`
+  align-items: end;
+  display: grid;
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: auto minmax(160px, 220px) minmax(160px, 220px) auto;
+
+  @media (max-width: 1080px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StyledTableEditor = styled.div`
+  display: grid;
+  gap: ${themeCssVariables.spacing[2]};
+  margin-top: ${themeCssVariables.spacing[2]};
+`;
+
 const StyledEmpty = styled.div`
   color: ${themeCssVariables.font.color.secondary};
   padding: ${themeCssVariables.spacing[5]} 0;
@@ -348,6 +414,22 @@ const formatInquiryStatus = (status: WebsiteInquiry['inquiryStatus']) => {
   return labels[status];
 };
 
+const inquiryStatusOptions: {
+  label: string;
+  value: WebsiteInquiry['inquiryStatus'];
+}[] = [
+  { label: '已接收', value: 'accepted' },
+  { label: '待分配', value: 'pending_assignment' },
+  { label: '已阻断', value: 'blocked' },
+  { label: '重复', value: 'duplicate' },
+];
+
+const formatWorkspaceMemberLabel = (workspaceMember: PartialWorkspaceMember) => {
+  const fullName = `${workspaceMember.name.firstName ?? ''} ${workspaceMember.name.lastName ?? ''}`.trim();
+
+  return fullName || workspaceMember.userEmail;
+};
+
 const formatCrmAction = (action: InquiryCrmRecord['action'] | undefined) => {
   if (!action) {
     return '-';
@@ -370,6 +452,7 @@ const generateWebhookSecret = () =>
 export const EnterpriseIndependentStationPage = () => {
   const enterpriseApiRequest = useEnterpriseApiRequest();
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
+  const currentWorkspaceMembers = useAtomStateValue(currentWorkspaceMembersState);
   const [activeTab, setActiveTab] = useState<'websites' | 'notifications'>(
     'websites',
   );
@@ -381,6 +464,19 @@ export const EnterpriseIndependentStationPage = () => {
   const [formMappings, setFormMappings] = useState<FormMapping[]>([]);
   const [assignmentRules, setAssignmentRules] = useState<AssignmentRule[]>([]);
   const [websiteInquiries, setWebsiteInquiries] = useState<WebsiteInquiry[]>([]);
+  const [websiteInquiryTotal, setWebsiteInquiryTotal] = useState(0);
+  const [inquiryDrafts, setInquiryDrafts] = useState<
+    Record<string, InquiryDraft>
+  >({});
+  const [selectedInquiryIds, setSelectedInquiryIds] = useState<string[]>([]);
+  const [bulkInquiryStatus, setBulkInquiryStatus] = useState('');
+  const [bulkAssignedTo, setBulkAssignedTo] = useState('');
+  const [inquiryFilters, setInquiryFilters] = useState<InquiryFilters>({
+    page: 1,
+    pageSize: 20,
+    search: '',
+    statuses: [],
+  });
   const [assignmentRuleForm, setAssignmentRuleForm] =
     useState<AssignmentRuleFormState | null>(null);
   const [newWebsiteName, setNewWebsiteName] = useState('');
@@ -396,6 +492,18 @@ export const EnterpriseIndependentStationPage = () => {
   );
 
   const selectedAssignmentRule = assignmentRules[0] ?? null;
+  const totalInquiryPages = Math.max(
+    1,
+    Math.ceil(websiteInquiryTotal / inquiryFilters.pageSize),
+  );
+  const workspaceMemberOptions = useMemo<WorkspaceMemberOption[]>(
+    () =>
+      currentWorkspaceMembers.map((workspaceMember) => ({
+        label: formatWorkspaceMemberLabel(workspaceMember),
+        value: workspaceMember.id,
+      })),
+    [currentWorkspaceMembers],
+  );
 
   const loadWebsiteBindings = useCallback(async () => {
     const response = await enterpriseApiRequest(
@@ -422,8 +530,26 @@ export const EnterpriseIndependentStationPage = () => {
       setFormMappings([]);
       setAssignmentRules([]);
       setWebsiteInquiries([]);
+      setWebsiteInquiryTotal(0);
+      setInquiryDrafts({});
+      setSelectedInquiryIds([]);
+      setBulkInquiryStatus('');
+      setBulkAssignedTo('');
 
       return;
+    }
+
+    const inquirySearchParams = new URLSearchParams({
+      page: inquiryFilters.page.toString(),
+      pageSize: inquiryFilters.pageSize.toString(),
+    });
+
+    if (inquiryFilters.search.trim()) {
+      inquirySearchParams.set('search', inquiryFilters.search.trim());
+    }
+
+    if (inquiryFilters.statuses.length > 0) {
+      inquirySearchParams.set('statuses', inquiryFilters.statuses.join(','));
     }
 
     const [formMappingsResponse, assignmentRulesResponse, inquiriesResponse] =
@@ -437,7 +563,7 @@ export const EnterpriseIndependentStationPage = () => {
           { credentials: 'include' },
         ),
         enterpriseApiRequest(
-          `/api/enterprise/independent-stations/${selectedWebsiteBindingId}/inquiries`,
+          `/api/enterprise/independent-stations/${selectedWebsiteBindingId}/inquiries?${inquirySearchParams.toString()}`,
           { credentials: 'include' },
         ),
       ]);
@@ -452,8 +578,26 @@ export const EnterpriseIndependentStationPage = () => {
 
     setFormMappings((await formMappingsResponse.json()) as FormMapping[]);
     setAssignmentRules((await assignmentRulesResponse.json()) as AssignmentRule[]);
-    setWebsiteInquiries((await inquiriesResponse.json()) as WebsiteInquiry[]);
-  }, [enterpriseApiRequest, selectedWebsiteBindingId]);
+    const inquiryResponse =
+      (await inquiriesResponse.json()) as WebsiteInquiryListResponse;
+
+    setWebsiteInquiries(inquiryResponse.items);
+    setWebsiteInquiryTotal(inquiryResponse.total);
+    setInquiryDrafts(
+      Object.fromEntries(
+        inquiryResponse.items.map((inquiry) => [
+          inquiry.id,
+          {
+            assignedTo: inquiry.assignedTo ?? '',
+            inquiryStatus: inquiry.inquiryStatus,
+          },
+        ]),
+      ),
+    );
+    setSelectedInquiryIds([]);
+    setBulkInquiryStatus('');
+    setBulkAssignedTo('');
+  }, [enterpriseApiRequest, inquiryFilters, selectedWebsiteBindingId]);
 
   useEffect(() => {
     loadWebsiteBindings().catch(() =>
@@ -480,6 +624,13 @@ export const EnterpriseIndependentStationPage = () => {
         : null,
     );
   }, [selectedAssignmentRule]);
+
+  useEffect(() => {
+    setInquiryFilters((currentFilters) => ({
+      ...currentFilters,
+      page: 1,
+    }));
+  }, [selectedWebsiteBindingId]);
 
   const createWebsiteBinding = async () => {
     if (!newWebsiteName.trim() || !newWebsiteUrl.trim()) {
@@ -722,6 +873,195 @@ export const EnterpriseIndependentStationPage = () => {
     } catch {
       enqueueErrorSnackBar({ message: '批量重新处理询盘失败' });
     }
+  };
+
+  const getInquiryDraft = (inquiry: WebsiteInquiry): InquiryDraft =>
+    inquiryDrafts[inquiry.id] ?? {
+      assignedTo: inquiry.assignedTo ?? '',
+      inquiryStatus: inquiry.inquiryStatus,
+    };
+
+  const formatAssigneeLabel = (assignedTo: string | null) => {
+    if (!assignedTo) {
+      return '待分配';
+    }
+
+    return (
+      workspaceMemberOptions.find(
+        (workspaceMemberOption) => workspaceMemberOption.value === assignedTo,
+      )?.label ?? assignedTo
+    );
+  };
+
+  const isInquirySelected = (inquiryId: string) =>
+    selectedInquiryIds.includes(inquiryId);
+
+  const isCurrentPageFullySelected =
+    websiteInquiries.length > 0 &&
+    websiteInquiries.every((inquiry) => selectedInquiryIds.includes(inquiry.id));
+
+  const toggleInquirySelection = (inquiryId: string) => {
+    setSelectedInquiryIds((currentInquiryIds) =>
+      currentInquiryIds.includes(inquiryId)
+        ? currentInquiryIds.filter(
+            (currentInquiryId) => currentInquiryId !== inquiryId,
+          )
+        : [...currentInquiryIds, inquiryId],
+    );
+  };
+
+  const toggleCurrentPageSelection = () => {
+    setSelectedInquiryIds((currentInquiryIds) =>
+      isCurrentPageFullySelected
+        ? currentInquiryIds.filter(
+            (inquiryId) =>
+              !websiteInquiries.some((inquiry) => inquiry.id === inquiryId),
+          )
+        : Array.from(
+            new Set([
+              ...currentInquiryIds,
+              ...websiteInquiries.map((inquiry) => inquiry.id),
+            ]),
+          ),
+    );
+  };
+
+  const updateInquiryDraft = (
+    inquiry: WebsiteInquiry,
+    patch: Partial<InquiryDraft>,
+  ) => {
+    setInquiryDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [inquiry.id]: {
+        ...(currentDrafts[inquiry.id] ?? {
+          assignedTo: inquiry.assignedTo ?? '',
+          inquiryStatus: inquiry.inquiryStatus,
+        }),
+        ...patch,
+      },
+    }));
+  };
+
+  const updateInquiryPageSize = (pageSize: number) => {
+    setInquiryFilters((currentFilters) => ({
+      ...currentFilters,
+      page: 1,
+      pageSize,
+    }));
+  };
+
+  const saveBatchInquiryUpdate = async () => {
+    if (!selectedWebsiteBinding || selectedInquiryIds.length === 0) {
+      return;
+    }
+
+    const normalizedAssignedTo =
+      bulkAssignedTo === '__unassigned__'
+          ? null
+          : bulkAssignedTo || undefined;
+    const normalizedInquiryStatus = bulkInquiryStatus || undefined;
+
+    if (
+      normalizedAssignedTo === undefined &&
+      normalizedInquiryStatus === undefined
+    ) {
+      enqueueErrorSnackBar({ message: '请先选择批量负责人或批量状态' });
+
+      return;
+    }
+
+    try {
+      const response = await enterpriseApiRequest(
+        `/api/enterprise/independent-stations/${selectedWebsiteBinding.id}/inquiries`,
+        {
+          body: JSON.stringify({
+            inquiryIds: selectedInquiryIds,
+            inquiryStatus: normalizedInquiryStatus,
+            assignedTo: normalizedAssignedTo,
+          }),
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          method: 'PATCH',
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update independent station inquiries');
+      }
+
+      enqueueSuccessSnackBar({
+        message: `已批量更新 ${selectedInquiryIds.length} 条询盘`,
+      });
+      await loadWebsiteDetails();
+    } catch {
+      enqueueErrorSnackBar({ message: '批量保存询盘处置失败' });
+    }
+  };
+
+  const saveInquiryDraft = async (inquiry: WebsiteInquiry) => {
+    if (!selectedWebsiteBinding) {
+      return;
+    }
+
+    const inquiryDraft = getInquiryDraft(inquiry);
+
+    try {
+      const response = await enterpriseApiRequest(
+        `/api/enterprise/independent-stations/${selectedWebsiteBinding.id}/inquiries/${inquiry.id}`,
+        {
+          body: JSON.stringify({
+            assignedTo: inquiryDraft.assignedTo.trim() || null,
+            inquiryStatus: inquiryDraft.inquiryStatus,
+          }),
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          method: 'PATCH',
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update independent station inquiry');
+      }
+
+      enqueueSuccessSnackBar({ message: '询盘处置已更新' });
+      await loadWebsiteDetails();
+    } catch {
+      enqueueErrorSnackBar({ message: '保存询盘处置失败' });
+    }
+  };
+
+  const updateInquirySearch = (search: string) => {
+    setInquiryFilters((currentFilters) => ({
+      ...currentFilters,
+      page: 1,
+      search,
+    }));
+  };
+
+  const updateInquiryStatusFilter = (value: string) => {
+    setInquiryFilters((currentFilters) => ({
+      ...currentFilters,
+      page: 1,
+      statuses: value
+        ? (value.split(',') as WebsiteInquiry['inquiryStatus'][])
+        : [],
+    }));
+  };
+
+  const hasInquiryDraftChanges = (inquiry: WebsiteInquiry) => {
+    const inquiryDraft = getInquiryDraft(inquiry);
+
+    return (
+      inquiryDraft.assignedTo.trim() !== (inquiry.assignedTo ?? '') ||
+      inquiryDraft.inquiryStatus !== inquiry.inquiryStatus
+    );
+  };
+
+  const goToInquiryPage = (page: number) => {
+    setInquiryFilters((currentFilters) => ({
+      ...currentFilters,
+      page: Math.min(Math.max(page, 1), totalInquiryPages),
+    }));
   };
 
   const addFormMapping = () => {
@@ -1149,77 +1489,272 @@ export const EnterpriseIndependentStationPage = () => {
                 <Button title="刷新询盘" onClick={() => void loadWebsiteDetails()} />
               </StyledActionRow>
             </StyledHeader>
-            {websiteInquiries.length > 0 ? (
-              <StyledTable>
-                <thead>
-                  <tr>
-                    <th>客户</th>
-                    <th>来源</th>
-                    <th>状态</th>
-                    <th>分配</th>
-                    <th>CRM 写入</th>
-                    <th>入站时间</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {websiteInquiries.map((inquiry) => (
-                    <tr key={inquiry.id}>
-                      <td>
-                        <strong>{getPayloadText(inquiry.payloadJson, 'name')}</strong>
-                        <StyledMeta>
-                          {getPayloadText(inquiry.payloadJson, 'email')}
-                        </StyledMeta>
-                        <StyledMeta>
-                          {getPayloadText(inquiry.payloadJson, 'company')}
-                        </StyledMeta>
-                      </td>
-                      <td>
-                        {inquiry.externalInquiryId}
-                        <StyledMeta>
-                          {getPayloadText(inquiry.payloadJson, 'sourcePage')}
-                        </StyledMeta>
-                      </td>
-                      <td>
-                        <StyledInquiryStatus status={inquiry.inquiryStatus}>
-                          {formatInquiryStatus(inquiry.inquiryStatus)}
-                        </StyledInquiryStatus>
-                        {inquiry.decisionJson?.missingRequiredFields?.length ? (
-                          <StyledMeta>
-                            缺失字段：
-                            {inquiry.decisionJson.missingRequiredFields.join(', ')}
-                          </StyledMeta>
-                        ) : null}
-                      </td>
-                      <td>
-                        {inquiry.assignedTo ?? '待分配'}
-                        <StyledMeta>
-                          {inquiry.decisionJson?.crmRecord?.companyId
-                            ? `公司 ${inquiry.decisionJson.crmRecord.companyId}`
-                            : '未关联公司'}
-                        </StyledMeta>
-                      </td>
-                      <td>
-                        {formatCrmAction(inquiry.decisionJson?.crmRecord?.action)}
-                        <StyledMeta>
-                          {inquiry.leadId
-                            ? `客户 ${inquiry.leadId}`
-                            : '未生成客户记录'}
-                        </StyledMeta>
-                      </td>
-                      <td>{formatDate(inquiry.createdAt)}</td>
-                      <td>
-                        <Button
-                          title="重处理"
-                          onClick={() => void reprocessInquiry(inquiry.id)}
-                        />
-                      </td>
-                    </tr>
+            <StyledToolbar>
+              <StyledField>
+                <StyledLabel>搜索询盘</StyledLabel>
+                <StyledInput
+                  onChange={(event) => updateInquirySearch(event.target.value)}
+                  placeholder="按姓名、邮箱、公司、来源页或外部询盘号搜索"
+                  value={inquiryFilters.search}
+                />
+              </StyledField>
+              <StyledField>
+                <StyledLabel>状态筛选</StyledLabel>
+                <StyledSelect
+                  onChange={(event) =>
+                    updateInquiryStatusFilter(event.target.value)
+                  }
+                  value={inquiryFilters.statuses.join(',')}
+                >
+                  <option value="">全部状态</option>
+                  {inquiryStatusOptions.map((statusOption) => (
+                    <option key={statusOption.value} value={statusOption.value}>
+                      {statusOption.label}
+                    </option>
                   ))}
-                </tbody>
-              </StyledTable>
+                </StyledSelect>
+              </StyledField>
+              <StyledField>
+                <StyledLabel>每页条数</StyledLabel>
+                <StyledSelect
+                  onChange={(event) =>
+                    updateInquiryPageSize(Number(event.target.value))
+                  }
+                  value={inquiryFilters.pageSize}
+                >
+                  {[20, 50, 100].map((pageSizeOption) => (
+                    <option key={pageSizeOption} value={pageSizeOption}>
+                      {pageSizeOption}
+                    </option>
+                  ))}
+                </StyledSelect>
+              </StyledField>
+              <StyledMeta>
+                共 {websiteInquiryTotal} 条，当前第 {inquiryFilters.page} /{' '}
+                {totalInquiryPages} 页
+              </StyledMeta>
+            </StyledToolbar>
+            {websiteInquiries.length > 0 ? (
+              <>
+                <StyledBulkBar>
+                  <StyledCheckbox>
+                    <input
+                      checked={isCurrentPageFullySelected}
+                      onChange={() => toggleCurrentPageSelection()}
+                      type="checkbox"
+                    />
+                    本页全选（已选 {selectedInquiryIds.length} 条）
+                  </StyledCheckbox>
+                  <StyledField>
+                    <StyledLabel>批量负责人</StyledLabel>
+                    <StyledSelect
+                      onChange={(event) => setBulkAssignedTo(event.target.value)}
+                      value={bulkAssignedTo}
+                    >
+                      <option value="">保持不变</option>
+                      <option value="__unassigned__">清空负责人</option>
+                      {workspaceMemberOptions.map((workspaceMemberOption) => (
+                        <option
+                          key={workspaceMemberOption.value}
+                          value={workspaceMemberOption.value}
+                        >
+                          {workspaceMemberOption.label}
+                        </option>
+                      ))}
+                    </StyledSelect>
+                  </StyledField>
+                  <StyledField>
+                    <StyledLabel>批量状态</StyledLabel>
+                    <StyledSelect
+                      onChange={(event) => setBulkInquiryStatus(event.target.value)}
+                      value={bulkInquiryStatus}
+                    >
+                      <option value="">保持不变</option>
+                      {inquiryStatusOptions.map((statusOption) => (
+                        <option key={statusOption.value} value={statusOption.value}>
+                          {statusOption.label}
+                        </option>
+                      ))}
+                    </StyledSelect>
+                  </StyledField>
+                  <StyledActionRow>
+                    <Button
+                      disabled={selectedInquiryIds.length === 0}
+                      title="批量保存处置"
+                      onClick={() => void saveBatchInquiryUpdate()}
+                    />
+                    <Button
+                      disabled={selectedInquiryIds.length === 0}
+                      title="清空选择"
+                      onClick={() => setSelectedInquiryIds([])}
+                    />
+                  </StyledActionRow>
+                </StyledBulkBar>
+                <StyledTable>
+                  <thead>
+                    <tr>
+                      <th>选择</th>
+                      <th>客户</th>
+                      <th>来源</th>
+                      <th>状态</th>
+                      <th>分配</th>
+                      <th>CRM 写入</th>
+                      <th>入站时间</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {websiteInquiries.map((inquiry) => (
+                      <tr key={inquiry.id}>
+                        <td>
+                          <StyledCheckbox>
+                            <input
+                              checked={isInquirySelected(inquiry.id)}
+                              onChange={() => toggleInquirySelection(inquiry.id)}
+                              type="checkbox"
+                            />
+                          </StyledCheckbox>
+                        </td>
+                        <td>
+                          <strong>{getPayloadText(inquiry.payloadJson, 'name')}</strong>
+                          <StyledMeta>
+                            {getPayloadText(inquiry.payloadJson, 'email')}
+                          </StyledMeta>
+                          <StyledMeta>
+                            {getPayloadText(inquiry.payloadJson, 'company')}
+                          </StyledMeta>
+                        </td>
+                        <td>
+                          {inquiry.externalInquiryId}
+                          <StyledMeta>
+                            {getPayloadText(inquiry.payloadJson, 'sourcePage')}
+                          </StyledMeta>
+                        </td>
+                        <td>
+                          <StyledInquiryStatus status={inquiry.inquiryStatus}>
+                            {formatInquiryStatus(inquiry.inquiryStatus)}
+                          </StyledInquiryStatus>
+                          {inquiry.decisionJson?.missingRequiredFields?.length ? (
+                            <StyledMeta>
+                              缺失字段：
+                              {inquiry.decisionJson.missingRequiredFields.join(
+                                ', ',
+                              )}
+                            </StyledMeta>
+                          ) : null}
+                          <StyledTableEditor>
+                            <StyledSelect
+                              onChange={(event) =>
+                                updateInquiryDraft(inquiry, {
+                                  inquiryStatus:
+                                    event.target.value as WebsiteInquiry['inquiryStatus'],
+                                })
+                              }
+                              value={getInquiryDraft(inquiry).inquiryStatus}
+                            >
+                              {inquiryStatusOptions.map((statusOption) => (
+                                <option
+                                  key={statusOption.value}
+                                  value={statusOption.value}
+                                >
+                                  {statusOption.label}
+                                </option>
+                              ))}
+                            </StyledSelect>
+                          </StyledTableEditor>
+                        </td>
+                        <td>
+                          {formatAssigneeLabel(inquiry.assignedTo)}
+                          <StyledMeta>
+                            {inquiry.decisionJson?.crmRecord?.companyId
+                              ? `公司 ${inquiry.decisionJson.crmRecord.companyId}`
+                              : '未关联公司'}
+                          </StyledMeta>
+                          <StyledTableEditor>
+                            <StyledSelect
+                              onChange={(event) =>
+                                updateInquiryDraft(inquiry, {
+                                  assignedTo: event.target.value,
+                                })
+                              }
+                              value={getInquiryDraft(inquiry).assignedTo}
+                            >
+                              <option value="">待分配</option>
+                              {workspaceMemberOptions.map((workspaceMemberOption) => (
+                                <option
+                                  key={workspaceMemberOption.value}
+                                  value={workspaceMemberOption.value}
+                                >
+                                  {workspaceMemberOption.label}
+                                </option>
+                              ))}
+                              {getInquiryDraft(inquiry).assignedTo &&
+                              !workspaceMemberOptions.some(
+                                (workspaceMemberOption) =>
+                                  workspaceMemberOption.value ===
+                                  getInquiryDraft(inquiry).assignedTo,
+                              ) ? (
+                                <option value={getInquiryDraft(inquiry).assignedTo}>
+                                  {getInquiryDraft(inquiry).assignedTo}
+                                </option>
+                              ) : null}
+                            </StyledSelect>
+                          </StyledTableEditor>
+                        </td>
+                        <td>
+                          {formatCrmAction(inquiry.decisionJson?.crmRecord?.action)}
+                          <StyledMeta>
+                            {inquiry.leadId
+                              ? `客户 ${inquiry.leadId}`
+                              : '未生成客户记录'}
+                          </StyledMeta>
+                          <StyledMeta>
+                            {inquiry.decisionJson?.crmRecord?.noteId
+                              ? `备注 ${inquiry.decisionJson.crmRecord.noteId}`
+                              : '未生成备注'}
+                          </StyledMeta>
+                        </td>
+                        <td>{formatDate(inquiry.createdAt)}</td>
+                        <td>
+                          <StyledActionRow>
+                            <Button
+                              disabled={!hasInquiryDraftChanges(inquiry)}
+                              title="保存处置"
+                              onClick={() => void saveInquiryDraft(inquiry)}
+                            />
+                            <Button
+                              title="重处理"
+                              onClick={() => void reprocessInquiry(inquiry.id)}
+                            />
+                          </StyledActionRow>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </StyledTable>
+                <StyledPagination>
+                  <StyledMeta>
+                    本页 {websiteInquiries.length} 条，累计 {websiteInquiryTotal}{' '}
+                    条
+                  </StyledMeta>
+                  <StyledActionRow>
+                    <Button
+                      disabled={inquiryFilters.page <= 1}
+                      title="上一页"
+                      onClick={() => goToInquiryPage(inquiryFilters.page - 1)}
+                    />
+                    <Button
+                      disabled={inquiryFilters.page >= totalInquiryPages}
+                      title="下一页"
+                      onClick={() => goToInquiryPage(inquiryFilters.page + 1)}
+                    />
+                  </StyledActionRow>
+                </StyledPagination>
+              </>
             ) : (
-              <StyledEmpty>暂无询盘记录。完成独立站 webhook 联调后会显示在这里。</StyledEmpty>
+              <StyledEmpty>
+                当前筛选条件下暂无询盘记录。完成独立站 webhook 联调后会显示在这里。
+              </StyledEmpty>
             )}
           </StyledPanel>
         </StyledGrid>

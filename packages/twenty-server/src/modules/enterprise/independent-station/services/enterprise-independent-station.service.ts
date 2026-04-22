@@ -12,6 +12,7 @@ import {
   type ActorMetadata,
   type LinksMetadata,
   type PhonesMetadata,
+  type RichTextMetadata,
 } from 'twenty-shared/types';
 import { type CountryCode } from 'libphonenumber-js';
 import { ILike, In, Repository } from 'typeorm';
@@ -22,9 +23,12 @@ import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system
 import { CompanyWorkspaceEntity } from 'src/modules/company/standard-objects/company.workspace-entity';
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
 import { CreateEnterpriseWebsiteBindingDto } from 'src/modules/enterprise/independent-station/dtos/create-enterprise-website-binding.dto';
+import { FindEnterpriseWebsiteInquiriesDto } from 'src/modules/enterprise/independent-station/dtos/find-enterprise-website-inquiries.dto';
 import { ReceiveEnterpriseWebsiteInquiryDto } from 'src/modules/enterprise/independent-station/dtos/receive-enterprise-website-inquiry.dto';
 import { ReplaceEnterpriseInquiryAssignmentRulesDto } from 'src/modules/enterprise/independent-station/dtos/replace-enterprise-inquiry-assignment-rules.dto';
 import { ReplaceEnterpriseInquiryFormMappingsDto } from 'src/modules/enterprise/independent-station/dtos/replace-enterprise-inquiry-form-mappings.dto';
+import { UpdateEnterpriseWebsiteInquiryDto } from 'src/modules/enterprise/independent-station/dtos/update-enterprise-website-inquiry.dto';
+import { UpdateEnterpriseWebsiteInquiriesDto } from 'src/modules/enterprise/independent-station/dtos/update-enterprise-website-inquiries.dto';
 import { UpdateEnterpriseWebsiteBindingDto } from 'src/modules/enterprise/independent-station/dtos/update-enterprise-website-binding.dto';
 import { EnterpriseInquiryAssignmentRuleEntity } from 'src/modules/enterprise/independent-station/enterprise-inquiry-assignment-rule.entity';
 import { EnterpriseInquiryFormMappingEntity } from 'src/modules/enterprise/independent-station/enterprise-inquiry-form-mapping.entity';
@@ -33,6 +37,8 @@ import { EnterpriseWebsiteInquiryEntity } from 'src/modules/enterprise/independe
 import { type EnterpriseWebsiteBindingStatus } from 'src/modules/enterprise/independent-station/types/enterprise-website-binding-status';
 import { type EnterpriseWebsiteInquiryStatus } from 'src/modules/enterprise/independent-station/types/enterprise-website-inquiry-status';
 import { addPersonEmailFiltersToQueryBuilder } from 'src/modules/match-participant/utils/add-person-email-filters-to-query-builder';
+import { NoteTargetWorkspaceEntity } from 'src/modules/note/standard-objects/note-target.workspace-entity';
+import { NoteWorkspaceEntity } from 'src/modules/note/standard-objects/note.workspace-entity';
 import { PersonWorkspaceEntity } from 'src/modules/person/standard-objects/person.workspace-entity';
 
 const DEFAULT_FORM_MAPPINGS = [
@@ -90,6 +96,7 @@ type EnterpriseInquiryCrmSyncResult = {
     | 'restored_person'
     | 'skipped_no_email';
   companyId: string | null;
+  noteId: string | null;
   personId: string | null;
 };
 
@@ -332,14 +339,223 @@ export class EnterpriseIndependentStationService {
     });
   }
 
-  async findInquiries(workspaceId: string, websiteBindingId: string) {
+  async findInquiries(
+    workspaceId: string,
+    websiteBindingId: string,
+    query?: FindEnterpriseWebsiteInquiriesDto,
+  ) {
+    await this.findWebsiteBindingOrFail(workspaceId, websiteBindingId);
+    const normalizedPage = this.normalizePositiveInteger(query?.page, 1);
+    const normalizedPageSize = this.normalizePageSize(query?.pageSize);
+    const normalizedStatuses = this.normalizeInquiryStatusesForList(
+      query?.statuses,
+    );
+    const normalizedSearch = query?.search?.trim().toLowerCase() ?? '';
+    const queryBuilder = this.enterpriseWebsiteInquiryRepository
+      .createQueryBuilder('inquiry')
+      .where('inquiry.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('inquiry.websiteBindingId = :websiteBindingId', {
+        websiteBindingId,
+      });
+
+    if (normalizedStatuses.length > 0) {
+      queryBuilder.andWhere('inquiry.inquiryStatus IN (:...statuses)', {
+        statuses: normalizedStatuses,
+      });
+    }
+
+    if (normalizedSearch) {
+      queryBuilder.andWhere(
+        `(
+          LOWER(inquiry.externalInquiryId) LIKE :search
+          OR LOWER(COALESCE(inquiry.payloadJson->>'name', '')) LIKE :search
+          OR LOWER(COALESCE(inquiry.payloadJson->>'email', '')) LIKE :search
+          OR LOWER(COALESCE(inquiry.payloadJson->>'company', '')) LIKE :search
+          OR LOWER(COALESCE(inquiry.payloadJson->>'companyName', '')) LIKE :search
+          OR LOWER(COALESCE(inquiry.payloadJson->>'sourcePage', '')) LIKE :search
+        )`,
+        {
+          search: `%${normalizedSearch}%`,
+        },
+      );
+    }
+
+    const [items, total] = await queryBuilder
+      .orderBy('inquiry.createdAt', 'DESC')
+      .skip((normalizedPage - 1) * normalizedPageSize)
+      .take(normalizedPageSize)
+      .getManyAndCount();
+
+    return {
+      items,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+      total,
+    };
+  }
+
+  async updateInquiry(
+    workspaceId: string,
+    websiteBindingId: string,
+    inquiryId: string,
+    dto: UpdateEnterpriseWebsiteInquiryDto,
+    actorWorkspaceMemberId?: string | null,
+  ) {
     await this.findWebsiteBindingOrFail(workspaceId, websiteBindingId);
 
-    return this.enterpriseWebsiteInquiryRepository.find({
-      where: { workspaceId, websiteBindingId },
-      order: { createdAt: 'DESC' },
-      take: 50,
+    const inquiry = await this.enterpriseWebsiteInquiryRepository.findOne({
+      where: { id: inquiryId, workspaceId, websiteBindingId },
     });
+
+    if (!inquiry) {
+      throw new NotFoundException(
+        `Enterprise website inquiry ${inquiryId} was not found`,
+      );
+    }
+
+    if (dto.assignedTo === undefined && dto.inquiryStatus === undefined) {
+      throw new BadRequestException(
+        'Either inquiryStatus or assignedTo must be provided',
+      );
+    }
+
+    const beforeJson = {
+      assignedTo: inquiry.assignedTo,
+      decisionJson: inquiry.decisionJson,
+      inquiryStatus: inquiry.inquiryStatus,
+    };
+    const hasChanges = this.applyManualInquiryUpdate({
+      actorWorkspaceMemberId,
+      assignedTo: dto.assignedTo,
+      inquiry,
+      inquiryStatus: dto.inquiryStatus,
+    });
+
+    if (!hasChanges) {
+      return inquiry;
+    }
+
+    const savedInquiry =
+      await this.enterpriseWebsiteInquiryRepository.save(inquiry);
+
+    await this.enterpriseConfigAuditService.createLog({
+      workspaceId,
+      action: 'enterprise.independentStation.updateInquiry',
+      resourceType: 'enterpriseWebsiteInquiry',
+      resourceId: savedInquiry.id,
+      actorWorkspaceMemberId,
+      beforeJson,
+      afterJson: {
+        assignedTo: savedInquiry.assignedTo,
+        decisionJson: savedInquiry.decisionJson,
+        inquiryStatus: savedInquiry.inquiryStatus,
+      },
+    });
+
+    return savedInquiry;
+  }
+
+  async updateInquiries(
+    workspaceId: string,
+    websiteBindingId: string,
+    dto: UpdateEnterpriseWebsiteInquiriesDto,
+    actorWorkspaceMemberId?: string | null,
+  ) {
+    await this.findWebsiteBindingOrFail(workspaceId, websiteBindingId);
+
+    if (dto.assignedTo === undefined && dto.inquiryStatus === undefined) {
+      throw new BadRequestException(
+        'Either inquiryStatus or assignedTo must be provided',
+      );
+    }
+
+    const inquiryIds = this.normalizeStringList(dto.inquiryIds ?? []);
+
+    if (inquiryIds.length === 0) {
+      throw new BadRequestException('inquiryIds are required');
+    }
+
+    const inquiries = await this.enterpriseWebsiteInquiryRepository.find({
+      where: {
+        id: In(inquiryIds),
+        workspaceId,
+        websiteBindingId,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (inquiries.length === 0) {
+      throw new NotFoundException('Enterprise website inquiries were not found');
+    }
+
+    const changedInquiries = inquiries
+      .map((inquiry) => {
+        const beforeJson = {
+          assignedTo: inquiry.assignedTo,
+          decisionJson: inquiry.decisionJson,
+          inquiryStatus: inquiry.inquiryStatus,
+        };
+        const hasChanges = this.applyManualInquiryUpdate({
+          actorWorkspaceMemberId,
+          assignedTo: dto.assignedTo,
+          inquiry,
+          inquiryStatus: dto.inquiryStatus,
+        });
+
+        if (!hasChanges) {
+          return null;
+        }
+
+        return {
+          beforeJson,
+          inquiry,
+        };
+      })
+      .filter(
+        (
+          value,
+        ): value is {
+          beforeJson: Record<string, unknown>;
+          inquiry: EnterpriseWebsiteInquiryEntity;
+        } => value !== null,
+      );
+
+    if (changedInquiries.length === 0) {
+      return {
+        inquiries,
+        updatedCount: 0,
+      };
+    }
+
+    const savedInquiries = await this.enterpriseWebsiteInquiryRepository.save(
+      changedInquiries.map(({ inquiry }) => inquiry),
+    );
+    const beforeJsonById = new Map(
+      changedInquiries.map(({ inquiry, beforeJson }) => [inquiry.id, beforeJson]),
+    );
+
+    await Promise.all(
+      savedInquiries.map((savedInquiry) =>
+        this.enterpriseConfigAuditService.createLog({
+          workspaceId,
+          action: 'enterprise.independentStation.updateInquiry',
+          resourceType: 'enterpriseWebsiteInquiry',
+          resourceId: savedInquiry.id,
+          actorWorkspaceMemberId,
+          beforeJson: beforeJsonById.get(savedInquiry.id),
+          afterJson: {
+            assignedTo: savedInquiry.assignedTo,
+            decisionJson: savedInquiry.decisionJson,
+            inquiryStatus: savedInquiry.inquiryStatus,
+          },
+        }),
+      ),
+    );
+
+    return {
+      inquiries: savedInquiries,
+      updatedCount: savedInquiries.length,
+    };
   }
 
   async replaceAssignmentRules(
@@ -495,6 +711,7 @@ export class EnterpriseIndependentStationService {
       workspaceId,
       websiteBindingId,
       inquiry.payloadJson,
+      inquiry.decisionJson.crmRecord as Record<string, unknown> | null,
     );
 
     inquiry.inquiryStatus = processingResult.inquiryStatus;
@@ -565,6 +782,7 @@ export class EnterpriseIndependentStationService {
     workspaceId: string,
     websiteBindingId: string,
     payloadJson: Record<string, unknown>,
+    existingCrmRecord?: Record<string, unknown> | null,
   ) {
     const mappings = await this.findFormMappings(workspaceId, websiteBindingId);
     const missingRequiredFields = mappings
@@ -583,6 +801,7 @@ export class EnterpriseIndependentStationService {
       decision.assignedTo,
     );
     const crmSyncResult = await this.syncAcceptedInquiryToCrm({
+      existingNoteId: this.pickPayloadString(existingCrmRecord ?? {}, 'noteId'),
       inquiryStatus,
       payloadJson,
       workspaceId,
@@ -606,10 +825,12 @@ export class EnterpriseIndependentStationService {
   }
 
   private async syncAcceptedInquiryToCrm({
+    existingNoteId,
     inquiryStatus,
     payloadJson,
     workspaceId,
   }: {
+    existingNoteId?: string | null;
     inquiryStatus: EnterpriseWebsiteInquiryStatus;
     payloadJson: Record<string, unknown>;
     workspaceId: string;
@@ -618,6 +839,7 @@ export class EnterpriseIndependentStationService {
       return {
         action: 'blocked',
         companyId: null,
+        noteId: null,
         personId: null,
       };
     }
@@ -628,6 +850,7 @@ export class EnterpriseIndependentStationService {
       return {
         action: 'skipped_no_email',
         companyId: null,
+        noteId: null,
         personId: null,
       };
     }
@@ -658,6 +881,16 @@ export class EnterpriseIndependentStationService {
           .getOne();
 
         if (existingPerson) {
+          const personId = existingPerson.id;
+
+          const noteId = await this.createOrUpdateInquiryNote({
+            companyId,
+            existingNoteId,
+            payloadJson,
+            personId,
+            workspaceId,
+          });
+
           if (existingPerson.deletedAt !== null) {
             await personRepository.updateMany([
               {
@@ -673,14 +906,16 @@ export class EnterpriseIndependentStationService {
             return {
               action: 'restored_person',
               companyId,
-              personId: existingPerson.id,
+              noteId,
+              personId,
             };
           }
 
           return {
             action: 'reused_person',
             companyId,
-            personId: existingPerson.id,
+            noteId,
+            personId,
           };
         }
 
@@ -706,9 +941,18 @@ export class EnterpriseIndependentStationService {
           },
         ]);
 
+        const noteId = await this.createOrUpdateInquiryNote({
+          companyId,
+          existingNoteId,
+          payloadJson,
+          personId,
+          workspaceId,
+        });
+
         return {
           action: 'created_person',
           companyId,
+          noteId,
           personId,
         };
       },
@@ -795,6 +1039,116 @@ export class EnterpriseIndependentStationService {
     ]);
 
     return companyId;
+  }
+
+  private async createOrUpdateInquiryNote({
+    companyId,
+    existingNoteId,
+    payloadJson,
+    personId,
+    workspaceId,
+  }: {
+    companyId: string | null;
+    existingNoteId?: string | null;
+    payloadJson: Record<string, unknown>;
+    personId: string | null;
+    workspaceId: string;
+  }) {
+    const noteBody = this.buildInquiryNoteBody(payloadJson);
+
+    if (!noteBody) {
+      return null;
+    }
+
+    const noteRepository = await this.globalWorkspaceOrmManager.getRepository(
+      workspaceId,
+      NoteWorkspaceEntity,
+      {
+        shouldBypassPermissionChecks: true,
+      },
+    );
+    const noteTargetRepository =
+      await this.globalWorkspaceOrmManager.getRepository(
+        workspaceId,
+        NoteTargetWorkspaceEntity,
+        {
+          shouldBypassPermissionChecks: true,
+        },
+      );
+    const title = this.buildInquiryNoteTitle(payloadJson);
+    let noteId = existingNoteId ?? null;
+
+    if (noteId) {
+      await noteRepository.updateMany([
+        {
+          criteria: noteId,
+          partialEntity: {
+            bodyV2: noteBody,
+            title,
+            updatedBy: INDEPENDENT_STATION_ACTOR,
+          },
+        },
+      ]);
+    } else {
+      noteId = v4();
+      const lastNotePosition =
+        (await noteRepository.maximum('position', undefined)) ?? 0;
+
+      await noteRepository.insert([
+        {
+          bodyV2: noteBody,
+          createdBy: INDEPENDENT_STATION_ACTOR,
+          id: noteId,
+          position: lastNotePosition + 1,
+          title,
+          updatedBy: INDEPENDENT_STATION_ACTOR,
+        },
+      ]);
+    }
+
+    await noteTargetRepository.delete({ noteId });
+    await this.attachInquiryNoteTargets({
+      companyId,
+      noteId,
+      noteTargetRepository,
+      personId,
+    });
+
+    return noteId;
+  }
+
+  private async attachInquiryNoteTargets({
+    companyId,
+    noteId,
+    noteTargetRepository,
+    personId,
+  }: {
+    companyId: string | null;
+    noteId: string;
+    noteTargetRepository: Repository<NoteTargetWorkspaceEntity>;
+    personId: string | null;
+  }) {
+    const targets = [];
+
+    if (personId) {
+      targets.push({
+        noteId,
+        targetPersonId: personId,
+      });
+    }
+
+    if (companyId) {
+      targets.push({
+        noteId,
+        targetCompanyId: companyId,
+      });
+    }
+
+    if (targets.length === 0) {
+      return;
+    }
+
+    await noteTargetRepository.insert(targets);
   }
 
   private async ensureDefaultMappings(
@@ -964,6 +1318,50 @@ export class EnterpriseIndependentStationService {
     };
   }
 
+  private buildInquiryNoteTitle(payloadJson: Record<string, unknown>) {
+    const name =
+      this.pickPayloadString(payloadJson, 'name') ??
+      this.pickPayloadString(payloadJson, 'email') ??
+      'Website inquiry';
+
+    return `Website inquiry: ${name}`;
+  }
+
+  private buildInquiryNoteBody(
+    payloadJson: Record<string, unknown>,
+  ): RichTextMetadata | null {
+    const message =
+      this.pickPayloadString(payloadJson, 'message') ??
+      this.pickPayloadString(payloadJson, 'note');
+
+    if (!message) {
+      return null;
+    }
+
+    const metadataLines = [
+      ['联系人', this.pickPayloadString(payloadJson, 'name')],
+      ['邮箱', this.pickPayloadString(payloadJson, 'email')],
+      ['电话', this.pickPayloadString(payloadJson, 'phone')],
+      [
+        '公司',
+        this.pickPayloadString(payloadJson, 'company') ??
+          this.pickPayloadString(payloadJson, 'companyName'),
+      ],
+      ['国家', this.pickPayloadString(payloadJson, 'country')],
+      ['来源页', this.pickPayloadString(payloadJson, 'sourcePage')],
+    ]
+      .filter(([, value]) => value)
+      .map(([label, value]) => `- ${label}: ${value}`);
+    const markdown = ['## 独立站询盘留言', '', ...metadataLines, '', message].join(
+      '\n',
+    );
+
+    return {
+      blocknote: null,
+      markdown,
+    };
+  }
+
   private assertWebhookSecret(
     websiteBinding: EnterpriseWebsiteBindingEntity,
     webhookSecret?: string,
@@ -1118,6 +1516,64 @@ export class EnterpriseIndependentStationService {
     return 'bound';
   }
 
+  private applyManualInquiryUpdate({
+    actorWorkspaceMemberId,
+    assignedTo,
+    inquiry,
+    inquiryStatus,
+  }: {
+    actorWorkspaceMemberId?: string | null;
+    assignedTo?: string | null;
+    inquiry: EnterpriseWebsiteInquiryEntity;
+    inquiryStatus?: string;
+  }) {
+    let hasChanges = false;
+
+    if (assignedTo !== undefined) {
+      const normalizedAssignedTo = this.normalizeInquiryAssignee(assignedTo);
+
+      if (normalizedAssignedTo !== inquiry.assignedTo) {
+        inquiry.assignedTo = normalizedAssignedTo;
+        hasChanges = true;
+      }
+    }
+
+    if (inquiryStatus !== undefined) {
+      const normalizedInquiryStatus = this.normalizeInquiryStatus(inquiryStatus);
+
+      if (normalizedInquiryStatus !== inquiry.inquiryStatus) {
+        inquiry.inquiryStatus = normalizedInquiryStatus;
+        hasChanges = true;
+      }
+    }
+
+    if (!hasChanges) {
+      return false;
+    }
+
+    inquiry.decisionJson = {
+      ...(inquiry.decisionJson ?? {}),
+      manualOverride: {
+        actorWorkspaceMemberId: actorWorkspaceMemberId ?? null,
+        assignedTo: inquiry.assignedTo,
+        inquiryStatus: inquiry.inquiryStatus,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+
+    return true;
+  }
+
+  private normalizeInquiryStatus(status: string): EnterpriseWebsiteInquiryStatus {
+    const normalizedStatus = status.trim() as EnterpriseWebsiteInquiryStatus;
+
+    if (!WEBSITE_INQUIRY_STATUSES.includes(normalizedStatus)) {
+      throw new BadRequestException(`Invalid inquiry status: ${status}`);
+    }
+
+    return normalizedStatus;
+  }
+
   private normalizeInquiryStatuses(
     statuses: string[] | undefined,
   ): EnterpriseWebsiteInquiryStatus[] {
@@ -1141,6 +1597,65 @@ export class EnterpriseIndependentStationService {
     return normalizedStatuses.filter(
       (status, index, list) => list.indexOf(status) === index,
     );
+  }
+
+  private normalizeInquiryAssignee(assignedTo?: string | null) {
+    if (assignedTo === null) {
+      return null;
+    }
+
+    const normalizedAssignedTo = assignedTo?.trim();
+
+    if (!normalizedAssignedTo) {
+      return null;
+    }
+
+    if (normalizedAssignedTo.length > 160) {
+      throw new BadRequestException('assignedTo is too long');
+    }
+
+    return normalizedAssignedTo;
+  }
+
+  private normalizeInquiryStatusesForList(
+    statuses: string[] | string | undefined,
+  ): EnterpriseWebsiteInquiryStatus[] {
+    if (!statuses) {
+      return [];
+    }
+
+    const rawStatuses = Array.isArray(statuses)
+      ? statuses
+      : statuses.split(',').map((status) => status.trim());
+    const normalizedStatuses = rawStatuses.filter(
+      (status): status is EnterpriseWebsiteInquiryStatus =>
+        WEBSITE_INQUIRY_STATUSES.includes(
+          status as EnterpriseWebsiteInquiryStatus,
+        ),
+    );
+
+    return normalizedStatuses.filter(
+      (status, index, list) => list.indexOf(status) === index,
+    );
+  }
+
+  private normalizePositiveInteger(
+    value: string | undefined,
+    fallbackValue: number,
+  ) {
+    const parsedValue = Number(value);
+
+    if (!Number.isInteger(parsedValue) || parsedValue < 1) {
+      return fallbackValue;
+    }
+
+    return parsedValue;
+  }
+
+  private normalizePageSize(value: string | undefined) {
+    const parsedValue = this.normalizePositiveInteger(value, 20);
+
+    return Math.min(parsedValue, 100);
   }
 
   private normalizeStringList(values: string[]) {

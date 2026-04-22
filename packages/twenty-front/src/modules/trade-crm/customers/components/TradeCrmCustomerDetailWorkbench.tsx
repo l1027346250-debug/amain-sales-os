@@ -1,8 +1,10 @@
 import { styled } from '@linaria/react';
 import { useEffect, useState } from 'react';
 
-import { type TradeCrmCustomerTableBadgeTone } from '@/trade-crm/customers/components/TradeCrmCustomerTable';
-import { TradeCrmCustomerTable } from '@/trade-crm/customers/components/TradeCrmCustomerTable';
+import {
+  TradeCrmCustomerTable,
+  type TradeCrmCustomerTableBadgeTone,
+} from '@/trade-crm/customers/components/TradeCrmCustomerTable';
 import {
   type TradeCrmCustomerDocumentItem,
   type TradeCrmCustomerAiInsight,
@@ -271,7 +273,7 @@ const StyledDealStrip = styled.div`
 const StyledDealCard = styled.div`
   background: linear-gradient(
     180deg,
-    rgba(20, 20, 20, 0.02),
+    ${tradeCrmUiTheme.colors.surface},
     ${tradeCrmUiTheme.colors.surfaceMuted}
   );
   border: 1px solid ${tradeCrmUiTheme.colors.border};
@@ -281,7 +283,7 @@ const StyledDealCard = styled.div`
 `;
 
 const StyledDealStage = styled.div`
-  color: #2759c6;
+  color: ${tradeCrmUiTheme.colors.borderStrong};
   font-size: ${themeCssVariables.font.size.xs};
   font-weight: ${themeCssVariables.font.weight.medium};
   margin-bottom: ${themeCssVariables.spacing[2]};
@@ -465,7 +467,9 @@ export const TradeCrmCustomerDetailWorkbench = ({
   const primaryContactRecord = peopleRecords?.[0] ?? null;
 
   useEffect(() => {
-    setEditContactEmail(getTradeCrmCustomerEmailLabel(primaryContactRecord ?? undefined));
+    setEditContactEmail(
+      getTradeCrmCustomerEmailLabel(primaryContactRecord ?? undefined),
+    );
     setEditContactName(
       primaryContactRecord
         ? getTradeCrmRecordName({
@@ -474,9 +478,13 @@ export const TradeCrmCustomerDetailWorkbench = ({
           })
         : '',
     );
-    setEditContactPhone(getTradeCrmCustomerPhoneLabel(primaryContactRecord ?? undefined));
+    setEditContactPhone(
+      getTradeCrmCustomerPhoneLabel(primaryContactRecord ?? undefined),
+    );
     setEditContactPosition(
-      primaryContactRecord ? getTradeCrmCustomerJobTitle(primaryContactRecord) : '',
+      primaryContactRecord
+        ? getTradeCrmCustomerJobTitle(primaryContactRecord)
+        : '',
     );
   }, [primaryContactRecord]);
 
@@ -497,115 +505,119 @@ export const TradeCrmCustomerDetailWorkbench = ({
             .join(' / '),
         }))
       : timelineThreadPreviews.length > 0 || timelineCalendarPreviews.length > 0
-      ? [
-          ...timelineThreadPreviews.map((thread) => ({
-            id: thread.id,
-            time: thread.lastMessageReceivedAt,
-            title: thread.subject,
-            description: `${thread.participantLabel} / ${thread.messageCountLabel}`,
-          })),
-          ...timelineCalendarPreviews.map((event) => ({
-            id: event.id,
-            time: event.startsAt,
-            title: event.title,
-            description: `${event.participantLabel} / ${event.location}`,
-          })),
-        ]
-      : [
-          {
-            id: 'empty-timeline',
-            time: '--',
-            title: 'No customer activity yet',
-            description:
-              'Write a follow-up, convert a lead, import a customer, move public-pool ownership, or link an opportunity to populate this timeline.',
-          },
-        ];
+        ? [
+            ...timelineThreadPreviews.map((thread) => ({
+              id: thread.id,
+              time: thread.lastMessageReceivedAt,
+              title: thread.subject,
+              description: `${thread.participantLabel} / ${thread.messageCountLabel}`,
+            })),
+            ...timelineCalendarPreviews.map((event) => ({
+              id: event.id,
+              time: event.startsAt,
+              title: event.title,
+              description: `${event.participantLabel} / ${event.location}`,
+            })),
+          ]
+        : [
+            {
+              id: 'empty-timeline',
+              time: '--',
+              title: 'No customer activity yet',
+              description:
+                'Write a follow-up, convert a lead, import a customer, move public-pool ownership, or link an opportunity to populate this timeline.',
+            },
+          ];
 
-  const contactRows = (peopleRecords ?? []).slice(0, 3).map((record, index) => ({
-    id: record.id,
-    cells: [
-      {
-        primary: getTradeCrmRecordName({
-          kind: 'individual',
-          record,
-        }),
-        secondary: getTradeCrmCustomerJobTitle(record),
-      },
-      {
-        primary: typeof record.email === 'string' ? record.email : 'No email',
-        secondary: getTradeCrmCustomerPhoneLabel(record),
-      },
-      {
-        primary: getTradeCrmCustomerLastTouchLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        secondary: getTradeCrmCustomerSourceLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-      },
-      {
-        primary: getTradeCrmCustomerCountryLabel(record),
-        secondary: getTradeCrmCustomerOwnerLabel(record),
-      },
-      {
-        primary: getTradeCrmCustomerStageLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        secondary: getTradeCrmCustomerGroupLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        badgeLabel: getTradeCrmCustomerStarLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        badgeTone: 'amber',
-      },
-    ],
-  }));
+  const contactRows = (peopleRecords ?? [])
+    .slice(0, 3)
+    .map((record, index) => ({
+      id: record.id,
+      cells: [
+        {
+          primary: getTradeCrmRecordName({
+            kind: 'individual',
+            record,
+          }),
+          secondary: getTradeCrmCustomerJobTitle(record),
+        },
+        {
+          primary: typeof record.email === 'string' ? record.email : 'No email',
+          secondary: getTradeCrmCustomerPhoneLabel(record),
+        },
+        {
+          primary: getTradeCrmCustomerLastTouchLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+          secondary: getTradeCrmCustomerSourceLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+        },
+        {
+          primary: getTradeCrmCustomerCountryLabel(record),
+          secondary: getTradeCrmCustomerOwnerLabel(record),
+        },
+        {
+          primary: getTradeCrmCustomerStageLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+          secondary: getTradeCrmCustomerGroupLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+          badgeLabel: getTradeCrmCustomerStarLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+          badgeTone: 'amber',
+        },
+      ],
+    }));
 
-  const dealRows = (opportunityRecords ?? []).slice(0, 4).map((record, index) => ({
-    id: record.id,
-    cells: [
-      {
-        primary:
-          typeof record.name === 'string' && record.name.length > 0
-            ? record.name
-            : `Opportunity ${index + 1}`,
-        secondary: `Deal lane ${index + 1}`,
-      },
-      {
-        primary: getTradeCrmCustomerStageLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        secondary: 'Commercial stage',
-        badgeLabel: getTradeCrmCustomerSourceLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        badgeTone: getBadgeTone(index),
-      },
-      {
-        primary: getOpportunityAmountLabel(record, index),
-        secondary: 'Projected amount',
-      },
-      {
-        primary: getTradeCrmCustomerOwnerLabel(record),
-        secondary: 'Deal owner',
-      },
-      {
-        primary: getTradeCrmCustomerLastTouchLabelForRecord({
-          record,
-          fallbackIndex: index,
-        }),
-        secondary: 'Latest action',
-      },
-    ],
-  }));
+  const dealRows = (opportunityRecords ?? [])
+    .slice(0, 4)
+    .map((record, index) => ({
+      id: record.id,
+      cells: [
+        {
+          primary:
+            typeof record.name === 'string' && record.name.length > 0
+              ? record.name
+              : `Opportunity ${index + 1}`,
+          secondary: `Deal lane ${index + 1}`,
+        },
+        {
+          primary: getTradeCrmCustomerStageLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+          secondary: 'Commercial stage',
+          badgeLabel: getTradeCrmCustomerSourceLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+          badgeTone: getBadgeTone(index),
+        },
+        {
+          primary: getOpportunityAmountLabel(record, index),
+          secondary: 'Projected amount',
+        },
+        {
+          primary: getTradeCrmCustomerOwnerLabel(record),
+          secondary: 'Deal owner',
+        },
+        {
+          primary: getTradeCrmCustomerLastTouchLabelForRecord({
+            record,
+            fallbackIndex: index,
+          }),
+          secondary: 'Latest action',
+        },
+      ],
+    }));
 
   const renderActiveTab = () => {
     if (activeTab === 'profile') {
@@ -644,7 +656,9 @@ export const TradeCrmCustomerDetailWorkbench = ({
               <span>Save updates into the company customer master record.</span>
               <StyledComposerButton
                 type="button"
-                disabled={profileName.trim().length === 0 || updateCustomerLoading}
+                disabled={
+                  profileName.trim().length === 0 || updateCustomerLoading
+                }
                 onClick={() => {
                   void updateCustomer({
                     addressLine: profileAddressLine.trim() || undefined,
@@ -709,7 +723,9 @@ export const TradeCrmCustomerDetailWorkbench = ({
                   {documentItem.fileCategory ?? 'file'}
                 </StyledTimelineTime>
                 <StyledTimelineTitle>{documentItem.name}</StyledTimelineTitle>
-                <StyledMuted>{documentItem.fullPath ?? 'No file path available'}</StyledMuted>
+                <StyledMuted>
+                  {documentItem.fullPath ?? 'No file path available'}
+                </StyledMuted>
               </StyledTimelineItem>
             ))
           ) : (
@@ -802,7 +818,7 @@ export const TradeCrmCustomerDetailWorkbench = ({
             <StyledTimelineTitle>AI Research Container</StyledTimelineTitle>
             <StyledMuted>
               {customerAiInsight?.summary ??
-                'AI research is reserved for phase two. The data contract is ready and will not require a detail-page rewrite.'}
+                'No AI research summary is available yet. Customer signals, contacts, and deal context are ready for later enrichment.'}
             </StyledMuted>
           </StyledTimelineItem>
           {(customerAiInsight?.signals ?? []).map((signal) => (
@@ -880,7 +896,9 @@ export const TradeCrmCustomerDetailWorkbench = ({
         <StyledCard>
           <StyledCardTitle>Customer Profile</StyledCardTitle>
           <StyledHeroName>
-            {customerDetailLoading ? 'Loading...' : customerDetail?.displayName ?? 'Unknown'}
+            {customerDetailLoading
+              ? 'Loading...'
+              : (customerDetail?.displayName ?? 'Unknown')}
           </StyledHeroName>
           <StyledMuted>
             {customerDetail?.websiteLabel ??
@@ -922,19 +940,21 @@ export const TradeCrmCustomerDetailWorkbench = ({
           <StyledCardTitle>AI Customer Analysis</StyledCardTitle>
           <StyledMuted>
             {customerAiInsight?.summary ??
-              'AI research is reserved for phase two. The customer data contract and container are already wired.'}
+              'No AI research summary is available yet. When upstream insight is absent, this panel still keeps the customer-analysis surface stable.'}
           </StyledMuted>
           <StyledProfileGrid>
-            {(customerAiInsight?.signals ?? [
-              {
-                label: 'Contacts',
-                value: `${contactRows.length}`,
-              },
-              {
-                label: 'Open Deals',
-                value: `${dealRows.length}`,
-              },
-            ]).map((signal) => (
+            {(
+              customerAiInsight?.signals ?? [
+                {
+                  label: 'Contacts',
+                  value: `${contactRows.length}`,
+                },
+                {
+                  label: 'Open Deals',
+                  value: `${dealRows.length}`,
+                },
+              ]
+            ).map((signal) => (
               <StyledMetric key={signal.label}>
                 <StyledMetricLabel>{signal.label}</StyledMetricLabel>
                 <StyledMetricValue>{signal.value}</StyledMetricValue>
@@ -974,13 +994,15 @@ export const TradeCrmCustomerDetailWorkbench = ({
                       ? record.name
                       : `Opportunity ${index + 1}`}
                   </StyledDealName>
-                  <StyledMuted>{`${getOpportunityAmountLabel(record, index)} / ${
-                    getTradeCrmCustomerOwnerLabel(record)
-                  }`}</StyledMuted>
+                  <StyledMuted>{`${getOpportunityAmountLabel(record, index)} / ${getTradeCrmCustomerOwnerLabel(
+                    record,
+                  )}`}</StyledMuted>
                 </StyledDealCard>
               ))
             ) : (
-              <StyledMuted>No in-progress opportunity is linked yet.</StyledMuted>
+              <StyledMuted>
+                No in-progress opportunity is linked yet.
+              </StyledMuted>
             )}
           </StyledDealStrip>
         </StyledCard>
@@ -1009,7 +1031,8 @@ export const TradeCrmCustomerDetailWorkbench = ({
                         : `Follow-up checkpoint ${index + 1}`}
                     </StyledTimelineTitle>
                     <StyledMuted>
-                      Keep calendar and tasks visible inside the customer detail.
+                      Keep calendar and tasks visible inside the customer
+                      detail.
                     </StyledMuted>
                   </StyledTimelineItem>
                 ))}
@@ -1036,17 +1059,21 @@ export const TradeCrmCustomerDetailWorkbench = ({
             />
             <StyledComposerActions>
               <span>
-                {timelineThreadTotalCount} mail threads / {timelineCalendarTotalCount}{' '}
-                schedule items / {customerTimelineTotalCount} timeline events
+                {timelineThreadTotalCount} mail threads /{' '}
+                {timelineCalendarTotalCount} schedule items /{' '}
+                {customerTimelineTotalCount} timeline events
               </span>
               <StyledComposerButton
                 type="button"
                 disabled={
-                  followUpBody.trim().length === 0 || createCustomerFollowUpLoading
+                  followUpBody.trim().length === 0 ||
+                  createCustomerFollowUpLoading
                 }
                 onClick={submitFollowUp}
               >
-                {createCustomerFollowUpLoading ? 'Saving...' : 'Write Follow-up'}
+                {createCustomerFollowUpLoading
+                  ? 'Saving...'
+                  : 'Write Follow-up'}
               </StyledComposerButton>
             </StyledComposerActions>
           </StyledComposer>
@@ -1055,7 +1082,13 @@ export const TradeCrmCustomerDetailWorkbench = ({
         <TradeCrmCustomerTable
           title="Contact Coverage"
           description="Keep reachable contacts visible beside the account profile so customer follow-up never loses the people layer."
-          columns={['Contact', 'Reachability', 'Latest Touch', 'Country', 'Stage']}
+          columns={[
+            'Contact',
+            'Reachability',
+            'Latest Touch',
+            'Country',
+            'Stage',
+          ]}
           rows={contactRows}
           emptyState="No contact coverage is visible yet."
         />

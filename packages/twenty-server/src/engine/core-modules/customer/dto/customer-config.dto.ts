@@ -1,4 +1,4 @@
-import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 
@@ -138,6 +138,15 @@ export class CustomerConfigImportDefaultsDTO {
 
   @Field(() => String, { nullable: true })
   status: string | null;
+}
+
+@InputType('LogCustomerConfigChangeInput')
+export class LogCustomerConfigChangeInput {
+  @Field(() => String)
+  summary: string;
+
+  @Field(() => [String])
+  sectionKeys: string[];
 }
 
 @ObjectType('CustomerConfigAggregate')

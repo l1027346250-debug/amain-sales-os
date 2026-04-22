@@ -226,10 +226,14 @@ const StyledSearchInput = styled.input`
 
 const StyledFilterButton = styled.button<{ $active: boolean }>`
   background: ${({ $active }) =>
-    $active ? tradeCrmUiTheme.colors.borderStrong : tradeCrmUiTheme.colors.surfaceMuted};
+    $active
+      ? tradeCrmUiTheme.colors.borderStrong
+      : tradeCrmUiTheme.colors.surfaceMuted};
   border: 1px solid
     ${({ $active }) =>
-      $active ? tradeCrmUiTheme.colors.borderStrong : tradeCrmUiTheme.colors.border};
+      $active
+        ? tradeCrmUiTheme.colors.borderStrong
+        : tradeCrmUiTheme.colors.border};
   border-radius: ${tradeCrmUiTheme.radius.pill};
   color: ${({ $active }) =>
     $active ? tradeCrmUiTheme.colors.surface : tradeCrmUiTheme.colors.inkMuted};
@@ -269,30 +273,37 @@ const StyledActionButtons = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledControlButton = styled.button<{ $tone?: 'primary' | 'neutral' | 'danger' }>`
+const StyledControlButton = styled.button<{
+  $tone?: 'primary' | 'neutral' | 'danger';
+}>`
   background: ${({ $tone }) =>
     $tone === 'primary'
       ? tradeCrmUiTheme.colors.borderStrong
       : $tone === 'danger'
-        ? 'rgba(197, 56, 56, 0.12)'
+        ? tradeCrmUiTheme.colors.surfaceInteractive
         : tradeCrmUiTheme.colors.surfaceMuted};
   border: 1px solid
     ${({ $tone }) =>
       $tone === 'primary'
         ? tradeCrmUiTheme.colors.borderStrong
         : $tone === 'danger'
-          ? 'rgba(197, 56, 56, 0.28)'
+          ? tradeCrmUiTheme.colors.borderInteractive
           : tradeCrmUiTheme.colors.border};
   border-radius: ${tradeCrmUiTheme.radius.control};
   color: ${({ $tone }) =>
     $tone === 'primary'
       ? tradeCrmUiTheme.colors.surface
       : $tone === 'danger'
-        ? '#8f1f1f'
+        ? tradeCrmUiTheme.colors.ink
         : tradeCrmUiTheme.colors.ink};
   cursor: pointer;
   font: inherit;
   padding: 8px 14px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 `;
 
 const StyledFormGrid = styled.div`
@@ -345,7 +356,8 @@ const StyledInlineComposer = styled.div`
 `;
 
 const StyledIndentedNode = styled(StyledFilterNode)<{ $level: 1 | 2 }>`
-  margin-left: ${({ $level }) => ($level === 2 ? themeCssVariables.spacing[4] : 0)};
+  margin-left: ${({ $level }) =>
+    $level === 2 ? themeCssVariables.spacing[4] : 0};
 `;
 
 const StyledTagButton = styled.button`
@@ -397,17 +409,15 @@ const StyledColumns = styled.div`
 const StyledCallout = styled.div`
   background: linear-gradient(
     180deg,
-    rgba(39, 106, 245, 0.06),
-    rgba(39, 106, 245, 0.02)
+    ${tradeCrmUiTheme.colors.surface},
+    ${tradeCrmUiTheme.colors.surfaceMuted}
   );
-  border: 1px solid rgba(39, 106, 245, 0.16);
+  border: 1px solid ${tradeCrmUiTheme.colors.focusRing};
   border-radius: ${tradeCrmUiTheme.radius.panel};
   padding: ${themeCssVariables.spacing[4]};
 `;
 
-const getBadgeTone = (
-  index: number,
-): TradeCrmCustomerTableBadgeTone =>
+const getBadgeTone = (index: number): TradeCrmCustomerTableBadgeTone =>
   index % 4 === 0
     ? 'green'
     : index % 4 === 1
@@ -520,13 +530,21 @@ const getCustomerConfigTabs = (activeSection: ConfigSection): PageHeaderTab[] =>
     to: getTradeCrmCustomerConfigPath(section),
   }));
 
+type CustomerSignalsCardsProps = {
+  companyTotalCount: number;
+  peopleTotalCount: number;
+  opportunityTotalCount: number;
+  totalTasksDueTodayCount: number;
+  materialAlignmentNotice: string;
+};
+
 const CustomerSignalsCards = ({
   companyTotalCount,
   peopleTotalCount,
   opportunityTotalCount,
   totalTasksDueTodayCount,
   materialAlignmentNotice,
-}: ReturnType<typeof useTradeCrmCustomerWorkspaceData>) => (
+}: CustomerSignalsCardsProps) => (
   <StyledMetricGrid>
     {[
       [
@@ -732,7 +750,9 @@ const getPublicPoolGroupLabels = (
 ) => {
   const labels = (publicPoolRecords ?? [])
     .map((record) => getTradeCrmPublicPoolGroupLabelForRecord(record))
-    .filter((label): label is string => typeof label === 'string' && label.length > 0);
+    .filter(
+      (label): label is string => typeof label === 'string' && label.length > 0,
+    );
 
   return labels.length > 0 ? [...new Set(labels)] : ['Default Public Pool'];
 };
@@ -741,14 +761,22 @@ const getImportDestinationValue = (destination: string) =>
   destination === 'public-pool' ? 'PUBLIC_POOL' : 'CUSTOMER_LIST';
 
 const escapeCsvCell = (value: number | string | null | undefined) => {
-  const normalizedValue = value === null || value === undefined ? '' : String(value);
+  const normalizedValue =
+    value === null || value === undefined ? '' : String(value);
 
   return `"${normalizedValue.replace(/"/g, '""')}"`;
 };
 
 const getImportResultCsvContent = (result: TradeCrmCustomerImportJobResult) =>
   [
-    ['rowNumber', 'rowLabel', 'companyName', 'contactEmail', 'status', 'message'],
+    [
+      'rowNumber',
+      'rowLabel',
+      'companyName',
+      'contactEmail',
+      'status',
+      'message',
+    ],
     ...result.rows.map((row) => [
       row.rowNumber,
       row.rowLabel,
@@ -784,7 +812,9 @@ const useTradeCrmCustomerRuntimeConfig = (
     customerGroupSummary: workspaceData.customerGroupSummary,
     customerTagSummary: workspaceData.customerTagSummary,
     customerSourceSummary: workspaceData.customerSourceSummary,
-    publicPoolGroupLabels: getPublicPoolGroupLabels(workspaceData.publicPoolRecords),
+    publicPoolGroupLabels: getPublicPoolGroupLabels(
+      workspaceData.publicPoolRecords,
+    ),
   });
   const publicPoolGroupLabels = useMemo(
     () =>
@@ -795,7 +825,10 @@ const useTradeCrmCustomerRuntimeConfig = (
         (label, index, labels) =>
           label.length > 0 && labels.indexOf(label) === index,
       ),
-    [configDraft.draft.publicPoolRule.publicPoolGroup, workspaceData.publicPoolRecords],
+    [
+      configDraft.draft.publicPoolRule.publicPoolGroup,
+      workspaceData.publicPoolRecords,
+    ],
   );
 
   return {
@@ -820,16 +853,16 @@ const renderConfigContent = ({
   onGroupParentIdChange,
   newTagLabels,
   onNewTagLabelChange,
-    newSourceLabel,
-    onNewSourceLabelChange,
-    importFileName,
-    onImportFileNameChange,
-    importJobs,
-    publicPoolGroupLabels,
-  }: {
-    activeSection: ConfigSection;
-    workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>;
-    configDraft: ReturnType<typeof useTradeCrmCustomerConfigDraft>;
+  newSourceLabel,
+  onNewSourceLabelChange,
+  importFileName,
+  onImportFileNameChange,
+  importJobs,
+  publicPoolGroupLabels,
+}: {
+  activeSection: ConfigSection;
+  workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>;
+  configDraft: ReturnType<typeof useTradeCrmCustomerConfigDraft>;
   newGroupLabel: string;
   onNewGroupLabelChange: (value: string) => void;
   groupParentId: string | null;
@@ -838,14 +871,14 @@ const renderConfigContent = ({
   onNewTagLabelChange: (
     scope: keyof CustomerConfigTagInputState,
     value: string,
-    ) => void;
-    newSourceLabel: string;
-    onNewSourceLabelChange: (value: string) => void;
-    importFileName: string;
-    onImportFileNameChange: (value: string) => void;
-    importJobs: ReturnType<typeof useTradeCrmCustomerImportJobs>;
-    publicPoolGroupLabels: string[];
-  }) => {
+  ) => void;
+  newSourceLabel: string;
+  onNewSourceLabelChange: (value: string) => void;
+  importFileName: string;
+  onImportFileNameChange: (value: string) => void;
+  importJobs: ReturnType<typeof useTradeCrmCustomerImportJobs>;
+  publicPoolGroupLabels: string[];
+}) => {
   if (activeSection === 'public-pool-rules') {
     return (
       <StyledSplitGrid>
@@ -858,7 +891,10 @@ const renderConfigContent = ({
                 <StyledTextInput
                   value={configDraft.draft.publicPoolRule.ruleName}
                   onChange={(event) =>
-                    configDraft.setPublicPoolRule('ruleName', event.target.value)
+                    configDraft.setPublicPoolRule(
+                      'ruleName',
+                      event.target.value,
+                    )
                   }
                 />
               </StyledField>
@@ -881,7 +917,10 @@ const renderConfigContent = ({
                 <StyledSelect
                   value={configDraft.draft.publicPoolRule.publicPoolGroup}
                   onChange={(event) =>
-                    configDraft.setPublicPoolRule('publicPoolGroup', event.target.value)
+                    configDraft.setPublicPoolRule(
+                      'publicPoolGroup',
+                      event.target.value,
+                    )
                   }
                 >
                   {publicPoolGroupLabels.map((label) => (
@@ -893,8 +932,8 @@ const renderConfigContent = ({
               </StyledField>
             </StyledFormGrid>
             <StyledPanelDescription>
-              Choose which customer stages should be eligible for nightly recycle into
-              the public pool.
+              Choose which customer stages should be eligible for nightly
+              recycle into the public pool.
             </StyledPanelDescription>
             <StyledTokenWrap>
               {(workspaceData.customerStageSummary.length > 0
@@ -929,8 +968,8 @@ const renderConfigContent = ({
                   : 'Owner Reminder Disabled'}
               </StyledFilterButton>
               <StyledConfigNote>
-                {workspaceData.publicPoolRecords.length} current public-pool records stay
-                visible in the audit lane after auto-move.
+                {workspaceData.publicPoolRecords.length} current public-pool
+                records stay visible in the audit lane after auto-move.
               </StyledConfigNote>
             </StyledInlineComposer>
           </StyledPanel>
@@ -975,8 +1014,8 @@ const renderConfigContent = ({
               </StyledControlButton>
             </StyledActionButtons>
             <StyledConfigNote>
-              Runs the saved public-pool rules against current customer records and
-              refreshes both private and public-pool lists after execution.
+              Runs the saved public-pool rules against current customer records
+              and refreshes both private and public-pool lists after execution.
             </StyledConfigNote>
           </StyledPanel>
         </StyledStack>
@@ -985,16 +1024,27 @@ const renderConfigContent = ({
   }
 
   if (activeSection === 'groups') {
-    const rootGroups = configDraft.draft.groups.filter((group) => group.level === 1);
+    const rootGroups = configDraft.draft.groups.filter(
+      (group) => group.level === 1,
+    );
+    const newGroupValidationMessage = configDraft.getNewGroupValidationMessage(
+      newGroupLabel,
+      groupParentId,
+    );
 
     return (
       <StyledSplitGrid>
         <StyledPanel>
           <StyledPanelTitle>Group Tree Editor</StyledPanelTitle>
           <StyledPanelDescription>
-            Add new root or second-level customer groups, then reorder them before the
-            backend config mutation is wired in.
+            Add new root or second-level customer groups, then reorder them
+            before saving. The hierarchy is persisted back into workspace
+            customer-group records.
           </StyledPanelDescription>
+          <StyledConfigNote>
+            Root groups move as a full branch. Second-level groups only reorder
+            inside the same parent.
+          </StyledConfigNote>
           <StyledInlineComposer>
             <StyledTextInput
               value={newGroupLabel}
@@ -1018,23 +1068,36 @@ const renderConfigContent = ({
             </StyledSelect>
             <StyledControlButton
               type="button"
+              disabled={newGroupValidationMessage !== null}
               onClick={() => {
                 configDraft.addGroup(newGroupLabel, groupParentId);
                 onNewGroupLabelChange('');
+                onGroupParentIdChange(null);
               }}
             >
               Add Group
             </StyledControlButton>
           </StyledInlineComposer>
+          <StyledConfigNote>
+            {newGroupValidationMessage ??
+              'Use root groups for top-level segments and attach level-two groups under one root.'}
+          </StyledConfigNote>
         </StyledPanel>
         <StyledStack>
           <StyledPanel>
             <StyledPanelTitle>Configured Groups</StyledPanelTitle>
+            {configDraft.groupValidationMessages.length > 0 ? (
+              <StyledConfigNote>
+                {configDraft.groupValidationMessages.join(' ')}
+              </StyledConfigNote>
+            ) : null}
             <StyledFilterList>
               {configDraft.draft.groups.map((group) => (
                 <StyledIndentedNode key={group.id} $level={group.level}>
                   <StyledInlineComposer>
-                    <StyledNodeCount>{group.level === 1 ? 'L1' : 'L2'}</StyledNodeCount>
+                    <StyledNodeCount>
+                      {group.level === 1 ? 'L1' : 'L2'}
+                    </StyledNodeCount>
                     <StyledTextInput
                       value={group.label}
                       onChange={(event) =>
@@ -1045,15 +1108,24 @@ const renderConfigContent = ({
                   <StyledInlineComposer>
                     <StyledControlButton
                       type="button"
+                      disabled={!configDraft.canMoveGroup(group.id, 'up')}
                       onClick={() => configDraft.moveGroup(group.id, 'up')}
                     >
                       Up
                     </StyledControlButton>
                     <StyledControlButton
                       type="button"
+                      disabled={!configDraft.canMoveGroup(group.id, 'down')}
                       onClick={() => configDraft.moveGroup(group.id, 'down')}
                     >
                       Down
+                    </StyledControlButton>
+                    <StyledControlButton
+                      type="button"
+                      $tone="danger"
+                      onClick={() => configDraft.removeGroup(group.id)}
+                    >
+                      Remove
                     </StyledControlButton>
                   </StyledInlineComposer>
                 </StyledIndentedNode>
@@ -1076,22 +1148,22 @@ const renderConfigContent = ({
           <StyledPanel key={scope}>
             <StyledPanelTitle>{title}</StyledPanelTitle>
             <StyledTokenWrap>
-              {configDraft.draft.tags[scope as keyof CustomerConfigTagInputState].map(
-                (tag) => (
-                  <StyledTagButton
-                    key={tag}
-                    type="button"
-                    onClick={() =>
-                      configDraft.removeTag(
-                        scope as keyof CustomerConfigTagInputState,
-                        tag,
-                      )
-                    }
-                  >
-                    {tag} ×
-                  </StyledTagButton>
-                ),
-              )}
+              {configDraft.draft.tags[
+                scope as keyof CustomerConfigTagInputState
+              ].map((tag) => (
+                <StyledTagButton
+                  key={tag}
+                  type="button"
+                  onClick={() =>
+                    configDraft.removeTag(
+                      scope as keyof CustomerConfigTagInputState,
+                      tag,
+                    )
+                  }
+                >
+                  {tag} ×
+                </StyledTagButton>
+              ))}
             </StyledTokenWrap>
             <StyledInlineComposer>
               <StyledTextInput
@@ -1106,6 +1178,12 @@ const renderConfigContent = ({
               />
               <StyledControlButton
                 type="button"
+                disabled={
+                  configDraft.getNewTagValidationMessage(
+                    scope as keyof CustomerConfigTagInputState,
+                    newTagLabels[scope as keyof CustomerConfigTagInputState],
+                  ) !== null
+                }
                 onClick={() => {
                   configDraft.addTag(
                     scope as keyof CustomerConfigTagInputState,
@@ -1120,6 +1198,16 @@ const renderConfigContent = ({
                 Add
               </StyledControlButton>
             </StyledInlineComposer>
+            <StyledConfigNote>
+              {configDraft.getNewTagValidationMessage(
+                scope as keyof CustomerConfigTagInputState,
+                newTagLabels[scope as keyof CustomerConfigTagInputState],
+              ) ??
+                configDraft.tagValidationMessages[
+                  scope as keyof CustomerConfigTagInputState
+                ][0] ??
+                'Keep tag labels unique inside each scope so list filters and detail tags stay stable.'}
+            </StyledConfigNote>
           </StyledPanel>
         ))}
       </StyledColumns>
@@ -1131,8 +1219,8 @@ const renderConfigContent = ({
       <StyledPanel>
         <StyledPanelTitle>Source Dictionary</StyledPanelTitle>
         <StyledPanelDescription>
-          Keep the same source dictionary shared by leads, customers, dedup, and import
-          mapping.
+          Keep the same source dictionary shared by leads, customers, dedup, and
+          import mapping.
         </StyledPanelDescription>
         <StyledInlineComposer>
           <StyledTextInput
@@ -1142,6 +1230,9 @@ const renderConfigContent = ({
           />
           <StyledControlButton
             type="button"
+            disabled={
+              configDraft.getNewSourceValidationMessage(newSourceLabel) !== null
+            }
             onClick={() => {
               configDraft.addSource(newSourceLabel);
               onNewSourceLabelChange('');
@@ -1150,6 +1241,11 @@ const renderConfigContent = ({
             Add Source
           </StyledControlButton>
         </StyledInlineComposer>
+        <StyledConfigNote>
+          {configDraft.getNewSourceValidationMessage(newSourceLabel) ??
+            configDraft.sourceValidationMessages[0] ??
+            'Source labels are shared across leads, customers, dedup, and import mapping.'}
+        </StyledConfigNote>
         <StyledFilterList>
           {configDraft.draft.sources.map((source) => (
             <StyledFilterNode key={source}>
@@ -1182,8 +1278,8 @@ const renderConfigContent = ({
         <StyledCallout>
           <StyledPanelTitle>Matching Weight Total</StyledPanelTitle>
           <StyledPanelDescription>
-            Keep the combined weight close to 100 so manual dedup and import dedup stay
-            predictable.
+            Keep the combined weight close to 100 so manual dedup and import
+            dedup stay predictable.
           </StyledPanelDescription>
           <StyledMetricValue>{totalWeight}%</StyledMetricValue>
         </StyledCallout>
@@ -1219,7 +1315,8 @@ const renderConfigContent = ({
         <StyledPanelTitle>Import Defaults</StyledPanelTitle>
         <StyledPanelDescription>
           Save the destination and update strategy here so import setup stays
-          consistent across customer settings and later import runs.
+          consistent across customer settings and every import job created from
+          this workspace.
         </StyledPanelDescription>
         <StyledInlineComposer>
           <StyledTextInput
@@ -1254,14 +1351,18 @@ const renderConfigContent = ({
         <StyledInlineComposer>
           <StyledFilterButton
             type="button"
-            $active={configDraft.draft.importConfig.destination === 'customer-list'}
+            $active={
+              configDraft.draft.importConfig.destination === 'customer-list'
+            }
             onClick={() => configDraft.setImportDestination('customer-list')}
           >
             Customer List
           </StyledFilterButton>
           <StyledFilterButton
             type="button"
-            $active={configDraft.draft.importConfig.destination === 'public-pool'}
+            $active={
+              configDraft.draft.importConfig.destination === 'public-pool'
+            }
             onClick={() => configDraft.setImportDestination('public-pool')}
           >
             Public Pool
@@ -1282,143 +1383,154 @@ const renderConfigContent = ({
         </StyledInlineComposer>
         <StyledStepList>
           {[
-            ['1. Upload file', 'Excel, CSV, and template-driven imports enter the customer module here.'],
-            ['2. Match fields', 'Map customer, contact, source, and public-pool fields before commit.'],
-            ['3. Review results', 'Keep success counts, failed rows, and downloadable logs together.'],
+            [
+              '1. Upload file',
+              'Excel, CSV, and template-driven imports enter the customer module here.',
+            ],
+            [
+              '2. Match fields',
+              'Map customer, contact, source, and public-pool fields before commit.',
+            ],
+            [
+              '3. Review results',
+              'Keep success counts, failed rows, and downloadable logs together.',
+            ],
           ].map(([title, text]) => (
             <StyledStepItem key={title}>
               <StyledStepTitle>{title}</StyledStepTitle>
               <StyledStepText>{text}</StyledStepText>
             </StyledStepItem>
           ))}
-          </StyledStepList>
-        </StyledPanel>
-        <StyledPanel>
-          <StyledPanelTitle>Import Job Records</StyledPanelTitle>
-          <StyledPanelDescription>
-            {importJobs.loading
-              ? 'Loading import jobs...'
-              : `${importJobs.totalCount} persisted import job(s) in this workspace.`}
-          </StyledPanelDescription>
-          <StyledFilterList>
-              {importJobs.jobs.slice(0, 6).map((job) => (
-                <StyledFilterNode key={job.id}>
-                  <StyledStack>
-                    <StyledNodeLabel>{job.fileName}</StyledNodeLabel>
-                    <StyledNodeCount>
-                      {job.destination} / {job.status} / success {job.successCount} /
-                      failed {job.failedCount}
-                    </StyledNodeCount>
-                  </StyledStack>
-                  <StyledActionButtons>
-                    <StyledControlButton
-                      type="button"
-                      disabled={importJobs.saveMappingLoading}
-                      onClick={() => {
-                        void importJobs
-                          .saveCustomerImportMapping({
-                            jobId: job.id,
-                            mappedFields:
-                              configDraft.draft.importConfig.selectedFields,
-                          })
-                          .catch(() => undefined);
-                      }}
-                    >
-                      {importJobs.saveMappingLoading ? 'Saving...' : 'Save Mapping'}
-                    </StyledControlButton>
-                    <StyledControlButton
-                      type="button"
-                      $tone="primary"
-                      disabled={importJobs.commitLoading}
-                      onClick={() => {
-                        void importJobs
-                          .commitCustomerImportJob({
-                            jobId: job.id,
-                          })
-                          .catch(() => undefined);
-                      }}
-                    >
-                      {importJobs.commitLoading ? 'Committing...' : 'Commit'}
-                    </StyledControlButton>
-                    <StyledControlButton
-                      type="button"
-                      disabled={importJobs.resultLoading}
-                      onClick={() => {
-                        void importJobs
-                          .getCustomerImportJobResult({
-                            jobId: job.id,
-                          })
-                          .catch(() => undefined);
-                      }}
-                    >
-                      {importJobs.resultLoading ? 'Loading...' : 'View Result'}
-                    </StyledControlButton>
-                  </StyledActionButtons>
-                  <StyledNodeCount>
-                    {job.executedAt?.slice(0, 16).replace('T', ' ') ?? '--'}
-                  </StyledNodeCount>
-                </StyledFilterNode>
-              ))}
-            {!importJobs.loading && importJobs.jobs.length === 0 ? (
-              <StyledConfigNote>
-                No import job exists yet. Create one above to persist the upload
-                setup before field mapping and commit are implemented.
-              </StyledConfigNote>
-            ) : null}
-          </StyledFilterList>
-          {importJobs.activeResult ? (
-            <StyledPanel>
-              <StyledPanelTitle>
-                Import Result: {importJobs.activeResult.job?.fileName ?? 'Unknown job'}
-              </StyledPanelTitle>
-              <StyledPanelDescription>
-                {importJobs.activeResult.job
-                  ? `Success ${importJobs.activeResult.job.successCount}, failed ${importJobs.activeResult.job.failedCount}, status ${importJobs.activeResult.job.status}.`
-                  : 'The selected import job is no longer available.'}
-              </StyledPanelDescription>
+        </StyledStepList>
+      </StyledPanel>
+      <StyledPanel>
+        <StyledPanelTitle>Import Job Records</StyledPanelTitle>
+        <StyledPanelDescription>
+          {importJobs.loading
+            ? 'Loading import jobs...'
+            : `${importJobs.totalCount} persisted import job(s) in this workspace.`}
+        </StyledPanelDescription>
+        <StyledFilterList>
+          {importJobs.jobs.slice(0, 6).map((job) => (
+            <StyledFilterNode key={job.id}>
+              <StyledStack>
+                <StyledNodeLabel>{job.fileName}</StyledNodeLabel>
+                <StyledNodeCount>
+                  {job.destination} / {job.status} / success {job.successCount}{' '}
+                  / failed {job.failedCount}
+                </StyledNodeCount>
+              </StyledStack>
               <StyledActionButtons>
                 <StyledControlButton
                   type="button"
-                  disabled={importJobs.activeResult.rows.length === 0}
+                  disabled={importJobs.saveMappingLoading}
                   onClick={() => {
-                    if (!importJobs.activeResult) {
-                      return;
-                    }
-
-                    downloadImportResultCsv(importJobs.activeResult);
+                    void importJobs
+                      .saveCustomerImportMapping({
+                        jobId: job.id,
+                        mappedFields:
+                          configDraft.draft.importConfig.selectedFields,
+                      })
+                      .catch(() => undefined);
                   }}
                 >
-                  Download Result CSV
+                  {importJobs.saveMappingLoading ? 'Saving...' : 'Save Mapping'}
+                </StyledControlButton>
+                <StyledControlButton
+                  type="button"
+                  $tone="primary"
+                  disabled={importJobs.commitLoading}
+                  onClick={() => {
+                    void importJobs
+                      .commitCustomerImportJob({
+                        jobId: job.id,
+                      })
+                      .catch(() => undefined);
+                  }}
+                >
+                  {importJobs.commitLoading ? 'Committing...' : 'Commit'}
+                </StyledControlButton>
+                <StyledControlButton
+                  type="button"
+                  disabled={importJobs.resultLoading}
+                  onClick={() => {
+                    void importJobs
+                      .getCustomerImportJobResult({
+                        jobId: job.id,
+                      })
+                      .catch(() => undefined);
+                  }}
+                >
+                  {importJobs.resultLoading ? 'Loading...' : 'View Result'}
                 </StyledControlButton>
               </StyledActionButtons>
-              <StyledFilterList>
-                {importJobs.activeResult.rows.map((row) => (
-                  <StyledFilterNode key={row.id}>
-                    <StyledStack>
-                      <StyledNodeLabel>
-                        #{row.rowNumber} {row.rowLabel}
-                      </StyledNodeLabel>
-                      <StyledNodeCount>
-                        {row.companyName ?? 'Company pending'} /{' '}
-                        {row.contactEmail ?? 'No contact email'} / {row.status}
-                      </StyledNodeCount>
-                    </StyledStack>
-                    <StyledNodeCount>
-                      {row.errorMessage ?? 'No row issue'}
-                    </StyledNodeCount>
-                  </StyledFilterNode>
-                ))}
-                {importJobs.activeResult.rows.length === 0 ? (
-                  <StyledConfigNote>
-                    No row-level import result has been recorded for this job yet.
-                  </StyledConfigNote>
-                ) : null}
-              </StyledFilterList>
-            </StyledPanel>
+              <StyledNodeCount>
+                {job.executedAt?.slice(0, 16).replace('T', ' ') ?? '--'}
+              </StyledNodeCount>
+            </StyledFilterNode>
+          ))}
+          {!importJobs.loading && importJobs.jobs.length === 0 ? (
+            <StyledConfigNote>
+              No import job exists yet. Create one above to start a persisted
+              import flow, then save mapping, commit, and review the row-level
+              result here.
+            </StyledConfigNote>
           ) : null}
-        </StyledPanel>
-        <StyledPanel>
-          <StyledPanelTitle>Template Fields</StyledPanelTitle>
+        </StyledFilterList>
+        {importJobs.activeResult ? (
+          <StyledPanel>
+            <StyledPanelTitle>
+              Import Result:{' '}
+              {importJobs.activeResult.job?.fileName ?? 'Unknown job'}
+            </StyledPanelTitle>
+            <StyledPanelDescription>
+              {importJobs.activeResult.job
+                ? `Success ${importJobs.activeResult.job.successCount}, failed ${importJobs.activeResult.job.failedCount}, status ${importJobs.activeResult.job.status}.`
+                : 'The selected import job is no longer available.'}
+            </StyledPanelDescription>
+            <StyledActionButtons>
+              <StyledControlButton
+                type="button"
+                disabled={importJobs.activeResult.rows.length === 0}
+                onClick={() => {
+                  if (!importJobs.activeResult) {
+                    return;
+                  }
+
+                  downloadImportResultCsv(importJobs.activeResult);
+                }}
+              >
+                Download Result CSV
+              </StyledControlButton>
+            </StyledActionButtons>
+            <StyledFilterList>
+              {importJobs.activeResult.rows.map((row) => (
+                <StyledFilterNode key={row.id}>
+                  <StyledStack>
+                    <StyledNodeLabel>
+                      #{row.rowNumber} {row.rowLabel}
+                    </StyledNodeLabel>
+                    <StyledNodeCount>
+                      {row.companyName ?? 'Company pending'} /{' '}
+                      {row.contactEmail ?? 'No contact email'} / {row.status}
+                    </StyledNodeCount>
+                  </StyledStack>
+                  <StyledNodeCount>
+                    {row.errorMessage ?? 'No row issue'}
+                  </StyledNodeCount>
+                </StyledFilterNode>
+              ))}
+              {importJobs.activeResult.rows.length === 0 ? (
+                <StyledConfigNote>
+                  No row-level import result has been recorded for this job yet.
+                </StyledConfigNote>
+              ) : null}
+            </StyledFilterList>
+          </StyledPanel>
+        ) : null}
+      </StyledPanel>
+      <StyledPanel>
+        <StyledPanelTitle>Template Fields</StyledPanelTitle>
         <StyledTokenWrap>
           {configDraft.draft.importConfig.selectedFields.map((field) => (
             <StyledTagButton
@@ -1431,8 +1543,8 @@ const renderConfigContent = ({
           ))}
         </StyledTokenWrap>
         <StyledPanelDescription>
-          Click a field to remove it from the default import selection. Add it back from
-          the recommended field list below.
+          Click a field to remove it from the default import selection. Add it
+          back from the recommended field list below.
         </StyledPanelDescription>
         <StyledTokenWrap>
           {[
@@ -1456,7 +1568,8 @@ const renderConfigContent = ({
             'Gender',
           ]
             .filter(
-              (field) => !configDraft.draft.importConfig.selectedFields.includes(field),
+              (field) =>
+                !configDraft.draft.importConfig.selectedFields.includes(field),
             )
             .map((field) => (
               <StyledFilterButton
@@ -1515,7 +1628,8 @@ const TradeCrmCustomerListWorkspace = () => {
     .slice(0, 6)
     .map((record) => record.id);
   const canMoveVisibleCustomersToPublicPool =
-    visibleCustomerIds.length > 0 && !workspaceData.moveCustomersToPublicPoolLoading;
+    visibleCustomerIds.length > 0 &&
+    !workspaceData.moveCustomersToPublicPoolLoading;
   const canCreateCustomer =
     newCustomerName.trim().length > 0 &&
     !customerRecordMutations.createCustomerLoading;
@@ -1573,7 +1687,13 @@ const TradeCrmCustomerListWorkspace = () => {
         pathname: tradeCrmRouteMap.customers,
       }}
     >
-      <CustomerSignalsCards {...workspaceData} />
+      <CustomerSignalsCards
+        companyTotalCount={workspaceData.companyTotalCount}
+        peopleTotalCount={workspaceData.peopleTotalCount}
+        opportunityTotalCount={workspaceData.opportunityTotalCount}
+        totalTasksDueTodayCount={workspaceData.totalTasksDueTodayCount}
+        materialAlignmentNotice={workspaceData.materialAlignmentNotice}
+      />
       <StyledToolbar>
         <StyledSearchInput
           value={filters.searchTerm}
@@ -1605,8 +1725,7 @@ const TradeCrmCustomerListWorkspace = () => {
             onClick={() =>
               setFilters((currentFilters) => ({
                 ...currentFilters,
-                stage:
-                  currentFilters.stage === item.label ? null : item.label,
+                stage: currentFilters.stage === item.label ? null : item.label,
               }))
             }
           >
@@ -1645,119 +1764,121 @@ const TradeCrmCustomerListWorkspace = () => {
           </StyledFilterButton>
         ))}
         <StyledFilterSummary>
-          {filteredCompanyRecords.length} companies / {filteredPeopleRecords.length}{' '}
-          contacts visible
-          </StyledFilterSummary>
-        </StyledToolbar>
-        <StyledActionBar>
-          <StyledActionMeta>
-            <span>Create company customer</span>
-            <span>
-              Company is the formal customer master; contacts stay subordinate and can be
-              added from the detail workspace.
-            </span>
-          </StyledActionMeta>
-          <StyledActionButtons>
-            <StyledTextInput
-              value={newCustomerName}
-              onChange={(event) => setNewCustomerName(event.target.value)}
-              placeholder="Company name"
-            />
-            <StyledControlButton
-              type="button"
-              $tone="primary"
-              disabled={!canCreateCustomer}
-              onClick={() => {
-                void customerRecordMutations
-                  .createCustomer({
-                    name: newCustomerName,
-                  })
-                  .then((record) => {
-                    setNewCustomerName('');
+          {filteredCompanyRecords.length} companies /{' '}
+          {filteredPeopleRecords.length} contacts visible
+        </StyledFilterSummary>
+      </StyledToolbar>
+      <StyledActionBar>
+        <StyledActionMeta>
+          <span>Create company customer</span>
+          <span>
+            Company is the formal customer master; contacts stay subordinate and
+            can be added from the detail workspace.
+          </span>
+        </StyledActionMeta>
+        <StyledActionButtons>
+          <StyledTextInput
+            value={newCustomerName}
+            onChange={(event) => setNewCustomerName(event.target.value)}
+            placeholder="Company name"
+          />
+          <StyledControlButton
+            type="button"
+            $tone="primary"
+            disabled={!canCreateCustomer}
+            onClick={() => {
+              void customerRecordMutations
+                .createCustomer({
+                  name: newCustomerName,
+                })
+                .then((record) => {
+                  setNewCustomerName('');
 
-                    if (record?.id) {
-                      navigate(getTradeCrmCustomerDetailPath(record.id));
-                    }
-                  })
-                  .catch(() => undefined);
-              }}
-            >
-              {customerRecordMutations.createCustomerLoading
-                ? 'Creating...'
-                : 'Create Customer'}
-            </StyledControlButton>
-          </StyledActionButtons>
-        </StyledActionBar>
-        <StyledActionBar>
-          <StyledActionMeta>
-            <span>Convert lead to customer</span>
-            <span>
-              Creates the company master and first contact from a lead, then writes the
-              conversion into customer timeline and operation history.
-            </span>
-          </StyledActionMeta>
-          <StyledActionButtons>
-            <StyledTextInput
-              value={leadIdToConvert}
-              onChange={(event) => setLeadIdToConvert(event.target.value)}
-              placeholder="Lead record ID"
-            />
-            <StyledControlButton
-              type="button"
-              $tone="primary"
-              disabled={!canConvertLead}
-              onClick={() => {
-                void leadConversion
-                  .convertLeadToCustomer(leadIdToConvert.trim())
-                  .then((result) => {
-                    setLeadIdToConvert('');
+                  if (record?.id) {
+                    navigate(getTradeCrmCustomerDetailPath(record.id));
+                  }
+                })
+                .catch(() => undefined);
+            }}
+          >
+            {customerRecordMutations.createCustomerLoading
+              ? 'Creating...'
+              : 'Create Customer'}
+          </StyledControlButton>
+        </StyledActionButtons>
+      </StyledActionBar>
+      <StyledActionBar>
+        <StyledActionMeta>
+          <span>Convert lead to customer</span>
+          <span>
+            Creates the company master and first contact from a lead, then
+            writes the conversion into customer timeline and operation history.
+          </span>
+        </StyledActionMeta>
+        <StyledActionButtons>
+          <StyledTextInput
+            value={leadIdToConvert}
+            onChange={(event) => setLeadIdToConvert(event.target.value)}
+            placeholder="Lead record ID"
+          />
+          <StyledControlButton
+            type="button"
+            $tone="primary"
+            disabled={!canConvertLead}
+            onClick={() => {
+              void leadConversion
+                .convertLeadToCustomer(leadIdToConvert.trim())
+                .then((result) => {
+                  setLeadIdToConvert('');
 
-                    if (result?.customerId) {
-                      navigate(getTradeCrmCustomerDetailPath(result.customerId));
-                    }
-                  })
-                  .catch(() => undefined);
-              }}
-            >
-              {leadConversion.convertLeadToCustomerLoading
-                ? 'Converting...'
-                : 'Convert Lead'}
-            </StyledControlButton>
-          </StyledActionButtons>
-        </StyledActionBar>
-        <StyledActionBar>
-          <StyledActionMeta>
-            <span>Batch public-pool execution</span>
-            <span>
-              Move the first {visibleCustomerIds.length} visible customer(s) into the
-              configured public-pool group and preserve owner audit fields.
-            </span>
-          </StyledActionMeta>
-          <StyledActionButtons>
-            <StyledControlButton
-              type="button"
-              $tone="danger"
-              disabled={!canMoveVisibleCustomersToPublicPool}
-              onClick={() => {
-                void workspaceData.moveCustomersToPublicPool({
-                  customerIds: visibleCustomerIds,
-                  publicPoolGroup: configDraft.draft.publicPoolRule.publicPoolGroup,
-                  reason: 'Manual public-pool move from customer list',
-                });
-              }}
-            >
-              {workspaceData.moveCustomersToPublicPoolLoading
-                ? 'Moving...'
-                : 'Move Visible To Public Pool'}
-            </StyledControlButton>
-          </StyledActionButtons>
-        </StyledActionBar>
-        <StyledSplitGrid>
+                  if (result?.customerId) {
+                    navigate(getTradeCrmCustomerDetailPath(result.customerId));
+                  }
+                })
+                .catch(() => undefined);
+            }}
+          >
+            {leadConversion.convertLeadToCustomerLoading
+              ? 'Converting...'
+              : 'Convert Lead'}
+          </StyledControlButton>
+        </StyledActionButtons>
+      </StyledActionBar>
+      <StyledActionBar>
+        <StyledActionMeta>
+          <span>Batch public-pool execution</span>
+          <span>
+            Move the first {visibleCustomerIds.length} visible customer(s) into
+            the configured public-pool group and preserve owner audit fields.
+          </span>
+        </StyledActionMeta>
+        <StyledActionButtons>
+          <StyledControlButton
+            type="button"
+            $tone="danger"
+            disabled={!canMoveVisibleCustomersToPublicPool}
+            onClick={() => {
+              void workspaceData.moveCustomersToPublicPool({
+                customerIds: visibleCustomerIds,
+                publicPoolGroup:
+                  configDraft.draft.publicPoolRule.publicPoolGroup,
+                reason: 'Manual public-pool move from customer list',
+              });
+            }}
+          >
+            {workspaceData.moveCustomersToPublicPoolLoading
+              ? 'Moving...'
+              : 'Move Visible To Public Pool'}
+          </StyledControlButton>
+        </StyledActionButtons>
+      </StyledActionBar>
+      <StyledSplitGrid>
         <StyledStack>
           <StyledPanel>
             <StyledPanelTitle>Customer Segments</StyledPanelTitle>
             <StyledPanelDescription>
-              Mirror the OKKI left-tree pattern with counts that sellers can use for quick slicing.
+              Mirror the OKKI left-tree pattern with counts that sellers can use
+              for quick slicing.
             </StyledPanelDescription>
             <StyledFilterList>
               {[
@@ -1792,14 +1913,23 @@ const TradeCrmCustomerListWorkspace = () => {
           <StyledPanel>
             <StyledPanelTitle>Workspace Views</StyledPanelTitle>
             <StyledPanelDescription>
-              Jump into the seeded Trade CRM company views when sellers need the native
-              workspace table instead of the customer shell.
+              Jump into the seeded Trade CRM company views when sellers need the
+              native workspace table instead of the customer shell.
             </StyledPanelDescription>
             <StyledQuickLinkList>
               {[
-                ['Customers (Trade CRM)', workspaceData.customerWorkspaceViewLink],
-                ['Public Pool Customers', workspaceData.publicPoolWorkspaceViewLink],
-                ['Customers Need Follow-up', workspaceData.followUpWorkspaceViewLink],
+                [
+                  'Customers (Trade CRM)',
+                  workspaceData.customerWorkspaceViewLink,
+                ],
+                [
+                  'Public Pool Customers',
+                  workspaceData.publicPoolWorkspaceViewLink,
+                ],
+                [
+                  'Customers Need Follow-up',
+                  workspaceData.followUpWorkspaceViewLink,
+                ],
               ].map(([label, to]) => (
                 <StyledQuickLink key={label} to={to as string}>
                   <StyledNodeLabel>{label as string}</StyledNodeLabel>
@@ -1813,7 +1943,13 @@ const TradeCrmCustomerListWorkspace = () => {
           <TradeCrmCustomerTable
             title="Customer List"
             description="Keep company, owner, region, segmentation, and next action on the same row so customer follow-up decisions are visible at list level."
-            columns={['Company', 'Owner', 'Region', 'Tags & Score', 'Latest Action']}
+            columns={[
+              'Company',
+              'Owner',
+              'Region',
+              'Tags & Score',
+              'Latest Action',
+            ]}
             rows={buildCompanyRows(filteredCompanyRecords)}
             emptyState="No customer companies are available yet."
           />
@@ -1821,16 +1957,18 @@ const TradeCrmCustomerListWorkspace = () => {
             <StyledPanelTitle>Contact Coverage</StyledPanelTitle>
             <StyledPanelDescription>
               Contacts stay subordinate to company customers in the first formal
-              release, but the workspace still keeps visibility on reachable people and
-              follow-up density.
+              release, but the workspace still keeps visibility on reachable
+              people and follow-up density.
             </StyledPanelDescription>
             <StyledMetricGrid>
               <StyledMetricCard>
                 <StyledMetricLabel>Visible contacts</StyledMetricLabel>
-                <StyledMetricValue>{filteredPeopleRecords.length}</StyledMetricValue>
+                <StyledMetricValue>
+                  {filteredPeopleRecords.length}
+                </StyledMetricValue>
                 <StyledMetricHint>
-                  Person records remain available as customer contacts, not as a parallel
-                  customer master.
+                  Person records remain available as customer contacts, not as a
+                  parallel customer master.
                 </StyledMetricHint>
               </StyledMetricCard>
               <StyledMetricCard>
@@ -1838,13 +1976,14 @@ const TradeCrmCustomerListWorkspace = () => {
                 <StyledMetricValue>
                   {
                     filteredCompanyRecords.filter(
-                      (record) => getTradeCrmCustomerTagsForRecord({ record }).length > 0,
+                      (record) =>
+                        getTradeCrmCustomerTagsForRecord({ record }).length > 0,
                     ).length
                   }
                 </StyledMetricValue>
                 <StyledMetricHint>
-                  Company-level segmentation stays in the primary list and config
-                  center.
+                  Company-level segmentation stays in the primary list and
+                  config center.
                 </StyledMetricHint>
               </StyledMetricCard>
             </StyledMetricGrid>
@@ -1877,7 +2016,8 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
     [publicPoolBaseRecords, searchTerm],
   );
   const publicPoolStageScopeLabel =
-    configDraft.draft.publicPoolRule.scopeStages.join(', ') || 'No stage scope selected';
+    configDraft.draft.publicPoolRule.scopeStages.join(', ') ||
+    'No stage scope selected';
   const firstClaimablePublicPoolRecord = filteredPublicPoolRecords[0] ?? null;
   const visiblePublicPoolCustomerIds = filteredPublicPoolRecords
     .slice(0, 20)
@@ -1903,7 +2043,9 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
           }),
         },
         {
-          primary: getTradeCrmCustomerCountryLabel(filteredPublicPoolRecords?.[index]),
+          primary: getTradeCrmCustomerCountryLabel(
+            filteredPublicPoolRecords?.[index],
+          ),
           secondary: getTradeCrmPublicPoolGroupLabelForRecord(
             filteredPublicPoolRecords?.[index],
           ),
@@ -1934,7 +2076,7 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
       heroTitle="Keep public-pool review inside the customer workspace, not hidden behind settings."
-      heroDescription="This page now carries the operating frame for claim, recycle, and ownership transfer. It is the stable shell for the later public-pool resolver, rule audit, and reclaim actions."
+      heroDescription="This page now carries the operating frame for claim, recycle, and ownership transfer. Rule execution, reclaim actions, and public-pool audit are all available from this workspace."
       heroPills={[
         `${filteredPublicPoolRecords.length} claimable`,
         `${workspaceData.publicPoolRecords.length} already pooled`,
@@ -1958,10 +2100,9 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
         {
           label: 'Configured scope',
           value: publicPoolStageScopeLabel,
-          description:
-            configDraft.draft.publicPoolRule.notifyOwnersFirst
-              ? 'Owner reminder is enabled before public-pool transfer.'
-              : 'Owner reminder is disabled for direct recycle.',
+          description: configDraft.draft.publicPoolRule.notifyOwnersFirst
+            ? 'Owner reminder is enabled before public-pool transfer.'
+            : 'Owner reminder is disabled for direct recycle.',
         },
       ]}
       workspaceContext={{
@@ -1971,67 +2112,73 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
         stage: 'Public pool',
       }}
     >
-      <CustomerSignalsCards {...workspaceData} />
+      <CustomerSignalsCards
+        companyTotalCount={workspaceData.companyTotalCount}
+        peopleTotalCount={workspaceData.peopleTotalCount}
+        opportunityTotalCount={workspaceData.opportunityTotalCount}
+        totalTasksDueTodayCount={workspaceData.totalTasksDueTodayCount}
+        materialAlignmentNotice={workspaceData.materialAlignmentNotice}
+      />
       <StyledToolbar>
         <StyledSearchInput
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           placeholder="Search claimable accounts by company, owner, country, or tags"
         />
-          <StyledFilterSummary>
-            {filteredPublicPoolRecords.length} claimable accounts visible
-          </StyledFilterSummary>
-        </StyledToolbar>
-        <StyledActionBar>
-          <StyledActionMeta>
-            <span>
-              {firstClaimablePublicPoolRecord
-                ? `Next claim: ${getTradeCrmRecordName({
-                    kind: 'organization',
-                    record: firstClaimablePublicPoolRecord,
-                  })}`
-                : 'No public-pool customer selected'}
-            </span>
-            <span>
-              Claim writes the current workspace member as owner, clears public-pool
-              state, and logs the operation.
-            </span>
-          </StyledActionMeta>
-          <StyledActionButtons>
-            <StyledControlButton
-              type="button"
-              $tone="primary"
-              disabled={!canClaimFirstPublicPoolCustomer}
-              onClick={() => {
-                if (!firstClaimablePublicPoolRecord) {
-                  return;
-                }
+        <StyledFilterSummary>
+          {filteredPublicPoolRecords.length} claimable accounts visible
+        </StyledFilterSummary>
+      </StyledToolbar>
+      <StyledActionBar>
+        <StyledActionMeta>
+          <span>
+            {firstClaimablePublicPoolRecord !== null
+              ? `Next claim: ${getTradeCrmRecordName({
+                  kind: 'organization',
+                  record: firstClaimablePublicPoolRecord,
+                })}`
+              : 'No public-pool customer selected'}
+          </span>
+          <span>
+            Claim writes the current workspace member as owner, clears
+            public-pool state, and logs the operation.
+          </span>
+        </StyledActionMeta>
+        <StyledActionButtons>
+          <StyledControlButton
+            type="button"
+            $tone="primary"
+            disabled={!canClaimFirstPublicPoolCustomer}
+            onClick={() => {
+              if (firstClaimablePublicPoolRecord === null) {
+                return;
+              }
 
-                void workspaceData.claimPublicPoolCustomer(
-                  firstClaimablePublicPoolRecord.id,
-                );
-              }}
-            >
-              {workspaceData.claimPublicPoolCustomerLoading
-                ? 'Claiming...'
-                : 'Claim First Customer'}
-            </StyledControlButton>
-            <StyledControlButton
-              type="button"
-              disabled={!canClaimVisiblePublicPoolCustomers}
-              onClick={() => {
-                void workspaceData.claimPublicPoolCustomers(
-                  visiblePublicPoolCustomerIds,
-                );
-              }}
-            >
-              {workspaceData.claimPublicPoolCustomerLoading
-                ? 'Claiming...'
-                : `Claim Visible (${visiblePublicPoolCustomerIds.length})`}
-            </StyledControlButton>
-          </StyledActionButtons>
-        </StyledActionBar>
-        <StyledSplitGrid>
+              void workspaceData.claimPublicPoolCustomer(
+                firstClaimablePublicPoolRecord.id,
+              );
+            }}
+          >
+            {workspaceData.claimPublicPoolCustomerLoading
+              ? 'Claiming...'
+              : 'Claim First Customer'}
+          </StyledControlButton>
+          <StyledControlButton
+            type="button"
+            disabled={!canClaimVisiblePublicPoolCustomers}
+            onClick={() => {
+              void workspaceData.claimPublicPoolCustomers(
+                visiblePublicPoolCustomerIds,
+              );
+            }}
+          >
+            {workspaceData.claimPublicPoolCustomerLoading
+              ? 'Claiming...'
+              : `Claim Visible (${visiblePublicPoolCustomerIds.length})`}
+          </StyledControlButton>
+        </StyledActionButtons>
+      </StyledActionBar>
+      <StyledSplitGrid>
         <StyledStack>
           <StyledPanel>
             <StyledPanelTitle>Move to Public Pool Modes</StyledPanelTitle>
@@ -2067,7 +2214,13 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
         <TradeCrmCustomerTable
           title="Public Pool Customers"
           description="Expose original owner, latest touch, region, and reclaim readiness on a high-density list similar to the OKKI public pool page."
-          columns={['Company', 'Original Owner', 'Region', 'Pool Status', 'Next Move']}
+          columns={[
+            'Company',
+            'Original Owner',
+            'Region',
+            'Pool Status',
+            'Next Move',
+          ]}
           rows={publicPoolRows}
           emptyState="No public pool candidates are visible yet."
         />
@@ -2105,57 +2258,68 @@ const TradeCrmCustomerDedupWorkspace = () => {
     mergeDuplicateIds.length > 0 &&
     !dedupSearch.mergeCustomersLoading;
 
-  const dedupRows = dedupSearch.hits
-    .slice(0, 6)
-    .map((hit, index) => ({
-      id: hit.customer.id,
-      cells: [
-        {
-          primary: getTradeCrmRecordName({
-            kind: 'organization',
-            record: hit.customer,
-          }),
-          secondary: hit.primaryMatch ?? getTradeCrmCustomerWebsiteLabel(hit.customer),
-          badgeLabel: `${hit.matchScore}% match`,
-          badgeTone: hit.matchScore >= 80 ? 'red' : hit.matchScore >= 55 ? 'amber' : 'blue',
-        },
-        {
-          primary: `${getTradeCrmRecordName({
-            kind: 'individual',
-            record: hit.matchedContact ?? undefined,
-          })}`,
-          secondary: getTradeCrmCustomerEmailLabel(hit.matchedContact ?? undefined),
-        },
-        {
-          primary: getTradeCrmCustomerCountryLabel(hit.customer),
-          secondary: getTradeCrmCustomerSourceLabelForRecord({
-            record: hit.customer,
-            fallbackIndex: index,
-          }),
-        },
-        {
-          primary: getTradeCrmCustomerStageLabelForRecord({
-            record: hit.customer,
-            fallbackIndex: index,
-          }),
-          secondary: `Matched: ${hit.matchedFields.join(', ') || '--'}`,
-          badgeLabel: `${hit.matchScore}% match`,
-          badgeTone: hit.matchScore >= 80 ? 'red' : hit.matchScore >= 55 ? 'amber' : 'blue',
-        },
-        {
-          primary: getTradeCrmCustomerLastTouchLabelForRecord({
-            record: hit.customer,
-            fallbackIndex: index,
-          }),
-          secondary: `Owner ${getTradeCrmCustomerOwnerLabel(hit.customer)}`,
-        },
-      ],
-      actionLabel: 'Review',
-      actionTo: getTradeCrmCustomerRoutePath({
-        kind: 'organization',
-        record: hit.customer,
-      }),
-    }));
+  const dedupRows = dedupSearch.hits.slice(0, 6).map((hit, index) => ({
+    id: hit.customer.id,
+    cells: [
+      {
+        primary: getTradeCrmRecordName({
+          kind: 'organization',
+          record: hit.customer,
+        }),
+        secondary:
+          hit.primaryMatch ?? getTradeCrmCustomerWebsiteLabel(hit.customer),
+        badgeLabel: `${hit.matchScore}% match`,
+        badgeTone:
+          hit.matchScore >= 80
+            ? 'red'
+            : hit.matchScore >= 55
+              ? 'amber'
+              : 'blue',
+      },
+      {
+        primary: `${getTradeCrmRecordName({
+          kind: 'individual',
+          record: hit.matchedContact ?? undefined,
+        })}`,
+        secondary: getTradeCrmCustomerEmailLabel(
+          hit.matchedContact ?? undefined,
+        ),
+      },
+      {
+        primary: getTradeCrmCustomerCountryLabel(hit.customer),
+        secondary: getTradeCrmCustomerSourceLabelForRecord({
+          record: hit.customer,
+          fallbackIndex: index,
+        }),
+      },
+      {
+        primary: getTradeCrmCustomerStageLabelForRecord({
+          record: hit.customer,
+          fallbackIndex: index,
+        }),
+        secondary: `Matched: ${hit.matchedFields.join(', ') || '--'}`,
+        badgeLabel: `${hit.matchScore}% match`,
+        badgeTone:
+          hit.matchScore >= 80
+            ? 'red'
+            : hit.matchScore >= 55
+              ? 'amber'
+              : 'blue',
+      },
+      {
+        primary: getTradeCrmCustomerLastTouchLabelForRecord({
+          record: hit.customer,
+          fallbackIndex: index,
+        }),
+        secondary: `Owner ${getTradeCrmCustomerOwnerLabel(hit.customer)}`,
+      },
+    ],
+    actionLabel: 'Review',
+    actionTo: getTradeCrmCustomerRoutePath({
+      kind: 'organization',
+      record: hit.customer,
+    }),
+  }));
 
   return (
     <TradeCrmCustomerWorkspaceLayout
@@ -2212,7 +2376,7 @@ const TradeCrmCustomerDedupWorkspace = () => {
       <StyledActionBar>
         <StyledActionMeta>
           <span>
-            {mergePrimaryHit
+            {mergePrimaryHit !== null
               ? `Primary record: ${getTradeCrmRecordName({
                   kind: 'organization',
                   record: mergePrimaryHit.customer,
@@ -2231,7 +2395,7 @@ const TradeCrmCustomerDedupWorkspace = () => {
             $tone="danger"
             disabled={!canMergeTopCandidates}
             onClick={() => {
-              if (!mergePrimaryHit) {
+              if (mergePrimaryHit === null) {
                 return;
               }
 
@@ -2251,18 +2415,28 @@ const TradeCrmCustomerDedupWorkspace = () => {
       <StyledCallout>
         <StyledPanelTitle>Dedup Search Scope</StyledPanelTitle>
         <StyledPanelDescription>
-          Search company name, short name, contact email, phone, country, and social fields from one bar. This keeps manual dedup and import dedup aligned.
+          Search company name, short name, contact email, phone, country, and
+          social fields from one bar. This keeps manual dedup and import dedup
+          aligned.
         </StyledPanelDescription>
         <StyledTokenWrap>
-          {['All', ...appliedMatchingRules.map((rule) => rule.field)].map((token) => (
-            <StyledToken key={token}>{token}</StyledToken>
-          ))}
+          {['All', ...appliedMatchingRules.map((rule) => rule.field)].map(
+            (token) => (
+              <StyledToken key={token}>{token}</StyledToken>
+            ),
+          )}
         </StyledTokenWrap>
       </StyledCallout>
       <TradeCrmCustomerTable
         title="Dedup Hits"
         description="Show likely existing customers before creating, claiming, or importing a new one."
-        columns={['Candidate', 'Matched Contact', 'Region', 'Matching Rule', 'Latest Touch']}
+        columns={[
+          'Candidate',
+          'Matched Contact',
+          'Region',
+          'Matching Rule',
+          'Latest Touch',
+        ]}
         rows={dedupRows}
         emptyState="No matching candidates are available yet."
       />
@@ -2281,11 +2455,13 @@ const TradeCrmCustomerConfigWorkspace = ({
   const importJobs = useTradeCrmCustomerImportJobs();
   const [newGroupLabel, setNewGroupLabel] = useState('');
   const [groupParentId, setGroupParentId] = useState<string | null>(null);
-  const [newTagLabels, setNewTagLabels] = useState<CustomerConfigTagInputState>({
-    company: '',
-    mine: '',
-    subordinate: '',
-  });
+  const [newTagLabels, setNewTagLabels] = useState<CustomerConfigTagInputState>(
+    {
+      company: '',
+      mine: '',
+      subordinate: '',
+    },
+  );
   const [newSourceLabel, setNewSourceLabel] = useState('');
   const [importFileName, setImportFileName] = useState('');
 
@@ -2293,7 +2469,7 @@ const TradeCrmCustomerConfigWorkspace = ({
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
       heroTitle="Run customer configuration inside a dedicated control layer with stable deep links for each settings slice."
-      heroDescription="Public-pool rules, groups, tags, sources, matching, and import now have canonical URLs. This lets the customer module grow into a real configuration center without collapsing back to a single placeholder tab."
+      heroDescription="Public-pool rules, groups, tags, sources, matching, and import now have canonical URLs backed by workspace persistence. This keeps the customer module operating as a real configuration center."
       heroPills={[
         `${workspaceData.companyTotalCount} companies`,
         `${workspaceData.peopleTotalCount} contacts`,
@@ -2316,7 +2492,7 @@ const TradeCrmCustomerConfigWorkspace = ({
         },
         {
           label: 'Operational rule',
-          value: 'UI first, resolver next',
+          value: 'Persist to workspace',
           description:
             'Customer settings now persist in workspace records instead of browser-local drafts.',
         },
@@ -2331,26 +2507,43 @@ const TradeCrmCustomerConfigWorkspace = ({
       <StyledActionBar>
         <StyledActionMeta>
           <span>
-            {configDraft.hasUnsavedChanges
-              ? 'Unsaved customer configuration changes'
-              : 'Customer configuration is synced with workspace records'}
+            {configDraft.saveError
+              ? configDraft.saveError
+              : configDraft.hasValidationErrors
+                ? configDraft.validationMessages[0]
+                : configDraft.hasUnsavedChanges
+                  ? 'Unsaved customer configuration changes'
+                  : 'Customer configuration is synced with workspace records'}
           </span>
           <span>
-            {configDraft.lastSavedAt
-              ? `Last saved ${configDraft.lastSavedAt.slice(0, 16).replace('T', ' ')}`
-              : 'Save once to persist customer settings into workspace objects'}
+            {configDraft.isSaving
+              ? 'Saving customer settings into workspace objects...'
+              : configDraft.hasValidationErrors
+                ? `${configDraft.validationMessages.length} validation issue(s) must be resolved before saving.`
+                : configDraft.lastSavedAt
+                  ? `Last saved ${configDraft.lastSavedAt.slice(0, 16).replace('T', ' ')}`
+                  : 'Save once to persist customer settings into workspace objects'}
           </span>
         </StyledActionMeta>
         <StyledActionButtons>
-          <StyledControlButton type="button" onClick={configDraft.resetDraft}>
+          <StyledControlButton
+            type="button"
+            disabled={configDraft.isSaving || !configDraft.hasUnsavedChanges}
+            onClick={configDraft.resetDraft}
+          >
             Reset
           </StyledControlButton>
           <StyledControlButton
             type="button"
             $tone="primary"
+            disabled={
+              configDraft.isSaving ||
+              !configDraft.hasUnsavedChanges ||
+              configDraft.hasValidationErrors
+            }
             onClick={configDraft.saveDraft}
           >
-            Save Config
+            {configDraft.isSaving ? 'Saving...' : 'Save Config'}
           </StyledControlButton>
         </StyledActionButtons>
       </StyledActionBar>
@@ -2375,6 +2568,39 @@ const TradeCrmCustomerConfigWorkspace = ({
         importJobs,
         publicPoolGroupLabels,
       })}
+      <StyledPanel>
+        <StyledPanelTitle>Recent Config Changes</StyledPanelTitle>
+        <StyledPanelDescription>
+          Keep a workspace-level audit trail for customer settings so rule,
+          dictionary, and import-default updates can be reviewed without opening
+          a specific customer record.
+        </StyledPanelDescription>
+        <StyledFilterList>
+          {configDraft.configOperationHistoryItems.map((historyItem) => (
+            <StyledFilterNode key={historyItem.id}>
+              <StyledStack>
+                <StyledNodeLabel>
+                  {historyItem.operationSummary}
+                </StyledNodeLabel>
+                <StyledNodeCount>
+                  {historyItem.operatorName ?? 'system'} /{' '}
+                  {historyItem.operatedAt?.slice(0, 16).replace('T', ' ') ??
+                    '--'}
+                </StyledNodeCount>
+              </StyledStack>
+              <StyledNodeCount>
+                {historyItem.operationType ?? 'CONFIG'}
+              </StyledNodeCount>
+            </StyledFilterNode>
+          ))}
+          {configDraft.configOperationHistoryItems.length === 0 ? (
+            <StyledConfigNote>
+              No customer-setting change has been audited yet. Saving a config
+              update will create the first workspace-level log entry here.
+            </StyledConfigNote>
+          ) : null}
+        </StyledFilterList>
+      </StyledPanel>
     </TradeCrmCustomerWorkspaceLayout>
   );
 };
@@ -2391,7 +2617,7 @@ const TradeCrmCustomerDetailWorkspace = () => {
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
       heroTitle={workspaceData.customerDetail?.displayName ?? 'Customer detail'}
-      heroDescription="This routed detail page is now the stable customer-module handoff into company customer records. It is where the later customer aggregate, timeline merge, public-pool state, and import audit will surface together."
+      heroDescription="This routed detail page is the stable customer-module handoff into company customer records. Customer timeline, public-pool state, import audit, and related commercial data surface together here."
       heroPills={[
         'Company customer',
         workspaceData.customerDetail?.countryLabel ?? 'Country pending',
@@ -2445,7 +2671,9 @@ const TradeCrmCustomerDetailWorkspace = () => {
         timelineCalendarTotalCount={workspaceData.timelineCalendarTotalCount}
         customerTimelineItems={workspaceData.customerTimelineItems}
         customerTimelineTotalCount={workspaceData.customerTimelineTotalCount}
-        customerOperationHistoryItems={workspaceData.customerOperationHistoryItems}
+        customerOperationHistoryItems={
+          workspaceData.customerOperationHistoryItems
+        }
         customerOperationHistoryTotalCount={
           workspaceData.customerOperationHistoryTotalCount
         }
@@ -2453,13 +2681,19 @@ const TradeCrmCustomerDetailWorkspace = () => {
         customerDocumentTotalCount={workspaceData.customerDocumentTotalCount}
         customerAiInsight={workspaceData.customerAiInsight}
         createCustomerFollowUp={workspaceData.createCustomerFollowUp}
-        createCustomerFollowUpLoading={workspaceData.createCustomerFollowUpLoading}
+        createCustomerFollowUpLoading={
+          workspaceData.createCustomerFollowUpLoading
+        }
         createCustomerContact={workspaceData.createCustomerContact}
-        createCustomerContactLoading={workspaceData.createCustomerContactLoading}
+        createCustomerContactLoading={
+          workspaceData.createCustomerContactLoading
+        }
         updateCustomer={workspaceData.updateCustomer}
         updateCustomerLoading={workspaceData.updateCustomerLoading}
         updateCustomerContact={workspaceData.updateCustomerContact}
-        updateCustomerContactLoading={workspaceData.updateCustomerContactLoading}
+        updateCustomerContactLoading={
+          workspaceData.updateCustomerContactLoading
+        }
         refreshCustomerCommercialSummary={
           workspaceData.refreshCustomerCommercialSummary
         }
@@ -2497,7 +2731,9 @@ export const TradeCrmCustomersPage = () => {
       <Route path="dedup" element={<TradeCrmCustomerDedupWorkspace />} />
       <Route
         path="config/public-pool-rules"
-        element={<TradeCrmCustomerConfigWorkspace activeSection="public-pool-rules" />}
+        element={
+          <TradeCrmCustomerConfigWorkspace activeSection="public-pool-rules" />
+        }
       />
       <Route
         path="config/groups"
