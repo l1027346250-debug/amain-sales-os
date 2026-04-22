@@ -115,7 +115,13 @@ function Get-ListeningPid {
   } catch {
   }
 
-  $netstatLine = netstat -ano -p tcp |
+  $netstatExe = Join-Path $env:SystemRoot 'System32\netstat.exe'
+
+  if (-not (Test-Path -LiteralPath $netstatExe)) {
+    return $null
+  }
+
+  $netstatLine = & $netstatExe -ano -p tcp |
     Select-String -Pattern "^\s*TCP\s+\S+:$Port\s+\S+\s+LISTENING\s+(\d+)\s*$" |
     Select-Object -First 1
 

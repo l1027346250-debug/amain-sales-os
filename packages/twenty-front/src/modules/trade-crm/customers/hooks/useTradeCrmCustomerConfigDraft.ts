@@ -784,6 +784,8 @@ const buildDraftFromAggregate = ({
 
 const dedupeLabels = (labels: string[]) => [...new Set(labels)];
 
+const normalizeLabelKey = (label: string) => label.trim().toLocaleLowerCase();
+
 const formatSummaryList = (items: string[], maxItems = 3) => {
   if (items.length === 0) {
     return '';
@@ -796,6 +798,26 @@ const formatSummaryList = (items: string[], maxItems = 3) => {
     : visibleItems;
 };
 
+const haveSameNormalizedLabels = (
+  nextItems: string[],
+  previousItems: string[],
+) => {
+  if (nextItems.length !== previousItems.length) {
+    return false;
+  }
+
+  const nextKeys = [...nextItems].map(normalizeLabelKey).sort();
+  const previousKeys = [...previousItems].map(normalizeLabelKey).sort();
+
+  return nextKeys.every((key, index) => key === previousKeys[index]);
+};
+
+const hasSameNormalizedOrder = (nextItems: string[], previousItems: string[]) =>
+  nextItems.length === previousItems.length &&
+  nextItems.every(
+    (item, index) => normalizeLabelKey(item) === normalizeLabelKey(previousItems[index] ?? ''),
+  );
+
 const getAddedLabels = (nextItems: string[], previousItems: string[]) => {
   const previousItemKeys = new Set(
     previousItems.map((item) => normalizeLabelKey(item)),
@@ -807,7 +829,9 @@ const getAddedLabels = (nextItems: string[], previousItems: string[]) => {
 };
 
 const getRemovedLabels = (nextItems: string[], previousItems: string[]) => {
-  const nextItemKeys = new Set(nextItems.map((item) => normalizeLabelKey(item)));
+  const nextItemKeys = new Set(
+    nextItems.map((item) => normalizeLabelKey(item)),
+  );
 
   return previousItems.filter(
     (item) => !nextItemKeys.has(normalizeLabelKey(item)),
@@ -832,9 +856,18 @@ const getChangedConfigSections = ({
   ) {
     const publicPoolRuleChanges: string[] = [];
 
-    if (draft.publicPoolRule.inactivityDays !== savedDraft.publicPoolRule.inactivityDays) {
+    if (
+      draft.publicPoolRule.inactivityDays !==
+      savedDraft.publicPoolRule.inactivityDays
+    ) {
       publicPoolRuleChanges.push(
         `inactivity ${savedDraft.publicPoolRule.inactivityDays}d -> ${draft.publicPoolRule.inactivityDays}d`,
+      );
+    }
+
+    if (draft.publicPoolRule.ruleName !== savedDraft.publicPoolRule.ruleName) {
+      publicPoolRuleChanges.push(
+        `rule ${savedDraft.publicPoolRule.ruleName} -> ${draft.publicPoolRule.ruleName}`,
       );
     }
 
@@ -842,7 +875,9 @@ const getChangedConfigSections = ({
       draft.publicPoolRule.publicPoolGroup !==
       savedDraft.publicPoolRule.publicPoolGroup
     ) {
-      publicPoolRuleChanges.push(`pool ${draft.publicPoolRule.publicPoolGroup}`);
+      publicPoolRuleChanges.push(
+        `pool ${draft.publicPoolRule.publicPoolGroup}`,
+      );
     }
 
     if (
@@ -873,6 +908,17 @@ const getChangedConfigSections = ({
       publicPoolRuleChanges.push(`stage - ${formatSummaryList(removedStages)}`);
     }
 
+    if (
+      addedStages.length === 0 &&
+      removedStages.length === 0 &&
+      !hasSameNormalizedOrder(
+        draft.publicPoolRule.scopeStages,
+        savedDraft.publicPoolRule.scopeStages,
+      )
+    ) {
+      publicPoolRuleChanges.push('stage order updated');
+    }
+
     changedSections.push({
       key: 'public-pool-rules',
       summary:
@@ -886,7 +932,9 @@ const getChangedConfigSections = ({
     const previousGroupById = new Map(
       savedDraft.groups.map((group) => [group.id, group]),
     );
-    const nextGroupById = new Map(draft.groups.map((group) => [group.id, group]));
+    const nextGroupById = new Map(
+      draft.groups.map((group) => [group.id, group]),
+    );
     const addedGroups = draft.groups
       .filter((group) => !previousGroupById.has(group.id))
       .map((group) => group.label);
@@ -897,19 +945,86 @@ const getChangedConfigSections = ({
       .filter((group) => {
         const previousGroup = previousGroupById.get(group.id);
 
-        return previousGroup !== undefined && previousGroup.label !== group.label;
+        return (
+          previousGroup !== undefined && previousGroup.label !== group.label
+        );
       })
       .map((group) => {
         const previousGroup = previousGroupById.get(group.id);
 
         return `${previousGroup?.label ?? group.label} -> ${group.label}`;
       });
+    const movedGroups = draft.groups
+      .filter((group) => {
+        const previousGroup = previousGroupById.get(group.id);
+
+        return (
+          previousGroup !== undefined && previousGroup.parentId !== group.parentId
+        );
+      })
+      .map((group) => {
+        const previousGroup = previousGroupById.get(group.id);
+
+        if (previousGroup === undefined) {
+          return `${group.label} parent updated`;
+        }
+
+        const previousParentLabel =
+          previousGroup.parentId === null
+            ? 'root'
+            : savedDraft.groups.find(
+                (candidateGroup) => candidateGroup.id === previousGroup.parentId,
+              )?.label ?? 'unknown';
+        const nextParentLabel =
+          group.parentId === null
+            ? 'root'
+            : draft.groups.find(
+                (candidateGroup) => candidateGroup.id === group.parentId,
+              )?.label ?? 'unknown';
+
+        return `${group.label} ${previousParentLabel} -> ${nextParentLabel}`;
+      });
+    const previousRootOrder = savedDraft.groups
+      .filter((group) => group.level === 1)
+      .map((group) => group.id);
+    const nextRootOrder = draft.groups
+      .filter((group) => group.level === 1)
+      .map((group) => group.id);
+    const rootOrderChanged =
+      previousRootOrder.length === nextRootOrder.length &&
+      previousRootOrder.some(
+        (groupId, index) => groupId !== nextRootOrder[index],
+      );
+    const childOrderChanged = draft.groups.some((group) => {
+      if (group.level !== 1) {
+        return false;
+      }
+
+      const previousChildOrder = savedDraft.groups
+        .filter((candidateGroup) => candidateGroup.parentId === group.id)
+        .map((candidateGroup) => candidateGroup.id);
+      const nextChildOrder = draft.groups
+        .filter((candidateGroup) => candidateGroup.parentId === group.id)
+        .map((candidateGroup) => candidateGroup.id);
+
+      return (
+        previousChildOrder.length === nextChildOrder.length &&
+        previousChildOrder.some(
+          (groupId, index) => groupId !== nextChildOrder[index],
+        )
+      );
+    });
     const groupChanges = [
       addedGroups.length > 0 ? `+ ${formatSummaryList(addedGroups)}` : null,
       removedGroups.length > 0 ? `- ${formatSummaryList(removedGroups)}` : null,
       renamedGroups.length > 0
         ? `rename ${formatSummaryList(renamedGroups, 2)}`
         : null,
+      movedGroups.length > 0
+        ? `parent ${formatSummaryList(movedGroups, 2)}`
+        : null,
+      rootOrderChanged ? 'root order updated' : null,
+      childOrderChanged ? 'child order updated' : null,
     ].filter((change): change is string => change !== null);
 
     changedSections.push({
@@ -926,7 +1041,10 @@ const getChangedConfigSections = ({
       Object.keys(draft.tags) as TradeCrmCustomerConfigTagScope[]
     )
       .map((scope) => {
-        const addedTags = getAddedLabels(draft.tags[scope], savedDraft.tags[scope]);
+        const addedTags = getAddedLabels(
+          draft.tags[scope],
+          savedDraft.tags[scope],
+        );
         const removedTags = getRemovedLabels(
           draft.tags[scope],
           savedDraft.tags[scope],
@@ -934,6 +1052,12 @@ const getChangedConfigSections = ({
         const scopeChanges = [
           addedTags.length > 0 ? `+ ${formatSummaryList(addedTags)}` : null,
           removedTags.length > 0 ? `- ${formatSummaryList(removedTags)}` : null,
+          addedTags.length === 0 &&
+          removedTags.length === 0 &&
+          haveSameNormalizedLabels(draft.tags[scope], savedDraft.tags[scope]) &&
+          !hasSameNormalizedOrder(draft.tags[scope], savedDraft.tags[scope])
+            ? 'order updated'
+            : null,
         ].filter((change): change is string => change !== null);
 
         if (scopeChanges.length === 0) {
@@ -958,7 +1082,15 @@ const getChangedConfigSections = ({
     const removedSources = getRemovedLabels(draft.sources, savedDraft.sources);
     const sourceChanges = [
       addedSources.length > 0 ? `+ ${formatSummaryList(addedSources)}` : null,
-      removedSources.length > 0 ? `- ${formatSummaryList(removedSources)}` : null,
+      removedSources.length > 0
+        ? `- ${formatSummaryList(removedSources)}`
+        : null,
+      addedSources.length === 0 &&
+      removedSources.length === 0 &&
+      haveSameNormalizedLabels(draft.sources, savedDraft.sources) &&
+      !hasSameNormalizedOrder(draft.sources, savedDraft.sources)
+        ? 'order updated'
+        : null,
     ].filter((change): change is string => change !== null);
 
     changedSections.push({
@@ -1037,6 +1169,21 @@ const getChangedConfigSections = ({
       importChanges.push(`field - ${formatSummaryList(removedImportFields)}`);
     }
 
+    if (
+      addedImportFields.length === 0 &&
+      removedImportFields.length === 0 &&
+      haveSameNormalizedLabels(
+        draft.importConfig.selectedFields,
+        savedDraft.importConfig.selectedFields,
+      ) &&
+      !hasSameNormalizedOrder(
+        draft.importConfig.selectedFields,
+        savedDraft.importConfig.selectedFields,
+      )
+    ) {
+      importChanges.push('field order updated');
+    }
+
     changedSections.push({
       key: 'import',
       summary:
@@ -1048,8 +1195,6 @@ const getChangedConfigSections = ({
 
   return changedSections;
 };
-
-const normalizeLabelKey = (label: string) => label.trim().toLocaleLowerCase();
 
 const createEmptyTagScopeRecord = () => ({
   company: [] as string[],
@@ -1196,6 +1341,49 @@ const getNewGroupValidationMessage = ({
     : null;
 };
 
+const getChangeGroupParentValidationMessage = ({
+  groups,
+  groupId,
+  nextParentId,
+}: {
+  groups: TradeCrmCustomerConfigDraft['groups'];
+  groupId: string;
+  nextParentId: string;
+}) => {
+  const targetGroup = groups.find((group) => group.id === groupId) ?? null;
+
+  if (targetGroup === null) {
+    return 'Select a valid group before changing its parent.';
+  }
+
+  if (targetGroup.level !== 2) {
+    return 'Only second-level groups can change parent.';
+  }
+
+  const nextParentGroup =
+    groups.find((group) => group.id === nextParentId && group.level === 1) ??
+    null;
+
+  if (nextParentGroup === null) {
+    return 'Second-level groups must be attached to a root group.';
+  }
+
+  if (targetGroup.parentId === nextParentId) {
+    return null;
+  }
+
+  const hasDuplicate = groups.some(
+    (group) =>
+      group.id !== groupId &&
+      group.parentId === nextParentId &&
+      normalizeLabelKey(group.label) === normalizeLabelKey(targetGroup.label),
+  );
+
+  return hasDuplicate
+    ? 'A group with the same label already exists under the selected root.'
+    : null;
+};
+
 const getNewTagValidationMessage = ({
   tags,
   scope,
@@ -1219,6 +1407,33 @@ const getNewTagValidationMessage = ({
   return hasDuplicate ? 'This tag already exists in the current scope.' : null;
 };
 
+const getRenameTagValidationMessage = ({
+  tags,
+  scope,
+  currentLabel,
+  nextLabel,
+}: {
+  tags: TradeCrmCustomerConfigDraft['tags'];
+  scope: TradeCrmCustomerConfigTagScope;
+  currentLabel: string;
+  nextLabel: string;
+}) => {
+  if (normalizeLabelKey(currentLabel) === normalizeLabelKey(nextLabel)) {
+    return null;
+  }
+
+  return getNewTagValidationMessage({
+    tags: {
+      ...tags,
+      [scope]: tags[scope].filter(
+        (tagLabel) => normalizeLabelKey(tagLabel) !== normalizeLabelKey(currentLabel),
+      ),
+    },
+    scope,
+    label: nextLabel,
+  });
+};
+
 const getNewSourceValidationMessage = ({
   sources,
   label,
@@ -1238,6 +1453,28 @@ const getNewSourceValidationMessage = ({
   );
 
   return hasDuplicate ? 'This source already exists.' : null;
+};
+
+const getRenameSourceValidationMessage = ({
+  sources,
+  currentLabel,
+  nextLabel,
+}: {
+  sources: TradeCrmCustomerConfigDraft['sources'];
+  currentLabel: string;
+  nextLabel: string;
+}) => {
+  if (normalizeLabelKey(currentLabel) === normalizeLabelKey(nextLabel)) {
+    return null;
+  }
+
+  return getNewSourceValidationMessage({
+    sources: sources.filter(
+      (sourceLabel) =>
+        normalizeLabelKey(sourceLabel) !== normalizeLabelKey(currentLabel),
+    ),
+    label: nextLabel,
+  });
 };
 
 const getRootGroupIds = (
@@ -1288,6 +1525,38 @@ const moveGroupSlice = <TItem>(
     ...movingItems,
     ...remainingItems.slice(nextStartIndex),
   ];
+};
+
+const moveListItem = <TItem>(
+  items: TItem[],
+  currentIndex: number,
+  direction: 'up' | 'down',
+) => {
+  const adjacentIndex =
+    direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+  if (currentIndex < 0 || adjacentIndex < 0 || adjacentIndex >= items.length) {
+    return items;
+  }
+
+  return moveGroupSlice(items, currentIndex, currentIndex, adjacentIndex);
+};
+
+const getGroupOrderIndex = (
+  groups: TradeCrmCustomerConfigDraft['groups'],
+  targetGroup: TradeCrmCustomerConfigGroupItem,
+) => {
+  const siblingGroupIds =
+    targetGroup.level === 1
+      ? groups.filter((group) => group.level === 1).map((group) => group.id)
+      : groups
+          .filter(
+            (group) =>
+              group.level === 2 && group.parentId === targetGroup.parentId,
+          )
+          .map((group) => group.id);
+
+  return siblingGroupIds.findIndex((groupId) => groupId === targetGroup.id);
 };
 
 export const useTradeCrmCustomerConfigDraft = (
@@ -1467,6 +1736,9 @@ export const useTradeCrmCustomerConfigDraft = (
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(
     hydratedLastSavedAt,
   );
+  const [lastSavedConfigOperationId, setLastSavedConfigOperationId] = useState<
+    string | null
+  >(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -1501,9 +1773,19 @@ export const useTradeCrmCustomerConfigDraft = (
     ],
   );
   const hasValidationErrors = validationMessages.length > 0;
+  const pendingChangedSections = useMemo(
+    () =>
+      getChangedConfigSections({
+        draft,
+        savedDraft,
+      }),
+    [draft, savedDraft],
+  );
 
   useEffect(() => {
     if (hasUnsavedChanges) {
+      setLastSavedConfigOperationId(null);
+
       return;
     }
 
@@ -1521,7 +1803,7 @@ export const useTradeCrmCustomerConfigDraft = (
       return;
     }
 
-    const changedSectionKeys = getChangedConfigSectionKeys({
+    const changedSections = getChangedConfigSections({
       draft,
       savedDraft,
     });
@@ -1704,16 +1986,25 @@ export const useTradeCrmCustomerConfigDraft = (
       };
 
       await refetchCustomerConfigAggregate();
-      if (changedSectionKeys.length > 0) {
-        await logCustomerConfigChangeMutation({
-          variables: {
-            input: {
-              sectionKeys: changedSectionKeys,
-              summary: 'Updated customer settings',
+      if (changedSections.length > 0) {
+        const logCustomerConfigChangeResult =
+          await logCustomerConfigChangeMutation({
+            variables: {
+              input: {
+                sectionKeys: changedSections.map((section) => section.key),
+                summary: changedSections
+                  .map((section) => section.summary)
+                  .join(' | '),
+              },
             },
-          },
-        });
+          });
+
+        setLastSavedConfigOperationId(
+          logCustomerConfigChangeResult.data?.logCustomerConfigChange.id ?? null,
+        );
         await refetchCustomerConfigOperationHistory();
+      } else {
+        setLastSavedConfigOperationId(null);
       }
 
       setSavedDraft(nextSavedDraft);
@@ -1846,6 +2137,60 @@ export const useTradeCrmCustomerConfigDraft = (
         groups: currentDraft.groups.filter(
           (group) => !groupIdsToRemove.has(group.id),
         ),
+      };
+    });
+  };
+
+  const changeGroupParent = (groupId: string, nextParentId: string) => {
+    setDraft((currentDraft) => {
+      if (
+        getChangeGroupParentValidationMessage({
+          groups: currentDraft.groups,
+          groupId,
+          nextParentId,
+        }) !== null
+      ) {
+        return currentDraft;
+      }
+
+      const targetGroup =
+        currentDraft.groups.find((group) => group.id === groupId) ?? null;
+
+      if (targetGroup === null || targetGroup.level !== 2) {
+        return currentDraft;
+      }
+
+      const remainingGroups = currentDraft.groups.filter(
+        (group) => group.id !== groupId,
+      );
+      const nextParentIndex = remainingGroups.findIndex(
+        (group) => group.id === nextParentId,
+      );
+
+      if (nextParentIndex < 0) {
+        return currentDraft;
+      }
+
+      let nextInsertIndex = nextParentIndex + 1;
+
+      while (
+        nextInsertIndex < remainingGroups.length &&
+        remainingGroups[nextInsertIndex]?.level === 2 &&
+        remainingGroups[nextInsertIndex]?.parentId === nextParentId
+      ) {
+        nextInsertIndex += 1;
+      }
+
+      const nextGroups = [...remainingGroups];
+
+      nextGroups.splice(nextInsertIndex, 0, {
+        ...targetGroup,
+        parentId: nextParentId,
+      });
+
+      return {
+        ...currentDraft,
+        groups: nextGroups,
       };
     });
   };
@@ -2024,6 +2369,77 @@ export const useTradeCrmCustomerConfigDraft = (
     }));
   };
 
+  const renameTag = (
+    scope: TradeCrmCustomerConfigTagScope,
+    currentLabel: string,
+    nextLabel: string,
+  ) => {
+    const normalizedLabel = nextLabel.trim();
+
+    if (
+      getRenameTagValidationMessage({
+        tags: draft.tags,
+        scope,
+        currentLabel,
+        nextLabel: normalizedLabel,
+      }) !== null
+    ) {
+      return;
+    }
+
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      tags: {
+        ...currentDraft.tags,
+        [scope]: currentDraft.tags[scope].map((tagLabel) =>
+          tagLabel === currentLabel ? normalizedLabel : tagLabel,
+        ),
+      },
+    }));
+  };
+
+  const moveTag = (
+    scope: TradeCrmCustomerConfigTagScope,
+    label: string,
+    direction: 'up' | 'down',
+  ) => {
+    setDraft((currentDraft) => {
+      const currentIndex = currentDraft.tags[scope].findIndex(
+        (tagLabel) => tagLabel === label,
+      );
+
+      if (currentIndex < 0) {
+        return currentDraft;
+      }
+
+      return {
+        ...currentDraft,
+        tags: {
+          ...currentDraft.tags,
+          [scope]: moveListItem(
+            currentDraft.tags[scope],
+            currentIndex,
+            direction,
+          ),
+        },
+      };
+    });
+  };
+
+  const canMoveTag = (
+    scope: TradeCrmCustomerConfigTagScope,
+    label: string,
+    direction: 'up' | 'down',
+  ) => {
+    const currentIndex = draft.tags[scope].findIndex(
+      (tagLabel) => tagLabel === label,
+    );
+
+    return direction === 'up'
+      ? currentIndex > 0
+      : currentIndex >= 0 && currentIndex < draft.tags[scope].length - 1;
+  };
+
   const addSource = (label: string) => {
     const normalizedLabel = label.trim();
 
@@ -2055,6 +2471,98 @@ export const useTradeCrmCustomerConfigDraft = (
         (currentLabel) => currentLabel !== label,
       ),
     }));
+  };
+
+  const renameSource = (currentLabel: string, nextLabel: string) => {
+    const normalizedLabel = nextLabel.trim();
+
+    if (
+      getRenameSourceValidationMessage({
+        sources: draft.sources,
+        currentLabel,
+        nextLabel: normalizedLabel,
+      }) !== null
+    ) {
+      return;
+    }
+
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      sources: currentDraft.sources.map((sourceLabel) =>
+        sourceLabel === currentLabel ? normalizedLabel : sourceLabel,
+      ),
+    }));
+  };
+
+  const moveSource = (label: string, direction: 'up' | 'down') => {
+    setDraft((currentDraft) => {
+      const currentIndex = currentDraft.sources.findIndex(
+        (sourceLabel) => sourceLabel === label,
+      );
+
+      if (currentIndex < 0) {
+        return currentDraft;
+      }
+
+      return {
+        ...currentDraft,
+        sources: moveListItem(currentDraft.sources, currentIndex, direction),
+      };
+    });
+  };
+
+  const canMoveSource = (label: string, direction: 'up' | 'down') => {
+    const currentIndex = draft.sources.findIndex(
+      (sourceLabel) => sourceLabel === label,
+    );
+
+    return direction === 'up'
+      ? currentIndex > 0
+      : currentIndex >= 0 && currentIndex < draft.sources.length - 1;
+  };
+
+  const getGroupPendingChangeMessage = (groupId: string) => {
+    const draftGroup = draft.groups.find((group) => group.id === groupId) ?? null;
+
+    if (draftGroup === null) {
+      return null;
+    }
+
+    const savedGroup =
+      savedDraft.groups.find((group) => group.id === groupId) ?? null;
+
+    if (savedGroup === null) {
+      return 'New pending save';
+    }
+
+    const pendingChanges: string[] = [];
+
+    if (
+      normalizeLabelKey(savedGroup.label) !== normalizeLabelKey(draftGroup.label)
+    ) {
+      pendingChanges.push('Rename pending');
+    }
+
+    if (savedGroup.parentId !== draftGroup.parentId) {
+      pendingChanges.push('Parent pending');
+    }
+
+    if (savedGroup.parentId === draftGroup.parentId) {
+      const savedOrderIndex = getGroupOrderIndex(savedDraft.groups, savedGroup);
+      const draftOrderIndex = getGroupOrderIndex(draft.groups, draftGroup);
+
+      if (
+        savedOrderIndex >= 0 &&
+        draftOrderIndex >= 0 &&
+        savedOrderIndex !== draftOrderIndex
+      ) {
+        pendingChanges.push(
+          draftGroup.level === 1 ? 'Root order pending' : 'Order pending',
+        );
+      }
+    }
+
+    return pendingChanges.length > 0 ? pendingChanges.join(' / ') : null;
   };
 
   const setMatchingWeight = (field: string, weight: number) => {
@@ -2119,6 +2627,7 @@ export const useTradeCrmCustomerConfigDraft = (
     lastSavedAt,
     saveError,
     validationMessages,
+    pendingChangedSections,
     groupValidationMessages,
     tagValidationMessages,
     sourceValidationMessages,
@@ -2128,6 +2637,7 @@ export const useTradeCrmCustomerConfigDraft = (
     configOperationHistoryTotalCount:
       customerConfigOperationHistoryData?.customerConfigOperationHistory
         .totalCount ?? 0,
+    lastSavedConfigOperationId,
     saveDraft,
     resetDraft,
     setPublicPoolRule,
@@ -2135,6 +2645,7 @@ export const useTradeCrmCustomerConfigDraft = (
     addGroup,
     renameGroup,
     removeGroup,
+    changeGroupParent,
     moveGroup,
     canMoveGroup,
     getNewGroupValidationMessage: (label: string, parentId: string | null) =>
@@ -2143,8 +2654,20 @@ export const useTradeCrmCustomerConfigDraft = (
         label,
         parentId,
       }),
+    getChangeGroupParentValidationMessage: (
+      groupId: string,
+      nextParentId: string,
+    ) =>
+      getChangeGroupParentValidationMessage({
+        groups: draft.groups,
+        groupId,
+        nextParentId,
+      }),
     addTag,
     removeTag,
+    renameTag,
+    moveTag,
+    canMoveTag,
     getNewTagValidationMessage: (
       scope: TradeCrmCustomerConfigTagScope,
       label: string,
@@ -2154,12 +2677,36 @@ export const useTradeCrmCustomerConfigDraft = (
         scope,
         label,
       }),
+    getRenameTagValidationMessage: (
+      scope: TradeCrmCustomerConfigTagScope,
+      currentLabel: string,
+      nextLabel: string,
+    ) =>
+      getRenameTagValidationMessage({
+        tags: draft.tags,
+        scope,
+        currentLabel,
+        nextLabel,
+      }),
     addSource,
     removeSource,
+    renameSource,
+    moveSource,
+    canMoveSource,
+    getGroupPendingChangeMessage,
     getNewSourceValidationMessage: (label: string) =>
       getNewSourceValidationMessage({
         sources: draft.sources,
         label,
+      }),
+    getRenameSourceValidationMessage: (
+      currentLabel: string,
+      nextLabel: string,
+    ) =>
+      getRenameSourceValidationMessage({
+        sources: draft.sources,
+        currentLabel,
+        nextLabel,
       }),
     setMatchingWeight,
     setImportDestination,

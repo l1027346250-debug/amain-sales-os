@@ -116,7 +116,7 @@ type WebsiteFormState = {
 type AssignmentRuleFormState = {
   ruleName: string;
   assignmentType: string;
-  assigneeIds: string;
+  assigneeIds: string[];
   departmentIds: string;
   country: string;
   sourcePage: string;
@@ -274,6 +274,13 @@ const StyledField = styled.label`
   gap: ${themeCssVariables.spacing[1]};
 `;
 
+const StyledChoiceGrid = styled.div`
+  display: grid;
+  gap: ${themeCssVariables.spacing[2]};
+  max-height: 220px;
+  overflow: auto;
+`;
+
 const StyledLabel = styled.span`
   color: ${themeCssVariables.font.color.light};
   font-size: ${themeCssVariables.font.size.sm};
@@ -383,7 +390,7 @@ const toAssignmentRuleFormState = (
 ): AssignmentRuleFormState => ({
   ruleName: rule.ruleName,
   assignmentType: rule.assignmentType,
-  assigneeIds: joinList(rule.assigneeIds),
+  assigneeIds: rule.assigneeIds,
   departmentIds: joinList(rule.departmentIds),
   country: rule.conditionJson?.country ?? '',
   sourcePage: rule.conditionJson?.sourcePage ?? '',
@@ -504,6 +511,9 @@ export const EnterpriseIndependentStationPage = () => {
       })),
     [currentWorkspaceMembers],
   );
+  const assignmentRuleNeedsAssignees =
+    assignmentRuleForm?.assignmentType === 'fixed_user' ||
+    assignmentRuleForm?.assignmentType === 'round_robin';
 
   const loadWebsiteBindings = useCallback(async () => {
     const response = await enterpriseApiRequest(
@@ -780,6 +790,12 @@ export const EnterpriseIndependentStationPage = () => {
       return;
     }
 
+    if (assignmentRuleNeedsAssignees && assignmentRuleForm.assigneeIds.length === 0) {
+      enqueueErrorSnackBar({ message: '请至少选择一位负责人' });
+
+      return;
+    }
+
     try {
       const response = await enterpriseApiRequest(
         `/api/enterprise/independent-stations/${selectedWebsiteBinding.id}/assignment-rules`,
@@ -789,7 +805,7 @@ export const EnterpriseIndependentStationPage = () => {
               {
                 ruleName: assignmentRuleForm.ruleName,
                 assignmentType: assignmentRuleForm.assignmentType,
-                assigneeIds: splitList(assignmentRuleForm.assigneeIds),
+                assigneeIds: assignmentRuleForm.assigneeIds,
                 departmentIds: splitList(assignmentRuleForm.departmentIds),
                 conditionJson: {
                   country: assignmentRuleForm.country,
@@ -948,6 +964,21 @@ export const EnterpriseIndependentStationPage = () => {
       page: 1,
       pageSize,
     }));
+  };
+
+  const toggleAssignmentRuleAssignee = (workspaceMemberId: string) => {
+    if (!assignmentRuleForm) {
+      return;
+    }
+
+    setAssignmentRuleForm({
+      ...assignmentRuleForm,
+      assigneeIds: assignmentRuleForm.assigneeIds.includes(workspaceMemberId)
+        ? assignmentRuleForm.assigneeIds.filter(
+            (assigneeId) => assigneeId !== workspaceMemberId,
+          )
+        : [...assignmentRuleForm.assigneeIds, workspaceMemberId],
+    });
   };
 
   const saveBatchInquiryUpdate = async () => {
@@ -1394,16 +1425,30 @@ export const EnterpriseIndependentStationPage = () => {
                     </StyledSelect>
                   </StyledField>
                   <StyledField>
-                    <StyledLabel>负责人 ID，逗号分隔</StyledLabel>
-                    <StyledInput
-                      onChange={(event) =>
-                        setAssignmentRuleForm({
-                          ...assignmentRuleForm,
-                          assigneeIds: event.target.value,
-                        })
-                      }
-                      value={assignmentRuleForm.assigneeIds}
-                    />
+                    <StyledLabel>负责人</StyledLabel>
+                    <StyledChoiceGrid>
+                      {workspaceMemberOptions.map((workspaceMemberOption) => (
+                        <StyledCheckbox key={workspaceMemberOption.value}>
+                          <input
+                            checked={assignmentRuleForm.assigneeIds.includes(
+                              workspaceMemberOption.value,
+                            )}
+                            onChange={() =>
+                              toggleAssignmentRuleAssignee(
+                                workspaceMemberOption.value,
+                              )
+                            }
+                            type="checkbox"
+                          />
+                          {workspaceMemberOption.label}
+                        </StyledCheckbox>
+                      ))}
+                    </StyledChoiceGrid>
+                    <StyledMeta>
+                      {assignmentRuleNeedsAssignees
+                        ? `已选择 ${assignmentRuleForm.assigneeIds.length} 位负责人`
+                        : '当前分配类型不会直接使用负责人'}
+                    </StyledMeta>
                   </StyledField>
                   <StyledField>
                     <StyledLabel>部门 ID，逗号分隔</StyledLabel>

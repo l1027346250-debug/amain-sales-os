@@ -1,5 +1,5 @@
 import { styled } from '@linaria/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Link,
   Navigate,
@@ -128,6 +128,14 @@ const StyledPanelTitle = styled.div`
   color: ${tradeCrmUiTheme.colors.ink};
   font-size: ${themeCssVariables.font.size.md};
   font-weight: ${themeCssVariables.font.weight.semiBold};
+  margin-bottom: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledPanelTitleRow = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
   margin-bottom: ${themeCssVariables.spacing[2]};
 `;
 
@@ -376,6 +384,62 @@ const StyledConfigNote = styled.div`
   line-height: 1.6;
 `;
 
+const StyledHistorySummary = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledHistoryMetaRow = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledHistorySegmentWrap = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledHistorySegment = styled.div`
+  background: ${tradeCrmUiTheme.colors.surface};
+  border: 1px solid ${tradeCrmUiTheme.colors.border};
+  border-radius: ${tradeCrmUiTheme.radius.control};
+  color: ${tradeCrmUiTheme.colors.ink};
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+`;
+
+const StyledHistorySegmentLabel = styled.div`
+  color: ${tradeCrmUiTheme.colors.ink};
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+`;
+
+const StyledHistorySegmentText = styled.div`
+  color: ${tradeCrmUiTheme.colors.inkSoft};
+  font-size: ${themeCssVariables.font.size.sm};
+  line-height: 1.6;
+`;
+
+const StyledHighlightedHistoryNode = styled(StyledFilterNode)`
+  background: linear-gradient(
+    180deg,
+    ${tradeCrmUiTheme.colors.surface},
+    ${tradeCrmUiTheme.colors.surfaceMuted}
+  );
+  border-color: ${tradeCrmUiTheme.colors.focusRing};
+  box-shadow: inset 0 0 0 1px ${tradeCrmUiTheme.colors.focusRing};
+`;
+
 const StyledStepList = styled.div`
   display: flex;
   flex-direction: column;
@@ -459,10 +523,12 @@ const getSidebarItems = ({
   activePath,
   companyTotalCount,
   peopleTotalCount,
+  pendingConfigSectionKeys = [],
 }: {
   activePath: string;
   companyTotalCount: number;
   peopleTotalCount: number;
+  pendingConfigSectionKeys?: string[];
 }): FilterSidebarItem[] => [
   {
     label: 'Customer List',
@@ -487,45 +553,80 @@ const getSidebarItems = ({
   },
   {
     label: 'Public Pool Rules',
-    hint: 'Auto-move rules and recycle policy.',
+    hint: pendingConfigSectionKeys.includes('public-pool-rules')
+      ? 'Auto-move rules and recycle policy. Unsaved changes.'
+      : 'Auto-move rules and recycle policy.',
     isActive: activePath === 'config-public-pool-rules',
     to: getTradeCrmCustomerPath('config-public-pool-rules'),
+    countLabel: pendingConfigSectionKeys.includes('public-pool-rules')
+      ? 'Unsaved'
+      : undefined,
   },
   {
     label: 'Groups',
-    hint: 'Customer grouping tree and segment governance.',
+    hint: pendingConfigSectionKeys.includes('groups')
+      ? 'Customer grouping tree and segment governance. Unsaved changes.'
+      : 'Customer grouping tree and segment governance.',
     isActive: activePath === 'config-groups',
     to: getTradeCrmCustomerPath('config-groups'),
+    countLabel: pendingConfigSectionKeys.includes('groups')
+      ? 'Unsaved'
+      : undefined,
   },
   {
     label: 'Tags',
-    hint: 'Company, personal, and subordinate tag dictionaries.',
+    hint: pendingConfigSectionKeys.includes('tags')
+      ? 'Company, personal, and subordinate tag dictionaries. Unsaved changes.'
+      : 'Company, personal, and subordinate tag dictionaries.',
     isActive: activePath === 'config-tags',
     to: getTradeCrmCustomerPath('config-tags'),
+    countLabel: pendingConfigSectionKeys.includes('tags')
+      ? 'Unsaved'
+      : undefined,
   },
   {
     label: 'Sources',
-    hint: 'Inbound origin dictionary for leads and customers.',
+    hint: pendingConfigSectionKeys.includes('sources')
+      ? 'Inbound origin dictionary for leads and customers. Unsaved changes.'
+      : 'Inbound origin dictionary for leads and customers.',
     isActive: activePath === 'config-sources',
     to: getTradeCrmCustomerPath('config-sources'),
+    countLabel: pendingConfigSectionKeys.includes('sources')
+      ? 'Unsaved'
+      : undefined,
   },
   {
     label: 'Matching',
-    hint: 'Dedup scoring weights and field priorities.',
+    hint: pendingConfigSectionKeys.includes('matching')
+      ? 'Dedup scoring weights and field priorities. Unsaved changes.'
+      : 'Dedup scoring weights and field priorities.',
     isActive: activePath === 'config-matching',
     to: getTradeCrmCustomerPath('config-matching'),
+    countLabel: pendingConfigSectionKeys.includes('matching')
+      ? 'Unsaved'
+      : undefined,
   },
   {
     label: 'Import',
-    hint: 'File upload, mapping, and import job history.',
+    hint: pendingConfigSectionKeys.includes('import')
+      ? 'File upload, mapping, and import job history. Unsaved changes.'
+      : 'File upload, mapping, and import job history.',
     isActive: activePath === 'config-import',
     to: getTradeCrmCustomerPath('config-import'),
+    countLabel: pendingConfigSectionKeys.includes('import')
+      ? 'Unsaved'
+      : undefined,
   },
 ];
 
-const getCustomerConfigTabs = (activeSection: ConfigSection): PageHeaderTab[] =>
+const getCustomerConfigTabs = (
+  activeSection: ConfigSection,
+  pendingConfigSectionKeys: string[] = [],
+): PageHeaderTab[] =>
   tradeCrmCustomerConfigSections.map((section) => ({
-    label: tradeCrmCustomerRouteLabels[`config-${section}`],
+    label: pendingConfigSectionKeys.includes(section)
+      ? `${tradeCrmCustomerRouteLabels[`config-${section}`]} •`
+      : tradeCrmCustomerRouteLabels[`config-${section}`],
     isActive: activeSection === section,
     to: getTradeCrmCustomerConfigPath(section),
   }));
@@ -837,11 +938,26 @@ const useTradeCrmCustomerRuntimeConfig = (
   };
 };
 
+const stripConfigOperationSummarySuffix = (summary: string) =>
+  summary.replace(/\s+\(([a-z-]+(?:,\s*[a-z-]+)*)\)$/iu, '');
+
+const getCustomerConfigSectionLabel = (sectionKey: string) =>
+  tradeCrmCustomerRouteLabels[
+    `config-${sectionKey}` as keyof typeof tradeCrmCustomerRouteLabels
+  ] ?? sectionKey;
+
+const hasPendingConfigSectionChange = (
+  pendingChangedSections: Array<{ key: string }>,
+  sectionKey: string,
+) => pendingChangedSections.some((section) => section.key === sectionKey);
+
 type CustomerConfigTagInputState = {
   company: string;
   mine: string;
   subordinate: string;
 };
+
+type CustomerConfigEditorState = Record<string, string>;
 
 const renderConfigContent = ({
   activeSection,
@@ -853,8 +969,14 @@ const renderConfigContent = ({
   onGroupParentIdChange,
   newTagLabels,
   onNewTagLabelChange,
+  tagEditorValues,
+  onTagEditorValueChange,
+  clearTagEditorValue,
   newSourceLabel,
   onNewSourceLabelChange,
+  sourceEditorValues,
+  onSourceEditorValueChange,
+  clearSourceEditorValue,
   importFileName,
   onImportFileNameChange,
   importJobs,
@@ -872,8 +994,14 @@ const renderConfigContent = ({
     scope: keyof CustomerConfigTagInputState,
     value: string,
   ) => void;
+  tagEditorValues: CustomerConfigEditorState;
+  onTagEditorValueChange: (key: string, value: string) => void;
+  clearTagEditorValue: (key: string) => void;
   newSourceLabel: string;
   onNewSourceLabelChange: (value: string) => void;
+  sourceEditorValues: CustomerConfigEditorState;
+  onSourceEditorValueChange: (key: string, value: string) => void;
+  clearSourceEditorValue: (key: string) => void;
   importFileName: string;
   onImportFileNameChange: (value: string) => void;
   importJobs: ReturnType<typeof useTradeCrmCustomerImportJobs>;
@@ -884,7 +1012,15 @@ const renderConfigContent = ({
       <StyledSplitGrid>
         <StyledStack>
           <StyledPanel>
-            <StyledPanelTitle>Rule Conditions</StyledPanelTitle>
+            <StyledPanelTitleRow>
+              <StyledPanelTitle>Rule Conditions</StyledPanelTitle>
+              {hasPendingConfigSectionChange(
+                configDraft.pendingChangedSections,
+                'public-pool-rules',
+              ) ? (
+                <StyledToken>Unsaved</StyledToken>
+              ) : null}
+            </StyledPanelTitleRow>
             <StyledFormGrid>
               <StyledField>
                 <StyledFieldLabel>Rule Name</StyledFieldLabel>
@@ -976,7 +1112,15 @@ const renderConfigContent = ({
         </StyledStack>
         <StyledStack>
           <StyledPanel>
-            <StyledPanelTitle>Execution Preview</StyledPanelTitle>
+            <StyledPanelTitleRow>
+              <StyledPanelTitle>Execution Preview</StyledPanelTitle>
+              {hasPendingConfigSectionChange(
+                configDraft.pendingChangedSections,
+                'public-pool-rules',
+              ) ? (
+                <StyledToken>Unsaved</StyledToken>
+              ) : null}
+            </StyledPanelTitleRow>
             <StyledStepList>
               {[
                 [
@@ -1035,7 +1179,15 @@ const renderConfigContent = ({
     return (
       <StyledSplitGrid>
         <StyledPanel>
-          <StyledPanelTitle>Group Tree Editor</StyledPanelTitle>
+          <StyledPanelTitleRow>
+            <StyledPanelTitle>Group Tree Editor</StyledPanelTitle>
+            {hasPendingConfigSectionChange(
+              configDraft.pendingChangedSections,
+              'groups',
+            ) ? (
+              <StyledToken>Unsaved</StyledToken>
+            ) : null}
+          </StyledPanelTitleRow>
           <StyledPanelDescription>
             Add new root or second-level customer groups, then reorder them
             before saving. The hierarchy is persisted back into workspace
@@ -1085,7 +1237,15 @@ const renderConfigContent = ({
         </StyledPanel>
         <StyledStack>
           <StyledPanel>
-            <StyledPanelTitle>Configured Groups</StyledPanelTitle>
+            <StyledPanelTitleRow>
+              <StyledPanelTitle>Configured Groups</StyledPanelTitle>
+              {hasPendingConfigSectionChange(
+                configDraft.pendingChangedSections,
+                'groups',
+              ) ? (
+                <StyledToken>Unsaved</StyledToken>
+              ) : null}
+            </StyledPanelTitleRow>
             {configDraft.groupValidationMessages.length > 0 ? (
               <StyledConfigNote>
                 {configDraft.groupValidationMessages.join(' ')}
@@ -1104,6 +1264,42 @@ const renderConfigContent = ({
                         configDraft.renameGroup(group.id, event.target.value)
                       }
                     />
+                    {group.level === 2 ? (
+                      <StyledSelect
+                        value={group.parentId ?? ''}
+                        onChange={(event) => {
+                          if (event.target.value.length === 0) {
+                            return;
+                          }
+
+                          configDraft.changeGroupParent(
+                            group.id,
+                            event.target.value,
+                          );
+                        }}
+                      >
+                        {rootGroups.map((rootGroup) => (
+                          <option
+                            key={`${group.id}-${rootGroup.id}`}
+                            value={rootGroup.id}
+                            disabled={
+                              rootGroup.id !== group.parentId &&
+                              configDraft.getChangeGroupParentValidationMessage(
+                                group.id,
+                                rootGroup.id,
+                              ) !== null
+                            }
+                          >
+                            {rootGroup.label}
+                          </option>
+                        ))}
+                      </StyledSelect>
+                    ) : null}
+                    {configDraft.getGroupPendingChangeMessage(group.id) ? (
+                      <StyledToken>
+                        {configDraft.getGroupPendingChangeMessage(group.id)}
+                      </StyledToken>
+                    ) : null}
                   </StyledInlineComposer>
                   <StyledInlineComposer>
                     <StyledControlButton
@@ -1146,8 +1342,16 @@ const renderConfigContent = ({
           ['subordinate', 'Subordinate Tags'],
         ].map(([scope, title]) => (
           <StyledPanel key={scope}>
-            <StyledPanelTitle>{title}</StyledPanelTitle>
-            <StyledTokenWrap>
+            <StyledPanelTitleRow>
+              <StyledPanelTitle>{title}</StyledPanelTitle>
+              {hasPendingConfigSectionChange(
+                configDraft.pendingChangedSections,
+                'tags',
+              ) ? (
+                <StyledToken>Unsaved</StyledToken>
+              ) : null}
+            </StyledPanelTitleRow>
+            <StyledFilterList>
               {configDraft.draft.tags[
                 scope as keyof CustomerConfigTagInputState
               ].map((tag) => (
@@ -1164,7 +1368,91 @@ const renderConfigContent = ({
                   {tag} ×
                 </StyledTagButton>
               ))}
-            </StyledTokenWrap>
+            </StyledFilterList>
+            <StyledFilterList>
+              {configDraft.draft.tags[
+                scope as keyof CustomerConfigTagInputState
+              ].map((tag) => {
+                const tagScope = scope as keyof CustomerConfigTagInputState;
+                const editorKey = `${tagScope}:${tag}`;
+                const editedTagLabel = tagEditorValues[editorKey] ?? tag;
+                const renameValidationMessage =
+                  configDraft.getRenameTagValidationMessage(
+                    tagScope,
+                    tag,
+                    editedTagLabel,
+                  );
+                const isRenameReady =
+                  editedTagLabel.trim().length > 0 &&
+                  editedTagLabel.trim() !== tag.trim() &&
+                  renameValidationMessage === null;
+
+                return (
+                  <StyledFilterNode key={`${editorKey}-controls`}>
+                    <StyledStack>
+                      <StyledTextInput
+                        value={editedTagLabel}
+                        onChange={(event) =>
+                          onTagEditorValueChange(editorKey, event.target.value)
+                        }
+                      />
+                      <StyledNodeCount>
+                        {renameValidationMessage ??
+                          (isRenameReady
+                            ? 'Rename ready. Click Rename to queue this change for save.'
+                            : 'No rename change queued for this tag yet.')}
+                      </StyledNodeCount>
+                    </StyledStack>
+                    <StyledInlineComposer>
+                    <StyledControlButton
+                      type="button"
+                      disabled={
+                        !configDraft.canMoveTag(tagScope, tag, 'up')
+                      }
+                      onClick={() => configDraft.moveTag(tagScope, tag, 'up')}
+                    >
+                      Up
+                    </StyledControlButton>
+                    <StyledControlButton
+                      type="button"
+                      disabled={
+                        !configDraft.canMoveTag(tagScope, tag, 'down')
+                      }
+                      onClick={() =>
+                        configDraft.moveTag(tagScope, tag, 'down')
+                      }
+                    >
+                      Down
+                    </StyledControlButton>
+                    <StyledControlButton
+                      type="button"
+                      disabled={!isRenameReady}
+                      onClick={() => {
+                        configDraft.renameTag(tagScope, tag, editedTagLabel);
+                        clearTagEditorValue(editorKey);
+                      }}
+                    >
+                      Rename
+                    </StyledControlButton>
+                    <StyledControlButton
+                      type="button"
+                      disabled={editedTagLabel === tag}
+                      onClick={() => clearTagEditorValue(editorKey)}
+                    >
+                      Cancel
+                    </StyledControlButton>
+                    <StyledControlButton
+                      type="button"
+                      $tone="danger"
+                      onClick={() => configDraft.removeTag(tagScope, tag)}
+                    >
+                      Remove
+                    </StyledControlButton>
+                    </StyledInlineComposer>
+                  </StyledFilterNode>
+                );
+              })}
+            </StyledFilterList>
             <StyledInlineComposer>
               <StyledTextInput
                 value={newTagLabels[scope as keyof CustomerConfigTagInputState]}
@@ -1217,7 +1505,15 @@ const renderConfigContent = ({
   if (activeSection === 'sources') {
     return (
       <StyledPanel>
-        <StyledPanelTitle>Source Dictionary</StyledPanelTitle>
+        <StyledPanelTitleRow>
+          <StyledPanelTitle>Source Dictionary</StyledPanelTitle>
+          {hasPendingConfigSectionChange(
+            configDraft.pendingChangedSections,
+            'sources',
+          ) ? (
+            <StyledToken>Unsaved</StyledToken>
+          ) : null}
+        </StyledPanelTitleRow>
         <StyledPanelDescription>
           Keep the same source dictionary shared by leads, customers, dedup, and
           import mapping.
@@ -1247,11 +1543,66 @@ const renderConfigContent = ({
             'Source labels are shared across leads, customers, dedup, and import mapping.'}
         </StyledConfigNote>
         <StyledFilterList>
-          {configDraft.draft.sources.map((source) => (
-            <StyledFilterNode key={source}>
-              <StyledNodeLabel>{source}</StyledNodeLabel>
-              <StyledInlineComposer>
-                <StyledNodeCount>Shared dictionary</StyledNodeCount>
+          {configDraft.draft.sources.map((source) => {
+            const editedSourceLabel = sourceEditorValues[source] ?? source;
+            const renameValidationMessage =
+              configDraft.getRenameSourceValidationMessage(
+                source,
+                editedSourceLabel,
+              );
+            const isRenameReady =
+              editedSourceLabel.trim().length > 0 &&
+              editedSourceLabel.trim() !== source.trim() &&
+              renameValidationMessage === null;
+
+            return (
+              <StyledFilterNode key={source}>
+                <StyledStack>
+                  <StyledTextInput
+                    value={editedSourceLabel}
+                    onChange={(event) =>
+                      onSourceEditorValueChange(source, event.target.value)
+                    }
+                  />
+                  <StyledNodeCount>
+                    {renameValidationMessage ??
+                      (isRenameReady
+                        ? 'Rename ready. Click Rename to queue this change for save.'
+                        : 'No rename change queued for this source yet.')}
+                  </StyledNodeCount>
+                </StyledStack>
+                <StyledInlineComposer>
+                <StyledControlButton
+                  type="button"
+                  disabled={!configDraft.canMoveSource(source, 'up')}
+                  onClick={() => configDraft.moveSource(source, 'up')}
+                >
+                  Up
+                </StyledControlButton>
+                <StyledControlButton
+                  type="button"
+                  disabled={!configDraft.canMoveSource(source, 'down')}
+                  onClick={() => configDraft.moveSource(source, 'down')}
+                >
+                  Down
+                </StyledControlButton>
+                <StyledControlButton
+                  type="button"
+                  disabled={!isRenameReady}
+                  onClick={() => {
+                    configDraft.renameSource(source, editedSourceLabel);
+                    clearSourceEditorValue(source);
+                  }}
+                >
+                  Rename
+                </StyledControlButton>
+                <StyledControlButton
+                  type="button"
+                  disabled={editedSourceLabel === source}
+                  onClick={() => clearSourceEditorValue(source)}
+                >
+                  Cancel
+                </StyledControlButton>
                 <StyledControlButton
                   type="button"
                   $tone="danger"
@@ -1259,9 +1610,10 @@ const renderConfigContent = ({
                 >
                   Remove
                 </StyledControlButton>
-              </StyledInlineComposer>
-            </StyledFilterNode>
-          ))}
+                </StyledInlineComposer>
+              </StyledFilterNode>
+            );
+          })}
         </StyledFilterList>
       </StyledPanel>
     );
@@ -1276,7 +1628,15 @@ const renderConfigContent = ({
     return (
       <StyledStack>
         <StyledCallout>
-          <StyledPanelTitle>Matching Weight Total</StyledPanelTitle>
+          <StyledPanelTitleRow>
+            <StyledPanelTitle>Matching Weight Total</StyledPanelTitle>
+            {hasPendingConfigSectionChange(
+              configDraft.pendingChangedSections,
+              'matching',
+            ) ? (
+              <StyledToken>Unsaved</StyledToken>
+            ) : null}
+          </StyledPanelTitleRow>
           <StyledPanelDescription>
             Keep the combined weight close to 100 so manual dedup and import
             dedup stay predictable.
@@ -1312,7 +1672,15 @@ const renderConfigContent = ({
   return (
     <StyledSplitGrid>
       <StyledPanel>
-        <StyledPanelTitle>Import Defaults</StyledPanelTitle>
+        <StyledPanelTitleRow>
+          <StyledPanelTitle>Import Defaults</StyledPanelTitle>
+          {hasPendingConfigSectionChange(
+            configDraft.pendingChangedSections,
+            'import',
+          ) ? (
+            <StyledToken>Unsaved</StyledToken>
+          ) : null}
+        </StyledPanelTitleRow>
         <StyledPanelDescription>
           Save the destination and update strategy here so import setup stays
           consistent across customer settings and every import job created from
@@ -1404,7 +1772,15 @@ const renderConfigContent = ({
         </StyledStepList>
       </StyledPanel>
       <StyledPanel>
-        <StyledPanelTitle>Import Job Records</StyledPanelTitle>
+        <StyledPanelTitleRow>
+          <StyledPanelTitle>Import Job Records</StyledPanelTitle>
+          {hasPendingConfigSectionChange(
+            configDraft.pendingChangedSections,
+            'import',
+          ) ? (
+            <StyledToken>Unsaved</StyledToken>
+          ) : null}
+        </StyledPanelTitleRow>
         <StyledPanelDescription>
           {importJobs.loading
             ? 'Loading import jobs...'
@@ -1479,10 +1855,18 @@ const renderConfigContent = ({
         </StyledFilterList>
         {importJobs.activeResult ? (
           <StyledPanel>
-            <StyledPanelTitle>
-              Import Result:{' '}
-              {importJobs.activeResult.job?.fileName ?? 'Unknown job'}
-            </StyledPanelTitle>
+            <StyledPanelTitleRow>
+              <StyledPanelTitle>
+                Import Result:{' '}
+                {importJobs.activeResult.job?.fileName ?? 'Unknown job'}
+              </StyledPanelTitle>
+              {hasPendingConfigSectionChange(
+                configDraft.pendingChangedSections,
+                'import',
+              ) ? (
+                <StyledToken>Unsaved</StyledToken>
+              ) : null}
+            </StyledPanelTitleRow>
             <StyledPanelDescription>
               {importJobs.activeResult.job
                 ? `Success ${importJobs.activeResult.job.successCount}, failed ${importJobs.activeResult.job.failedCount}, status ${importJobs.activeResult.job.status}.`
@@ -1530,7 +1914,15 @@ const renderConfigContent = ({
         ) : null}
       </StyledPanel>
       <StyledPanel>
-        <StyledPanelTitle>Template Fields</StyledPanelTitle>
+        <StyledPanelTitleRow>
+          <StyledPanelTitle>Template Fields</StyledPanelTitle>
+          {hasPendingConfigSectionChange(
+            configDraft.pendingChangedSections,
+            'import',
+          ) ? (
+            <StyledToken>Unsaved</StyledToken>
+          ) : null}
+        </StyledPanelTitleRow>
         <StyledTokenWrap>
           {configDraft.draft.importConfig.selectedFields.map((field) => (
             <StyledTagButton
@@ -2453,6 +2845,9 @@ const TradeCrmCustomerConfigWorkspace = ({
   const { configDraft, publicPoolGroupLabels } =
     useTradeCrmCustomerRuntimeConfig(workspaceData);
   const importJobs = useTradeCrmCustomerImportJobs();
+  const pendingConfigSectionKeys = configDraft.pendingChangedSections.map(
+    (section) => section.key,
+  );
   const [newGroupLabel, setNewGroupLabel] = useState('');
   const [groupParentId, setGroupParentId] = useState<string | null>(null);
   const [newTagLabels, setNewTagLabels] = useState<CustomerConfigTagInputState>(
@@ -2462,8 +2857,30 @@ const TradeCrmCustomerConfigWorkspace = ({
       subordinate: '',
     },
   );
+  const [tagEditorValues, setTagEditorValues] =
+    useState<CustomerConfigEditorState>({});
   const [newSourceLabel, setNewSourceLabel] = useState('');
+  const [sourceEditorValues, setSourceEditorValues] =
+    useState<CustomerConfigEditorState>({});
   const [importFileName, setImportFileName] = useState('');
+
+  useEffect(() => {
+    if (configDraft.hasUnsavedChanges) {
+      return;
+    }
+
+    setNewGroupLabel('');
+    setGroupParentId(null);
+    setNewTagLabels({
+      company: '',
+      mine: '',
+      subordinate: '',
+    });
+    setTagEditorValues({});
+    setNewSourceLabel('');
+    setSourceEditorValues({});
+    setImportFileName('');
+  }, [configDraft.hasUnsavedChanges]);
 
   return (
     <TradeCrmCustomerWorkspaceLayout
@@ -2476,12 +2893,16 @@ const TradeCrmCustomerConfigWorkspace = ({
         tradeCrmCustomerRouteLabels[`config-${activeSection}`],
       ]}
       tabs={getPrimaryTabs('settings')}
-      secondaryTabs={getCustomerConfigTabs(activeSection)}
+      secondaryTabs={getCustomerConfigTabs(
+        activeSection,
+        pendingConfigSectionKeys,
+      )}
       sidebarTitle="Customer Module"
       sidebarItems={getSidebarItems({
         activePath: `config-${activeSection}`,
         companyTotalCount: workspaceData.companyTotalCount,
         peopleTotalCount: workspaceData.peopleTotalCount,
+        pendingConfigSectionKeys,
       })}
       insights={[
         {
@@ -2520,6 +2941,10 @@ const TradeCrmCustomerConfigWorkspace = ({
               ? 'Saving customer settings into workspace objects...'
               : configDraft.hasValidationErrors
                 ? `${configDraft.validationMessages.length} validation issue(s) must be resolved before saving.`
+                : configDraft.hasUnsavedChanges
+                  ? `${configDraft.pendingChangedSections.length} config section(s) pending save.`
+                : configDraft.lastSavedConfigOperationId !== null
+                  ? 'Latest save was written to the config audit trail below.'
                 : configDraft.lastSavedAt
                   ? `Last saved ${configDraft.lastSavedAt.slice(0, 16).replace('T', ' ')}`
                   : 'Save once to persist customer settings into workspace objects'}
@@ -2547,6 +2972,23 @@ const TradeCrmCustomerConfigWorkspace = ({
           </StyledControlButton>
         </StyledActionButtons>
       </StyledActionBar>
+      {configDraft.hasUnsavedChanges &&
+      configDraft.pendingChangedSections.length > 0 ? (
+        <StyledCallout>
+          <StyledPanelTitle>Pending Sections</StyledPanelTitle>
+          <StyledPanelDescription>
+            These customer settings sections have unsaved changes and will be
+            written together on the next save.
+          </StyledPanelDescription>
+          <StyledTokenWrap>
+            {configDraft.pendingChangedSections.map((section) => (
+              <StyledToken key={section.key}>
+                {getCustomerConfigSectionLabel(section.key)}
+              </StyledToken>
+            ))}
+          </StyledTokenWrap>
+        </StyledCallout>
+      ) : null}
       {renderConfigContent({
         activeSection,
         workspaceData,
@@ -2561,38 +3003,119 @@ const TradeCrmCustomerConfigWorkspace = ({
             ...currentState,
             [scope]: value,
           })),
+        tagEditorValues,
+        onTagEditorValueChange: (key, value) =>
+          setTagEditorValues((currentState) => ({
+            ...currentState,
+            [key]: value,
+          })),
+        clearTagEditorValue: (key) =>
+          setTagEditorValues((currentState) => {
+            const nextState = { ...currentState };
+
+            delete nextState[key];
+
+            return nextState;
+          }),
         newSourceLabel,
         onNewSourceLabelChange: setNewSourceLabel,
+        sourceEditorValues,
+        onSourceEditorValueChange: (key, value) =>
+          setSourceEditorValues((currentState) => ({
+            ...currentState,
+            [key]: value,
+          })),
+        clearSourceEditorValue: (key) =>
+          setSourceEditorValues((currentState) => {
+            const nextState = { ...currentState };
+
+            delete nextState[key];
+
+            return nextState;
+          }),
         importFileName,
         onImportFileNameChange: setImportFileName,
         importJobs,
         publicPoolGroupLabels,
       })}
       <StyledPanel>
-        <StyledPanelTitle>Recent Config Changes</StyledPanelTitle>
+        <StyledPanelTitle>
+          Recent Config Changes ({configDraft.configOperationHistoryItems.length}
+          {configDraft.configOperationHistoryTotalCount >
+          configDraft.configOperationHistoryItems.length
+            ? ` / ${configDraft.configOperationHistoryTotalCount}`
+            : ''}
+          )
+        </StyledPanelTitle>
         <StyledPanelDescription>
           Keep a workspace-level audit trail for customer settings so rule,
           dictionary, and import-default updates can be reviewed without opening
-          a specific customer record.
+          a specific customer record. Each save is broken into section-level
+          change notes for faster review.
         </StyledPanelDescription>
         <StyledFilterList>
-          {configDraft.configOperationHistoryItems.map((historyItem) => (
-            <StyledFilterNode key={historyItem.id}>
-              <StyledStack>
-                <StyledNodeLabel>
-                  {historyItem.operationSummary}
-                </StyledNodeLabel>
-                <StyledNodeCount>
-                  {historyItem.operatorName ?? 'system'} /{' '}
-                  {historyItem.operatedAt?.slice(0, 16).replace('T', ' ') ??
-                    '--'}
-                </StyledNodeCount>
-              </StyledStack>
-              <StyledNodeCount>
-                {historyItem.operationType ?? 'CONFIG'}
-              </StyledNodeCount>
-            </StyledFilterNode>
-          ))}
+          {configDraft.configOperationHistoryItems.map((historyItem) => {
+            const summarySegments = stripConfigOperationSummarySuffix(
+              historyItem.operationSummary,
+            )
+              .split(' | ')
+              .map((segment) => segment.trim())
+              .filter((segment) => segment.length > 0)
+              .map((segment) => {
+                const delimiterIndex = segment.indexOf(':');
+
+                if (delimiterIndex < 0) {
+                  return {
+                    label: 'Config',
+                    detail: segment,
+                  };
+                }
+
+                return {
+                  label: segment.slice(0, delimiterIndex).trim(),
+                  detail: segment.slice(delimiterIndex + 1).trim(),
+                };
+              });
+
+            const HistoryNodeComponent =
+              historyItem.id === configDraft.lastSavedConfigOperationId
+                ? StyledHighlightedHistoryNode
+                : StyledFilterNode;
+
+            return (
+              <HistoryNodeComponent key={historyItem.id}>
+                <StyledHistorySummary>
+                  <StyledHistoryMetaRow>
+                    <StyledNodeCount>
+                      {historyItem.operatorName ?? 'system'} /{' '}
+                      {historyItem.operatedAt?.slice(0, 16).replace('T', ' ') ??
+                        '--'}
+                    </StyledNodeCount>
+                    {historyItem.id === configDraft.lastSavedConfigOperationId ? (
+                      <StyledToken>Latest save</StyledToken>
+                    ) : null}
+                    <StyledToken>
+                      {historyItem.operationType ?? 'CONFIG'}
+                    </StyledToken>
+                  </StyledHistoryMetaRow>
+                  <StyledHistorySegmentWrap>
+                    {summarySegments.map((segment) => (
+                      <StyledHistorySegment
+                        key={`${historyItem.id}-${segment.label}`}
+                      >
+                        <StyledHistorySegmentLabel>
+                          {segment.label}
+                        </StyledHistorySegmentLabel>
+                        <StyledHistorySegmentText>
+                          {segment.detail}
+                        </StyledHistorySegmentText>
+                      </StyledHistorySegment>
+                    ))}
+                  </StyledHistorySegmentWrap>
+                </StyledHistorySummary>
+              </HistoryNodeComponent>
+            );
+          })}
           {configDraft.configOperationHistoryItems.length === 0 ? (
             <StyledConfigNote>
               No customer-setting change has been audited yet. Saving a config

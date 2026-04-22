@@ -108,3 +108,8 @@
 - 后端新增批量处置接口 `PATCH /api/enterprise/independent-stations/:id/inquiries`，支持对多条询盘统一更新负责人/状态，并逐条写入 `manualOverride` 与审计日志。
 - 单条询盘人工处置逻辑已抽为共享更新逻辑，保证单条保存与批量保存写入行为一致。
 - 本轮已通过 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front` 与 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx build twenty-server`。
+## 2026-04-22 独立站分配规则成员选择器补充
+- 独立站分配规则表单中的 `assigneeIds` 已从手填逗号字符串改为真实 workspace 成员数组，前端直接复用 `currentWorkspaceMembersState` 做负责人勾选列表。
+- `fixed_user` 与 `round_robin` 分配类型保存前会校验至少选择一位负责人，避免空负责人规则落库。
+- 规则保存现在直接提交成员 ID 数组，与单条询盘人工处置、批量处置使用的负责人来源保持一致。
+- 本轮已通过 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front`。
