@@ -6,11 +6,21 @@ import {
   type TradeCrmCustomerTableBadgeTone,
 } from '@/trade-crm/customers/components/TradeCrmCustomerTable';
 import {
+  getTradeCrmEnterpriseCustomerFieldValidationMessage,
+  TradeCrmEnterpriseCustomerFieldInput,
+} from '@/trade-crm/customers/components/TradeCrmEnterpriseCustomerFieldInput';
+import {
   type TradeCrmCustomerDocumentItem,
   type TradeCrmCustomerAiInsight,
   type TradeCrmCustomerOperationHistoryItem,
   type TradeCrmCustomerTimelineItem,
 } from '@/trade-crm/customers/hooks/useTradeCrmCustomerWorkspaceData';
+import {
+  type TradeCrmEnterpriseCustomerField,
+  type TradeCrmEnterpriseCustomerFieldDraftValue,
+  type TradeCrmEnterpriseCustomerFieldOption,
+  type TradeCrmEnterpriseCustomerFieldWithLayout,
+} from '@/trade-crm/customers/hooks/useTradeCrmEnterpriseCustomerFields';
 import {
   getTradeCrmCustomerCountryLabel,
   getTradeCrmCustomerEmailLabel,
@@ -116,6 +126,23 @@ type TradeCrmCustomerDetailWorkbenchProps = {
   updateCustomerContactLoading: boolean;
   refreshCustomerCommercialSummary: () => Promise<void>;
   refreshCustomerCommercialSummaryLoading: boolean;
+  enterpriseCustomerDetailFields: TradeCrmEnterpriseCustomerFieldWithLayout[];
+  enterpriseCustomerEditFields: TradeCrmEnterpriseCustomerFieldWithLayout[];
+  enterpriseCustomerFieldDraftValues: Record<
+    string,
+    TradeCrmEnterpriseCustomerFieldDraftValue
+  >;
+  enterpriseCustomerFieldOptionsByFieldId: Record<
+    string,
+    TradeCrmEnterpriseCustomerFieldOption[]
+  >;
+  enterpriseCustomerFieldsLoading: boolean;
+  enterpriseCustomerFieldsSaving: boolean;
+  onEnterpriseCustomerFieldDraftValueChange: (
+    fieldDefinitionId: string,
+    value: TradeCrmEnterpriseCustomerFieldDraftValue,
+  ) => void;
+  onSaveEnterpriseCustomerFields: () => Promise<void>;
 };
 
 type DetailTabKey =
@@ -413,6 +440,66 @@ const getTimelineSourceLabel = (sourceObjectName: string | null) => {
   }
 };
 
+const getEnterpriseFieldDraftText = (
+  value: TradeCrmEnterpriseCustomerFieldDraftValue | undefined,
+) => {
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+
+  return value ?? '';
+};
+
+const getEnterpriseFieldDisplayValue = ({
+  field,
+  options,
+  value,
+}: {
+  field: TradeCrmEnterpriseCustomerField;
+  options: TradeCrmEnterpriseCustomerFieldOption[];
+  value: TradeCrmEnterpriseCustomerFieldDraftValue | undefined;
+}) => {
+  if (value === undefined || value === '') {
+    return '--';
+  }
+
+  if (field.fieldType === 'boolean') {
+    return value === true || value === 'true' ? 'Yes' : 'No';
+  }
+
+  if (field.fieldType === 'multiSelect') {
+    const values = Array.isArray(value)
+      ? value
+      : String(value)
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean);
+
+    return (
+      values
+        .map(
+          (entry) =>
+            options.find((option) => option.optionCode === entry)?.optionLabel ??
+            entry,
+        )
+        .join(', ') || '--'
+    );
+  }
+
+  if (field.fieldType === 'select') {
+    return (
+      options.find((option) => option.optionCode === value)?.optionLabel ??
+      String(value)
+    );
+  }
+
+  return getEnterpriseFieldDraftText(value);
+};
+
 export const TradeCrmCustomerDetailWorkbench = ({
   customerDetail,
   customerDetailLoading,
@@ -440,6 +527,14 @@ export const TradeCrmCustomerDetailWorkbench = ({
   updateCustomerContactLoading,
   refreshCustomerCommercialSummary,
   refreshCustomerCommercialSummaryLoading,
+  enterpriseCustomerDetailFields,
+  enterpriseCustomerEditFields,
+  enterpriseCustomerFieldDraftValues,
+  enterpriseCustomerFieldOptionsByFieldId,
+  enterpriseCustomerFieldsLoading,
+  enterpriseCustomerFieldsSaving,
+  onEnterpriseCustomerFieldDraftValueChange,
+  onSaveEnterpriseCustomerFields,
 }: TradeCrmCustomerDetailWorkbenchProps) => {
   const [activeTab, setActiveTab] = useState<DetailTabKey>('activity');
   const [followUpBody, setFollowUpBody] = useState('');
@@ -618,6 +713,44 @@ export const TradeCrmCustomerDetailWorkbench = ({
         },
       ],
     }));
+  const enterpriseFieldValidationMessages = Object.fromEntries(
+    enterpriseCustomerEditFields.map((field) => [
+      field.id,
+      getTradeCrmEnterpriseCustomerFieldValidationMessage({
+        field,
+        options: enterpriseCustomerFieldOptionsByFieldId[field.id] ?? [],
+        value: enterpriseCustomerFieldDraftValues[field.id],
+      }),
+    ]),
+  );
+  const hasInvalidEnterpriseField = Object.values(
+    enterpriseFieldValidationMessages,
+  ).some((message) => message !== null);
+
+  const renderEnterpriseFieldInput = (
+    field: TradeCrmEnterpriseCustomerFieldWithLayout,
+  ) => {
+    const draftValue = enterpriseCustomerFieldDraftValues[field.id];
+    const options = enterpriseCustomerFieldOptionsByFieldId[field.id] ?? [];
+
+    return (
+      <TradeCrmEnterpriseCustomerFieldInput
+        field={field}
+        noOptionsFallback={
+          <StyledMuted>No options configured for {field.fieldName}.</StyledMuted>
+        }
+        options={options}
+        value={draftValue}
+        validationMessage={enterpriseFieldValidationMessages[field.id]}
+        onChange={(nextValue) =>
+          onEnterpriseCustomerFieldDraftValueChange(
+            field.id,
+            nextValue,
+          )
+        }
+      />
+    );
+  };
 
   const renderActiveTab = () => {
     if (activeTab === 'profile') {
@@ -673,6 +806,54 @@ export const TradeCrmCustomerDetailWorkbench = ({
               </StyledComposerButton>
             </StyledComposerActions>
           </StyledComposer>
+          <StyledComposer>
+            <StyledCardTitle>Enterprise Custom Fields</StyledCardTitle>
+            {enterpriseCustomerFieldsLoading ? (
+              <StyledMuted>Loading enterprise custom fields...</StyledMuted>
+            ) : enterpriseCustomerEditFields.length > 0 ? (
+              <>
+                <StyledProfileGrid>
+                  {enterpriseCustomerEditFields.map((field) => (
+                    <StyledMetric key={field.id}>
+                      <StyledMetricLabel>
+                        {field.fieldName}
+                        {field.required ? ' *' : ''}
+                        {field.readonly ? ' / read-only' : ''}
+                      </StyledMetricLabel>
+                      {renderEnterpriseFieldInput(field)}
+                    </StyledMetric>
+                  ))}
+                </StyledProfileGrid>
+            <StyledComposerActions>
+              <span>
+                {hasInvalidEnterpriseField
+                  ? 'Resolve enterprise field validation issues before saving.'
+                  : 'Values are stored in enterprise field values and stay linked to this customer record.'}
+              </span>
+              <StyledComposerButton
+                type="button"
+                disabled={
+                  enterpriseCustomerFieldsSaving ||
+                  hasInvalidEnterpriseField
+                }
+                    onClick={() => {
+                      void onSaveEnterpriseCustomerFields();
+                    }}
+                  >
+                    {enterpriseCustomerFieldsSaving
+                      ? 'Saving...'
+                      : 'Save Custom Fields'}
+                  </StyledComposerButton>
+                </StyledComposerActions>
+              </>
+            ) : (
+              <StyledMuted>
+                No enterprise customer fields are visible in the edit layout.
+                Add fields from Enterprise Management / Field Display / Edit
+                Form to make them editable here.
+              </StyledMuted>
+            )}
+          </StyledComposer>
           <StyledProfileGrid>
             {[
               ['Stage', customerDetail?.customerStageLabel ?? '--'],
@@ -689,6 +870,15 @@ export const TradeCrmCustomerDetailWorkbench = ({
               ['Last Contact', customerDetail?.lastContactLabel ?? '--'],
               ['Last Won', customerDetail?.lastWonLabel ?? '--'],
               ['Won Revenue', customerDetail?.totalWonAmountLabel ?? '--'],
+              ...enterpriseCustomerDetailFields.map((field) => [
+                field.fieldName,
+                getEnterpriseFieldDisplayValue({
+                  field,
+                  options:
+                    enterpriseCustomerFieldOptionsByFieldId[field.id] ?? [],
+                  value: enterpriseCustomerFieldDraftValues[field.id],
+                }),
+              ]),
             ].map(([label, value]) => (
               <StyledMetric key={label}>
                 <StyledMetricLabel>{label}</StyledMetricLabel>

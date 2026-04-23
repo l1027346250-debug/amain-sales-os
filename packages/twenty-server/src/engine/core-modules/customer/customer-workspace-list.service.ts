@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
-import { type ObjectLiteral } from 'typeorm';
+import { In, IsNull, type ObjectLiteral, Repository } from 'typeorm';
 
 import { ObjectMetadataService } from 'src/engine/metadata-modules/object-metadata/object-metadata.service';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
@@ -13,11 +14,17 @@ import {
   TRADE_CRM_SOURCE_OPTIONS,
 } from 'src/engine/workspace-manager/trade-crm-metadata/constants/trade-crm-select-options.constant';
 import {
+  type CustomerWorkspaceEnterpriseFieldFilter,
   CustomerWorkspaceListArgs,
   CustomerWorkspaceListDTO,
   CustomerWorkspaceListItemDTO,
   CustomerWorkspaceSummaryDTO,
 } from 'src/engine/core-modules/customer/dto/customer-workspace-list.dto';
+import { EnterpriseEntityBindingEntity } from 'src/modules/enterprise/entity-binding/enterprise-entity-binding.entity';
+import { EnterpriseFieldDefinitionEntity } from 'src/modules/enterprise/field-definition/enterprise-field-definition.entity';
+import { EnterpriseFieldValueEntity } from 'src/modules/enterprise/field-value/enterprise-field-value.entity';
+import { EnterpriseEntityType } from 'src/modules/enterprise/shared/types/enterprise-entity-type';
+import { EnterpriseFieldType } from 'src/modules/enterprise/shared/types/enterprise-field-type';
 
 type TradeCrmSelectOption = {
   label: string;
@@ -196,6 +203,12 @@ export class CustomerWorkspaceListService {
   constructor(
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
     private readonly objectMetadataService: ObjectMetadataService,
+    @InjectRepository(EnterpriseEntityBindingEntity)
+    private readonly enterpriseEntityBindingRepository: Repository<EnterpriseEntityBindingEntity>,
+    @InjectRepository(EnterpriseFieldDefinitionEntity)
+    private readonly enterpriseFieldDefinitionRepository: Repository<EnterpriseFieldDefinitionEntity>,
+    @InjectRepository(EnterpriseFieldValueEntity)
+    private readonly enterpriseFieldValueRepository: Repository<EnterpriseFieldValueEntity>,
   ) {}
 
   async getCustomerWorkspaceList(
@@ -217,6 +230,12 @@ export class CustomerWorkspaceListService {
       };
     }
 
+    const enterpriseFilteredCustomerIds =
+      await this.findCustomerIdsByEnterpriseFieldFilters(
+        workspaceId,
+        this.parseEnterpriseFieldFilters(args),
+      );
+
     return this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
       const repository =
         await this.globalWorkspaceOrmManager.getRepository<WorkspaceCompanyRecord>(
@@ -236,8 +255,15 @@ export class CustomerWorkspaceListService {
         relations: ['accountOwner'],
       });
 
-      const filteredRecords = records.filter((record) =>
-        this.matchesFilters(record, args),
+      const enterpriseFilteredCustomerIdSet =
+        enterpriseFilteredCustomerIds === null
+          ? null
+          : new Set(enterpriseFilteredCustomerIds);
+      const filteredRecords = records.filter(
+        (record) =>
+          (enterpriseFilteredCustomerIdSet === null ||
+            enterpriseFilteredCustomerIdSet.has(record.id)) &&
+          this.matchesFilters(record, args),
       );
       const visibleRecords = filteredRecords.slice(0, getSafeLimit(args.limit));
 
@@ -291,6 +317,181 @@ export class CustomerWorkspaceListService {
         ),
       };
     }, authContext);
+  }
+
+  private parseEnterpriseFieldFilters(
+    args: CustomerWorkspaceListArgs,
+  ): CustomerWorkspaceEnterpriseFieldFilter[] {
+    if (!Array.isArray(args.enterpriseFieldFilters)) {
+      return [];
+    }
+
+    return args.enterpriseFieldFilters.filter(
+      (filter): filter is CustomerWorkspaceEnterpriseFieldFilter =>
+        typeof filter === 'object' &&
+        filter !== null &&
+        typeof filter.fieldDefinitionId === 'string' &&
+        [
+          'contains',
+          'equals',
+          'isEmpty',
+          'isNotEmpty',
+        ].includes(filter.operator),
+    );
+  }
+
+  private async findCustomerIdsByEnterpriseFieldFilters(
+    workspaceId: string,
+    filters: CustomerWorkspaceEnterpriseFieldFilter[],
+  ) {
+    if (filters.length === 0) {
+      return null;
+    }
+
+    const customerBinding = await this.enterpriseEntityBindingRepository.findOne({
+      where: {
+        enabled: true,
+        entityType: EnterpriseEntityType.CUSTOMER,
+        workspaceId,
+      },
+    });
+
+    if (!customerBinding) {
+      return [];
+    }
+
+    const fieldDefinitionIds = [
+      ...new Set(filters.map((filter) => filter.fieldDefinitionId)),
+    ];
+    const fieldDefinitions =
+      await this.enterpriseFieldDefinitionRepository.find({
+        where: {
+          deletedAt: IsNull(),
+          enabled: true,
+          entityBindingId: customerBinding.id,
+          id: In(fieldDefinitionIds),
+          searchable: true,
+          workspaceId,
+        },
+      });
+    const fieldDefinitionById = new Map(
+      fieldDefinitions.map((fieldDefinition) => [
+        fieldDefinition.id,
+        fieldDefinition,
+      ]),
+    );
+    let matchingRecordIds: string[] | null = null;
+
+    for (const filter of filters) {
+      const fieldDefinition = fieldDefinitionById.get(filter.fieldDefinitionId);
+
+      if (!fieldDefinition) {
+        continue;
+      }
+
+      const recordIdsForFilter = await this.findRecordIdsForEnterpriseFieldFilter(
+        workspaceId,
+        customerBinding.id,
+        fieldDefinition,
+        filter,
+      );
+
+      matchingRecordIds =
+        matchingRecordIds === null
+          ? recordIdsForFilter
+          : matchingRecordIds.filter((recordId) =>
+              recordIdsForFilter.includes(recordId),
+            );
+
+      if (matchingRecordIds.length === 0) {
+        break;
+      }
+    }
+
+    return matchingRecordIds ?? [];
+  }
+
+  private async findRecordIdsForEnterpriseFieldFilter(
+    workspaceId: string,
+    entityBindingId: string,
+    fieldDefinition: EnterpriseFieldDefinitionEntity,
+    filter: CustomerWorkspaceEnterpriseFieldFilter,
+  ) {
+    const queryBuilder = this.enterpriseFieldValueRepository
+      .createQueryBuilder('fieldValue')
+      .select('fieldValue.recordId', 'recordId')
+      .where('fieldValue.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('fieldValue.entityBindingId = :entityBindingId', {
+        entityBindingId,
+      })
+      .andWhere('fieldValue.fieldDefinitionId = :fieldDefinitionId', {
+        fieldDefinitionId: fieldDefinition.id,
+      });
+
+    if (filter.operator === 'isEmpty') {
+      queryBuilder.andWhere(
+        '(fieldValue.valueString IS NULL AND fieldValue.valueNumber IS NULL AND fieldValue.valueBoolean IS NULL AND fieldValue.valueDate IS NULL AND fieldValue.valueStringArray IS NULL AND fieldValue.valueJson IS NULL)',
+      );
+    } else if (filter.operator === 'isNotEmpty') {
+      queryBuilder.andWhere(
+        '(fieldValue.valueString IS NOT NULL OR fieldValue.valueNumber IS NOT NULL OR fieldValue.valueBoolean IS NOT NULL OR fieldValue.valueDate IS NOT NULL OR fieldValue.valueStringArray IS NOT NULL OR fieldValue.valueJson IS NOT NULL)',
+      );
+    } else {
+      this.applyEnterpriseFieldValueComparison(
+        queryBuilder,
+        fieldDefinition,
+        filter,
+      );
+    }
+
+    const rows = await queryBuilder.getRawMany<{ recordId: string }>();
+
+    return rows.map((row) => row.recordId);
+  }
+
+  private applyEnterpriseFieldValueComparison(
+    queryBuilder: ReturnType<
+      Repository<EnterpriseFieldValueEntity>['createQueryBuilder']
+    >,
+    fieldDefinition: EnterpriseFieldDefinitionEntity,
+    filter: CustomerWorkspaceEnterpriseFieldFilter,
+  ) {
+    const value = filter.value;
+
+    switch (fieldDefinition.fieldType) {
+      case EnterpriseFieldType.NUMBER:
+        queryBuilder.andWhere('fieldValue.valueNumber = :numberValue', {
+          numberValue:
+            value === null || value === undefined ? null : Number(value),
+        });
+        return;
+      case EnterpriseFieldType.BOOLEAN:
+        queryBuilder.andWhere('fieldValue.valueBoolean = :booleanValue', {
+          booleanValue: value === true || value === 'true' || value === 'yes',
+        });
+        return;
+      case EnterpriseFieldType.DATE:
+        queryBuilder.andWhere('fieldValue.valueDate::date = :dateValue::date', {
+          dateValue: String(value),
+        });
+        return;
+      case EnterpriseFieldType.MULTI_SELECT:
+        queryBuilder.andWhere('fieldValue.valueStringArray && :arrayValue', {
+          arrayValue: Array.isArray(value) ? value.map(String) : [String(value)],
+        });
+        return;
+      default:
+        if (filter.operator === 'contains') {
+          queryBuilder.andWhere('fieldValue.valueString ILIKE :stringValue', {
+            stringValue: `%${String(value ?? '')}%`,
+          });
+          return;
+        }
+
+        queryBuilder.andWhere('fieldValue.valueString = :stringValue', {
+          stringValue: String(value ?? ''),
+        });
+    }
   }
 
   private async hasWorkspaceObject(

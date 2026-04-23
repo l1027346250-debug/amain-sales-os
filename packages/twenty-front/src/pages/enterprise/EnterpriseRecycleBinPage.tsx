@@ -4,9 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { styled } from '@linaria/react';
 
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
+import { enterprisePermissionCodes } from '@/enterprise/shared/constants/enterprisePermissions';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
+import { useEnterprisePermissions } from '@/enterprise/shared/hooks/useEnterprisePermissions';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { Button } from 'twenty-ui/input';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
@@ -206,12 +208,19 @@ export const EnterpriseRecycleBinPage = () => {
   const navigate = useNavigate();
   const activeResourceType = resourceType ?? 'email';
   const enterpriseApiRequest = useEnterpriseApiRequest();
+  const { hasEnterprisePermission } = useEnterprisePermissions();
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
   const [status, setStatus] = useState('deleted');
   const [records, setRecords] = useState<RecycleRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const canPurgeRecycle = hasEnterprisePermission(
+    enterprisePermissionCodes.recyclePurge,
+  );
+  const canRestoreRecycle = hasEnterprisePermission(
+    enterprisePermissionCodes.recycleRestore,
+  );
 
   const activeResourceLabel =
     recycleResourceTypes.find((item) => item.key === activeResourceType)?.label ??
@@ -264,6 +273,12 @@ export const EnterpriseRecycleBinPage = () => {
   }, [loadRecords]);
 
   const restoreRecord = async (record: RecycleRecord) => {
+    if (!canRestoreRecycle) {
+      enqueueErrorSnackBar({ message: '没有恢复回收站记录的权限' });
+
+      return;
+    }
+
     try {
       const response = await enterpriseApiRequest(
         `/api/enterprise/recycle/${record.resourceType}/${record.id}/restore`,
@@ -285,6 +300,12 @@ export const EnterpriseRecycleBinPage = () => {
   };
 
   const purgeRecord = async (record: RecycleRecord) => {
+    if (!canPurgeRecycle) {
+      enqueueErrorSnackBar({ message: '没有清空回收站记录的权限' });
+
+      return;
+    }
+
     if (!window.confirm('确认永久清空该记录？该操作会写入审计日志。')) {
       return;
     }
@@ -310,6 +331,12 @@ export const EnterpriseRecycleBinPage = () => {
   };
 
   const purgeResourceType = async () => {
+    if (!canPurgeRecycle) {
+      enqueueErrorSnackBar({ message: '没有批量清空回收站记录的权限' });
+
+      return;
+    }
+
     if (!window.confirm(`确认清空所有 ${activeResourceLabel} 回收记录？`)) {
       return;
     }
@@ -335,7 +362,9 @@ export const EnterpriseRecycleBinPage = () => {
   };
 
   return (
-    <EnterprisePermissionGuard>
+    <EnterprisePermissionGuard
+      requiredPermission={enterprisePermissionCodes.recycleRead}
+    >
       <EnterpriseShell title="企业管理 / 回收箱" sidebar={buildSidebar()}>
         <StyledGrid>
           <StyledPanel>
@@ -348,7 +377,9 @@ export const EnterpriseRecycleBinPage = () => {
               </div>
               <Button
                 accent="danger"
-                disabled={records.length === 0 || status !== 'deleted'}
+                disabled={
+                  records.length === 0 || status !== 'deleted' || !canPurgeRecycle
+                }
                 title={`一键清空${activeResourceLabel}`}
                 onClick={() => void purgeResourceType()}
               />
@@ -415,12 +446,14 @@ export const EnterpriseRecycleBinPage = () => {
                         <td>
                           <StyledActionCell>
                             <Button
-                              disabled={record.status !== 'deleted'}
+                              disabled={
+                                record.status !== 'deleted' || !canRestoreRecycle
+                              }
                               title="恢复"
                               onClick={() => void restoreRecord(record)}
                             />
                             <Button
-                              disabled={record.status === 'purged'}
+                              disabled={record.status === 'purged' || !canPurgeRecycle}
                               title="清空"
                               onClick={() => void purgeRecord(record)}
                             />

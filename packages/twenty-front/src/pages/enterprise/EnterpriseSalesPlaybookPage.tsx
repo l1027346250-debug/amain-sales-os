@@ -3,9 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { styled } from '@linaria/react';
 
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
+import { enterprisePermissionCodes } from '@/enterprise/shared/constants/enterprisePermissions';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
+import { useEnterprisePermissions } from '@/enterprise/shared/hooks/useEnterprisePermissions';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { Button } from 'twenty-ui/input';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
@@ -270,6 +272,7 @@ const toItemFormState = (item: SalesPlaybookItem): ItemFormState => ({
 
 export const EnterpriseSalesPlaybookPage = () => {
   const enterpriseApiRequest = useEnterpriseApiRequest();
+  const { hasEnterprisePermission } = useEnterprisePermissions();
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
   const [playbooks, setPlaybooks] = useState<SalesPlaybook[]>([]);
   const [selectedPlaybookId, setSelectedPlaybookId] = useState<string | null>(
@@ -285,6 +288,12 @@ export const EnterpriseSalesPlaybookPage = () => {
   const [itemForm, setItemForm] = useState<ItemFormState | null>(null);
   const [newPlaybookName, setNewPlaybookName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const canCreatePlaybook = hasEnterprisePermission(
+    enterprisePermissionCodes.salesPlaybookCreate,
+  );
+  const canUpdatePlaybook = hasEnterprisePermission(
+    enterprisePermissionCodes.salesPlaybookUpdate,
+  );
 
   const selectedPlaybook = useMemo(
     () => playbooks.find((playbook) => playbook.id === selectedPlaybookId) ?? null,
@@ -391,6 +400,12 @@ export const EnterpriseSalesPlaybookPage = () => {
   }, [selectedItem]);
 
   const createPlaybook = async () => {
+    if (!canCreatePlaybook) {
+      enqueueErrorSnackBar({ message: '没有新建销售流程的权限' });
+
+      return;
+    }
+
     if (!newPlaybookName.trim()) {
       enqueueErrorSnackBar({ message: '请输入流程名称' });
 
@@ -426,6 +441,12 @@ export const EnterpriseSalesPlaybookPage = () => {
   };
 
   const savePlaybook = async () => {
+    if (!canUpdatePlaybook) {
+      enqueueErrorSnackBar({ message: '没有保存销售流程的权限' });
+
+      return;
+    }
+
     if (!selectedPlaybook || !playbookForm) {
       return;
     }
@@ -453,6 +474,12 @@ export const EnterpriseSalesPlaybookPage = () => {
   };
 
   const saveStages = async () => {
+    if (!canUpdatePlaybook) {
+      enqueueErrorSnackBar({ message: '没有维护销售阶段的权限' });
+
+      return;
+    }
+
     if (!selectedPlaybook) {
       return;
     }
@@ -480,6 +507,12 @@ export const EnterpriseSalesPlaybookPage = () => {
   };
 
   const saveItems = async () => {
+    if (!canUpdatePlaybook) {
+      enqueueErrorSnackBar({ message: '没有维护销售阶段内容的权限' });
+
+      return;
+    }
+
     if (!selectedStage || !itemForm) {
       return;
     }
@@ -533,6 +566,12 @@ export const EnterpriseSalesPlaybookPage = () => {
   };
 
   const addStage = () => {
+    if (!canUpdatePlaybook) {
+      enqueueErrorSnackBar({ message: '没有维护销售阶段的权限' });
+
+      return;
+    }
+
     setStages([
       ...stages,
       {
@@ -545,6 +584,12 @@ export const EnterpriseSalesPlaybookPage = () => {
   };
 
   const addItem = () => {
+    if (!canUpdatePlaybook) {
+      enqueueErrorSnackBar({ message: '没有维护销售阶段内容的权限' });
+
+      return;
+    }
+
     setItems([
       ...items,
       {
@@ -561,7 +606,9 @@ export const EnterpriseSalesPlaybookPage = () => {
   };
 
   return (
-    <EnterprisePermissionGuard>
+    <EnterprisePermissionGuard
+      requiredPermission={enterprisePermissionCodes.salesPlaybookRead}
+    >
       <EnterpriseShell title="企业管理 / 销售助手管理" sidebar={buildSidebar()}>
         <StyledGrid>
           <StyledPanel>
@@ -593,7 +640,7 @@ export const EnterpriseSalesPlaybookPage = () => {
                 </StyledField>
                 <Button
                   accent="blue"
-                  disabled={isSaving}
+                  disabled={isSaving || !canCreatePlaybook}
                   title="新建流程"
                   onClick={() => void createPlaybook()}
                 />
@@ -660,12 +707,20 @@ export const EnterpriseSalesPlaybookPage = () => {
                     />
                     启用流程
                   </StyledCheckbox>
-                  <Button title="保存流程" onClick={() => void savePlaybook()} />
+                  <Button
+                    disabled={!canUpdatePlaybook}
+                    title="保存流程"
+                    onClick={() => void savePlaybook()}
+                  />
                 </StyledForm>
               )}
               <StyledHeader>
                 <StyledSubTitle>阶段列表</StyledSubTitle>
-                <Button title="新增阶段" onClick={addStage} />
+                <Button
+                  disabled={!canUpdatePlaybook}
+                  title="新增阶段"
+                  onClick={addStage}
+                />
               </StyledHeader>
               <StyledTable>
                 <thead>
@@ -729,7 +784,11 @@ export const EnterpriseSalesPlaybookPage = () => {
                   ))}
                 </tbody>
               </StyledTable>
-              <Button title="保存阶段排序" onClick={() => void saveStages()} />
+              <Button
+                disabled={!canUpdatePlaybook}
+                title="保存阶段排序"
+                onClick={() => void saveStages()}
+              />
             </StyledPanel>
 
             <StyledGrid>
@@ -743,7 +802,11 @@ export const EnterpriseSalesPlaybookPage = () => {
                       当前阶段下的话术、文档和建议会被业务侧读取接口返回。
                     </StyledDescription>
                   </div>
-                  <Button title="新增内容" onClick={addItem} />
+                  <Button
+                    disabled={!canUpdatePlaybook}
+                    title="新增内容"
+                    onClick={addItem}
+                  />
                 </StyledHeader>
                 <StyledTabs>
                   {items.map((item, index) => (
@@ -845,6 +908,7 @@ export const EnterpriseSalesPlaybookPage = () => {
                     </StyledCheckbox>
                     <Button
                       accent="blue"
+                      disabled={!canUpdatePlaybook}
                       title="保存阶段内容"
                       onClick={() => void saveItems()}
                     />

@@ -19,6 +19,8 @@ import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorat
 import { JwtAuthGuard } from 'src/engine/guards/jwt-auth.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
+import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
 import { EnterpriseRecycleService } from 'src/modules/enterprise/recycle/services/enterprise-recycle.service';
 
 @Controller('api/enterprise/recycle')
@@ -27,16 +29,20 @@ import { EnterpriseRecycleService } from 'src/modules/enterprise/recycle/service
 export class EnterpriseRecycleController {
   constructor(
     private readonly enterpriseRecycleService: EnterpriseRecycleService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
 
   @Get(':resourceType')
   async findMany(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('resourceType') resourceType: string,
+    @Req() request: Request,
     @Query('status') status?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.recycle.read');
+
     return this.enterpriseRecycleService.findMany(workspace.id, resourceType, {
       status,
       page: page ? Number(page) : undefined,
@@ -48,7 +54,10 @@ export class EnterpriseRecycleController {
   async findOne(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') recordId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.recycle.read');
+
     return this.enterpriseRecycleService.findOneOrFail(workspace.id, recordId);
   }
 
@@ -59,6 +68,12 @@ export class EnterpriseRecycleController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.recycle.restore',
+    );
 
     return this.enterpriseRecycleService.restore(
       workspace.id,
@@ -75,6 +90,12 @@ export class EnterpriseRecycleController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.recycle.purge',
+    );
+
     return this.enterpriseRecycleService.purge(
       workspace.id,
       recordId,
@@ -90,11 +111,32 @@ export class EnterpriseRecycleController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.recycle.purge',
+    );
+
     return this.enterpriseRecycleService.purgeResourceType(
       workspace.id,
       resourceType,
       authenticatedRequest.workspaceMember?.id ?? null,
     );
   }
-}
 
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode: EnterprisePermissionCode,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
+  }
+}

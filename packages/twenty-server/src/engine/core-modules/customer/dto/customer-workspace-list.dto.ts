@@ -4,6 +4,12 @@ import GraphQLJSON from 'graphql-type-json';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 
+export type CustomerWorkspaceEnterpriseFieldFilter = {
+  fieldDefinitionId: string;
+  operator: 'contains' | 'equals' | 'isEmpty' | 'isNotEmpty';
+  value?: unknown;
+};
+
 @ArgsType()
 export class CustomerWorkspaceListArgs {
   @Field(() => String, { nullable: true })
@@ -20,6 +26,9 @@ export class CustomerWorkspaceListArgs {
 
   @Field(() => String, { nullable: true })
   publicPoolStateValue?: string;
+
+  @Field(() => GraphQLJSON, { nullable: true })
+  enterpriseFieldFilters?: CustomerWorkspaceEnterpriseFieldFilter[] | null;
 
   @Field(() => Int, { nullable: true, defaultValue: 50 })
   limit?: number;

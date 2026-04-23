@@ -30,6 +30,8 @@ import { EnterpriseFieldDefinitionEntity } from 'src/modules/enterprise/field-de
 import { EnterpriseFieldDefinitionService } from 'src/modules/enterprise/field-definition/services/enterprise-field-definition.service';
 import { EnterpriseFieldValueEntity } from 'src/modules/enterprise/field-value/enterprise-field-value.entity';
 import { EnterpriseEntityType } from 'src/modules/enterprise/shared/types/enterprise-entity-type';
+import { EnterpriseFieldType } from 'src/modules/enterprise/shared/types/enterprise-field-type';
+import { EnterpriseCustomerExportFieldFilterDto } from 'src/modules/enterprise/customer-export/dtos/preview-enterprise-customer-export-count.dto';
 
 const DEFAULT_CUSTOMER_EXPORT_FIELD_CODES = [
   'name',
@@ -74,7 +76,8 @@ export class EnterpriseCustomerExportService {
     actorWorkspaceMemberId?: string | null,
   ) {
     const customerCount = await this.countCustomers(workspaceId, dto.filter);
-    const selectedFieldCodes = this.normalizeSelectedFieldCodes(
+    const selectedFieldCodes = await this.normalizeSelectedFieldCodes(
+      workspaceId,
       dto.selectedFieldCodes,
     );
     const normalizedFilter = this.normalizeFilter(dto.filter);
@@ -185,7 +188,8 @@ export class EnterpriseCustomerExportService {
     });
 
     try {
-      const selectedFieldCodes = this.normalizeSelectedFieldCodes(
+      const selectedFieldCodes = await this.normalizeSelectedFieldCodes(
+        workspaceId,
         job.selectedFieldCodes,
       );
       const selectedFieldLabels = await this.buildSelectedFieldLabels(
@@ -424,6 +428,10 @@ export class EnterpriseCustomerExportService {
     filter?: PreviewEnterpriseCustomerExportCountDto,
   ) {
     const authContext = buildSystemAuthContext(workspaceId);
+    const matchingCustomerIds = await this.findCustomerIdsByEnterpriseFieldFilters(
+      workspaceId,
+      filter?.enterpriseFieldFilters ?? [],
+    );
 
     return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
       async () => {
@@ -447,6 +455,14 @@ export class EnterpriseCustomerExportService {
                   accountOwnerId: filter.accountOwnerId,
                 }
               : {}),
+            ...(matchingCustomerIds
+              ? {
+                  id:
+                    matchingCustomerIds.length > 0
+                      ? In(matchingCustomerIds)
+                      : In(['00000000-0000-0000-0000-000000000000']),
+                }
+              : {}),
           },
         });
       },
@@ -459,6 +475,10 @@ export class EnterpriseCustomerExportService {
     filterJson?: Record<string, unknown> | null,
   ): Promise<CompanyWorkspaceEntity[]> {
     const authContext = buildSystemAuthContext(workspaceId);
+    const matchingCustomerIds = await this.findCustomerIdsByEnterpriseFieldFilters(
+      workspaceId,
+      this.parseEnterpriseFieldFilters(filterJson),
+    );
 
     return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
       async () => {
@@ -473,6 +493,14 @@ export class EnterpriseCustomerExportService {
           where: {
             deletedAt: IsNull(),
             ...this.buildCustomerWhereInput(filterJson),
+            ...(matchingCustomerIds
+              ? {
+                  id:
+                    matchingCustomerIds.length > 0
+                      ? In(matchingCustomerIds)
+                      : In(['00000000-0000-0000-0000-000000000000']),
+                }
+              : {}),
           },
           order: {
             createdAt: 'DESC',
@@ -483,16 +511,43 @@ export class EnterpriseCustomerExportService {
     );
   }
 
-  private normalizeSelectedFieldCodes(selectedFieldCodes: string[]) {
+  private async normalizeSelectedFieldCodes(
+    workspaceId: string,
+    selectedFieldCodes: string[],
+  ) {
     const normalizedFieldCodes = selectedFieldCodes
       .map((fieldCode) => fieldCode.trim())
       .filter((fieldCode) => fieldCode.length > 0);
+    const allowedFieldCodes = new Set([
+      ...DEFAULT_CUSTOMER_EXPORT_FIELD_CODES,
+      ...(await this.findExportableCustomerFieldDefinitions(workspaceId)).map(
+        (fieldDefinition) => fieldDefinition.fieldCode,
+      ),
+    ]);
+    const allowedSelectedFieldCodes = normalizedFieldCodes.filter((fieldCode) =>
+      allowedFieldCodes.has(fieldCode),
+    );
 
-    if (normalizedFieldCodes.length === 0) {
+    if (allowedSelectedFieldCodes.length === 0) {
       return DEFAULT_CUSTOMER_EXPORT_FIELD_CODES;
     }
 
-    return [...new Set(normalizedFieldCodes)];
+    return [...new Set(allowedSelectedFieldCodes)];
+  }
+
+  private async findExportableCustomerFieldDefinitions(workspaceId: string) {
+    const customFieldDefinitions =
+      await this.enterpriseFieldDefinitionService.findMany(
+        workspaceId,
+        EnterpriseEntityType.CUSTOMER,
+      );
+
+    return customFieldDefinitions.filter(
+      (fieldDefinition) =>
+        fieldDefinition.enabled &&
+        fieldDefinition.exportable &&
+        !fieldDefinition.deletedAt,
+    );
   }
 
   private async buildSelectedFieldLabels(
@@ -506,10 +561,7 @@ export class EnterpriseCustomerExportService {
       ['createdAt', '创建时间'],
     ]);
     const customFieldDefinitions =
-      await this.enterpriseFieldDefinitionService.findMany(
-        workspaceId,
-        EnterpriseEntityType.CUSTOMER,
-      );
+      await this.findExportableCustomerFieldDefinitions(workspaceId);
 
     for (const fieldDefinition of customFieldDefinitions) {
       if (selectedFieldCodes.includes(fieldDefinition.fieldCode)) {
@@ -529,10 +581,7 @@ export class EnterpriseCustomerExportService {
     selectedFieldCodes: string[],
   ) {
     const customFieldDefinitions =
-      await this.enterpriseFieldDefinitionService.findMany(
-        workspaceId,
-        EnterpriseEntityType.CUSTOMER,
-      );
+      await this.findExportableCustomerFieldDefinitions(workspaceId);
     const selectedCustomFields = customFieldDefinitions.filter((fieldDefinition) =>
       selectedFieldCodes.includes(fieldDefinition.fieldCode),
     );
@@ -598,6 +647,185 @@ export class EnterpriseCustomerExportService {
           }
         : {}),
     };
+  }
+
+  private parseEnterpriseFieldFilters(
+    filterJson?: Record<string, unknown> | null,
+  ): EnterpriseCustomerExportFieldFilterDto[] {
+    if (!Array.isArray(filterJson?.enterpriseFieldFilters)) {
+      return [];
+    }
+
+    return filterJson.enterpriseFieldFilters
+      .map((filter) => {
+        if (!filter || typeof filter !== 'object') {
+          return null;
+        }
+
+        const filterRecord = filter as Record<string, unknown>;
+
+        if (
+          typeof filterRecord.fieldDefinitionId !== 'string' ||
+          typeof filterRecord.operator !== 'string'
+        ) {
+          return null;
+        }
+
+        if (
+          !['contains', 'equals', 'isEmpty', 'isNotEmpty'].includes(
+            filterRecord.operator,
+          )
+        ) {
+          return null;
+        }
+
+        return {
+          fieldDefinitionId: filterRecord.fieldDefinitionId,
+          operator: filterRecord.operator as EnterpriseCustomerExportFieldFilterDto['operator'],
+          value: filterRecord.value,
+        };
+      })
+      .filter(
+        (
+          filter,
+        ): filter is EnterpriseCustomerExportFieldFilterDto => filter !== null,
+      );
+  }
+
+  private async findCustomerIdsByEnterpriseFieldFilters(
+    workspaceId: string,
+    filters: EnterpriseCustomerExportFieldFilterDto[],
+  ) {
+    if (filters.length === 0) {
+      return null;
+    }
+
+    const customerBinding =
+      await this.enterpriseEntityBindingService.resolveBindingOrFail(
+        workspaceId,
+        EnterpriseEntityType.CUSTOMER,
+      );
+    const customerFieldDefinitions =
+      await this.enterpriseFieldDefinitionService.findMany(
+        workspaceId,
+        EnterpriseEntityType.CUSTOMER,
+      );
+    const fieldDefinitionById = new Map(
+      customerFieldDefinitions.map((fieldDefinition) => [
+        fieldDefinition.id,
+        fieldDefinition,
+      ]),
+    );
+    let matchingRecordIds: string[] | null = null;
+
+    for (const filter of filters) {
+      const fieldDefinition = fieldDefinitionById.get(filter.fieldDefinitionId);
+
+      if (!fieldDefinition || !fieldDefinition.searchable) {
+        matchingRecordIds = [];
+        break;
+      }
+
+      const recordIdsForFilter = await this.findRecordIdsForEnterpriseFieldFilter(
+        workspaceId,
+        customerBinding.id,
+        fieldDefinition,
+        filter,
+      );
+
+      matchingRecordIds =
+        matchingRecordIds === null
+          ? recordIdsForFilter
+          : matchingRecordIds.filter((recordId) =>
+              recordIdsForFilter.includes(recordId),
+            );
+
+      if (matchingRecordIds.length === 0) {
+        break;
+      }
+    }
+
+    return matchingRecordIds ?? [];
+  }
+
+  private async findRecordIdsForEnterpriseFieldFilter(
+    workspaceId: string,
+    entityBindingId: string,
+    fieldDefinition: EnterpriseFieldDefinitionEntity,
+    filter: EnterpriseCustomerExportFieldFilterDto,
+  ) {
+    const queryBuilder = this.enterpriseFieldValueRepository
+      .createQueryBuilder('fieldValue')
+      .select('fieldValue.recordId', 'recordId')
+      .where('fieldValue.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('fieldValue.entityBindingId = :entityBindingId', {
+        entityBindingId,
+      })
+      .andWhere('fieldValue.fieldDefinitionId = :fieldDefinitionId', {
+        fieldDefinitionId: fieldDefinition.id,
+      });
+
+    if (filter.operator === 'isEmpty') {
+      queryBuilder.andWhere(
+        '(fieldValue.valueString IS NULL AND fieldValue.valueNumber IS NULL AND fieldValue.valueBoolean IS NULL AND fieldValue.valueDate IS NULL AND fieldValue.valueStringArray IS NULL AND fieldValue.valueJson IS NULL)',
+      );
+    } else if (filter.operator === 'isNotEmpty') {
+      queryBuilder.andWhere(
+        '(fieldValue.valueString IS NOT NULL OR fieldValue.valueNumber IS NOT NULL OR fieldValue.valueBoolean IS NOT NULL OR fieldValue.valueDate IS NOT NULL OR fieldValue.valueStringArray IS NOT NULL OR fieldValue.valueJson IS NOT NULL)',
+      );
+    } else {
+      this.applyEnterpriseFieldValueComparison(
+        queryBuilder,
+        fieldDefinition,
+        filter,
+      );
+    }
+
+    const rows = await queryBuilder.getRawMany<{ recordId: string }>();
+
+    return rows.map((row) => row.recordId);
+  }
+
+  private applyEnterpriseFieldValueComparison(
+    queryBuilder: ReturnType<Repository<EnterpriseFieldValueEntity>['createQueryBuilder']>,
+    fieldDefinition: EnterpriseFieldDefinitionEntity,
+    filter: EnterpriseCustomerExportFieldFilterDto,
+  ) {
+    const value = filter.value;
+
+    switch (fieldDefinition.fieldType) {
+      case EnterpriseFieldType.NUMBER:
+        queryBuilder.andWhere('fieldValue.valueNumber = :numberValue', {
+          numberValue: value === null || value === undefined ? null : Number(value),
+        });
+        return;
+      case EnterpriseFieldType.BOOLEAN:
+        queryBuilder.andWhere('fieldValue.valueBoolean = :booleanValue', {
+          booleanValue: value === true || value === 'true' || value === 'yes',
+        });
+        return;
+      case EnterpriseFieldType.DATE:
+        queryBuilder.andWhere('fieldValue.valueDate::date = :dateValue::date', {
+          dateValue: String(value),
+        });
+        return;
+      case EnterpriseFieldType.MULTI_SELECT:
+        queryBuilder.andWhere('fieldValue.valueStringArray && :arrayValue', {
+          arrayValue: Array.isArray(value) ? value.map(String) : [String(value)],
+        });
+        return;
+      default:
+        if (filter.operator === 'contains') {
+          queryBuilder.andWhere('fieldValue.valueString ILIKE :stringValue', {
+            stringValue: `%${String(value ?? '')}%`,
+          });
+          return;
+        }
+
+        queryBuilder.andWhere('fieldValue.valueString = :stringValue', {
+          stringValue: String(value ?? ''),
+        });
+    }
   }
 
   private resolveExportCellValue(
@@ -701,6 +929,9 @@ export class EnterpriseCustomerExportService {
       ...(filter?.accountOwnerId
         ? { accountOwnerId: filter.accountOwnerId }
         : {}),
+      ...(filter?.enterpriseFieldFilters?.length
+        ? { enterpriseFieldFilters: filter.enterpriseFieldFilters }
+        : {}),
     };
   }
 
@@ -761,5 +992,3 @@ export type EnterpriseCustomerExportJobData = {
 };
 
 export class EnterpriseCustomerExportJob {}
-
-

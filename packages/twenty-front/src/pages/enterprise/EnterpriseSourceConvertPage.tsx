@@ -3,9 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { styled } from '@linaria/react';
 
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
+import { enterprisePermissionCodes } from '@/enterprise/shared/constants/enterprisePermissions';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
+import { useEnterprisePermissions } from '@/enterprise/shared/hooks/useEnterprisePermissions';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { Button } from 'twenty-ui/input';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
@@ -244,6 +246,7 @@ const toFormState = (rule: SourceConvertRule): RuleFormState => ({
 
 export const EnterpriseSourceConvertPage = () => {
   const enterpriseApiRequest = useEnterpriseApiRequest();
+  const { hasEnterprisePermission } = useEnterprisePermissions();
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
   const [categories, setCategories] = useState<SourceCategory[]>([]);
   const [activeCategoryCode, setActiveCategoryCode] = useState('okki');
@@ -254,6 +257,12 @@ export const EnterpriseSourceConvertPage = () => {
   const [blacklistType, setBlacklistType] = useState('email');
   const [blacklistValue, setBlacklistValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const canUpdateSourceConvert = hasEnterprisePermission(
+    enterprisePermissionCodes.sourceConvertUpdate,
+  );
+  const canUpdateBlacklist = hasEnterprisePermission(
+    enterprisePermissionCodes.sourceConvertBlacklistUpdate,
+  );
 
   const selectedRule = useMemo(
     () => rules.find((rule) => rule.id === selectedRuleId) ?? null,
@@ -331,6 +340,12 @@ export const EnterpriseSourceConvertPage = () => {
   }, [selectedRule]);
 
   const saveRule = async () => {
+    if (!canUpdateSourceConvert) {
+      enqueueErrorSnackBar({ message: '没有修改来源流转规则的权限' });
+
+      return;
+    }
+
     if (!selectedRule || !ruleForm) {
       return;
     }
@@ -377,6 +392,12 @@ export const EnterpriseSourceConvertPage = () => {
   };
 
   const toggleRule = async (rule: SourceConvertRule) => {
+    if (!canUpdateSourceConvert) {
+      enqueueErrorSnackBar({ message: '没有启停来源流转规则的权限' });
+
+      return;
+    }
+
     try {
       const response = await enterpriseApiRequest(
         `/api/enterprise/source-convert/rules/${rule.id}/enabled`,
@@ -399,6 +420,12 @@ export const EnterpriseSourceConvertPage = () => {
   };
 
   const addBlacklistRule = async () => {
+    if (!canUpdateBlacklist) {
+      enqueueErrorSnackBar({ message: '没有维护来源黑名单的权限' });
+
+      return;
+    }
+
     if (!blacklistValue.trim()) {
       enqueueErrorSnackBar({ message: '请输入黑名单值' });
 
@@ -434,6 +461,12 @@ export const EnterpriseSourceConvertPage = () => {
   };
 
   const deleteBlacklistRule = async (blacklistRule: BlacklistRule) => {
+    if (!canUpdateBlacklist) {
+      enqueueErrorSnackBar({ message: '没有维护来源黑名单的权限' });
+
+      return;
+    }
+
     if (!window.confirm(`确认删除黑名单 ${blacklistRule.ruleValue}？`)) {
       return;
     }
@@ -459,7 +492,9 @@ export const EnterpriseSourceConvertPage = () => {
   };
 
   return (
-    <EnterprisePermissionGuard>
+    <EnterprisePermissionGuard
+      requiredPermission={enterprisePermissionCodes.sourceConvertRead}
+    >
       <EnterpriseShell title="企业管理 / 获客来源流转配置" sidebar={buildSidebar()}>
         <StyledGrid>
           <StyledPanel>
@@ -540,6 +575,7 @@ export const EnterpriseSourceConvertPage = () => {
                             onClick={() => setSelectedRuleId(rule.id)}
                           />
                           <Button
+                            disabled={!canUpdateSourceConvert}
                             title={rule.enabled ? '停用' : '启用'}
                             onClick={() => void toggleRule(rule)}
                           />
@@ -671,7 +707,7 @@ export const EnterpriseSourceConvertPage = () => {
                     </StyledCheckbox>
                     <Button
                       accent="blue"
-                      disabled={isSaving}
+                      disabled={isSaving || !canUpdateSourceConvert}
                       title={isSaving ? '保存中...' : '保存规则'}
                       onClick={() => void saveRule()}
                     />
@@ -701,6 +737,7 @@ export const EnterpriseSourceConvertPage = () => {
                     value={blacklistValue}
                   />
                   <Button
+                    disabled={!canUpdateBlacklist}
                     title="新增"
                     onClick={() => void addBlacklistRule()}
                   />
@@ -720,6 +757,7 @@ export const EnterpriseSourceConvertPage = () => {
                         <td>{blacklistRule.ruleValue}</td>
                         <td>
                           <Button
+                            disabled={!canUpdateBlacklist}
                             title="删除"
                             onClick={() => void deleteBlacklistRule(blacklistRule)}
                           />

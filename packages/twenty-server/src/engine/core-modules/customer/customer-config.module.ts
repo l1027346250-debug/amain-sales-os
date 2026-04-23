@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { CustomerAiInsightResolver } from 'src/engine/core-modules/customer/customer-ai-insight.resolver';
 import { CustomerAiInsightService } from 'src/engine/core-modules/customer/customer-ai-insight.service';
 import { CustomerConfigResolver } from 'src/engine/core-modules/customer/customer-config.resolver';
@@ -33,9 +35,19 @@ import { CustomerTimelineService } from 'src/engine/core-modules/customer/custom
 import { CustomerWorkspaceListResolver } from 'src/engine/core-modules/customer/customer-workspace-list.resolver';
 import { CustomerWorkspaceListService } from 'src/engine/core-modules/customer/customer-workspace-list.service';
 import { ObjectMetadataModule } from 'src/engine/metadata-modules/object-metadata/object-metadata.module';
+import { EnterpriseEntityBindingEntity } from 'src/modules/enterprise/entity-binding/enterprise-entity-binding.entity';
+import { EnterpriseFieldDefinitionEntity } from 'src/modules/enterprise/field-definition/enterprise-field-definition.entity';
+import { EnterpriseFieldValueEntity } from 'src/modules/enterprise/field-value/enterprise-field-value.entity';
 
 @Module({
-  imports: [ObjectMetadataModule],
+  imports: [
+    ObjectMetadataModule,
+    TypeOrmModule.forFeature([
+      EnterpriseEntityBindingEntity,
+      EnterpriseFieldDefinitionEntity,
+      EnterpriseFieldValueEntity,
+    ]),
+  ],
   providers: [
     CustomerAiInsightResolver,
     CustomerAiInsightService,

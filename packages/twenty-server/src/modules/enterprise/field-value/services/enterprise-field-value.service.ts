@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
 import { EnterpriseEntityBindingService } from 'src/modules/enterprise/entity-binding/services/enterprise-entity-binding.service';
@@ -40,6 +40,51 @@ export class EnterpriseFieldValueService {
         createdAt: 'ASC',
       },
     });
+  }
+
+  async findManyForRecords(
+    workspaceId: string,
+    entityType: string,
+    recordIds: string[],
+  ) {
+    const binding = await this.enterpriseEntityBindingService.resolveBindingOrFail(
+      workspaceId,
+      entityType as never,
+    );
+    const uniqueRecordIds = [...new Set(recordIds.filter(Boolean))];
+
+    if (uniqueRecordIds.length === 0) {
+      return {
+        recordIds: [],
+        valuesByRecordId: {},
+      };
+    }
+
+    const fieldValues = await this.enterpriseFieldValueRepository.find({
+      where: {
+        workspaceId,
+        entityBindingId: binding.id,
+        recordId: In(uniqueRecordIds),
+      },
+      order: {
+        recordId: 'ASC',
+        createdAt: 'ASC',
+      },
+    });
+
+    return {
+      recordIds: uniqueRecordIds,
+      valuesByRecordId: fieldValues.reduce<
+        Record<string, EnterpriseFieldValueEntity[]>
+      >((valuesByRecordId, fieldValue) => {
+        valuesByRecordId[fieldValue.recordId] = [
+          ...(valuesByRecordId[fieldValue.recordId] ?? []),
+          fieldValue,
+        ];
+
+        return valuesByRecordId;
+      }, {}),
+    };
   }
 
   async updateManyForRecord(

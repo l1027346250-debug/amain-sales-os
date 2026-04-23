@@ -22,6 +22,7 @@ import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { CreateEnterpriseCustomerExportJobDto } from 'src/modules/enterprise/customer-export/dtos/create-enterprise-customer-export-job.dto';
 import { PreviewEnterpriseCustomerExportCountDto } from 'src/modules/enterprise/customer-export/dtos/preview-enterprise-customer-export-count.dto';
 import { EnterpriseCustomerExportService } from 'src/modules/enterprise/customer-export/services/enterprise-customer-export.service';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
 
 @Controller('api/enterprise/customer-export')
 @UseGuards(JwtAuthGuard, WorkspaceAuthGuard, NoPermissionGuard)
@@ -29,13 +30,21 @@ import { EnterpriseCustomerExportService } from 'src/modules/enterprise/customer
 export class EnterpriseCustomerExportController {
   constructor(
     private readonly enterpriseCustomerExportService: EnterpriseCustomerExportService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
 
   @Post('preview-count')
   async previewCount(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Body() dto: PreviewEnterpriseCustomerExportCountDto,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.customerExport.read',
+    );
+
     return this.enterpriseCustomerExportService.previewCount(workspace.id, dto);
   }
 
@@ -46,6 +55,12 @@ export class EnterpriseCustomerExportController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.customerExport.create',
+    );
 
     return this.enterpriseCustomerExportService.createJob(
       workspace.id,
@@ -62,6 +77,12 @@ export class EnterpriseCustomerExportController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.customerExport.create',
+    );
+
     return this.enterpriseCustomerExportService.enqueueJob(
       workspace.id,
       jobId,
@@ -70,7 +91,16 @@ export class EnterpriseCustomerExportController {
   }
 
   @Get('jobs')
-  async findMany(@AuthWorkspace() workspace: WorkspaceEntity) {
+  async findMany(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.customerExport.read',
+    );
+
     return this.enterpriseCustomerExportService.findMany(workspace.id);
   }
 
@@ -78,7 +108,14 @@ export class EnterpriseCustomerExportController {
   async findOne(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') jobId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.customerExport.read',
+    );
+
     return this.enterpriseCustomerExportService.findOneOrFail(
       workspace.id,
       jobId,
@@ -89,7 +126,14 @@ export class EnterpriseCustomerExportController {
   async getFileAccess(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') jobId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.customerExport.download',
+    );
+
     return this.enterpriseCustomerExportService.getFileAccess(
       workspace.id,
       jobId,
@@ -100,8 +144,15 @@ export class EnterpriseCustomerExportController {
   async downloadCsv(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') jobId: string,
+    @Req() request: Request,
     @Res() response: Response,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.customerExport.download',
+    );
+
     const fileAccess = await this.enterpriseCustomerExportService.getFileAccess(
       workspace.id,
       jobId,
@@ -109,5 +160,23 @@ export class EnterpriseCustomerExportController {
 
     return response.redirect(fileAccess.downloadUrl);
   }
-}
 
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode:
+      | 'enterprise.customerExport.create'
+      | 'enterprise.customerExport.download'
+      | 'enterprise.customerExport.read',
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
+  }
+}

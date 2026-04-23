@@ -113,3 +113,207 @@
 - `fixed_user` 与 `round_robin` 分配类型保存前会校验至少选择一位负责人，避免空负责人规则落库。
 - 规则保存现在直接提交成员 ID 数组，与单条询盘人工处置、批量处置使用的负责人来源保持一致。
 - 本轮已通过 `node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front`。
+
+## 2026-04-22 企业管理模块复核与下一阶段计划
+- 已完成蓝图复核：确认 8 个页面、后端模块、迁移、核心 API 均有落点。
+- 已修复报告模板 API 与技术蓝图不一致的问题，补齐 PATCH、content、enabled、DELETE 兼容接口。
+- 已修复本地运行脚本在当前 Windows 环境中找不到 `netstat` 的启动阻塞。
+- 已完成验证：`nx build twenty-server` 通过，`nx typecheck twenty-front` 通过，本地运行环境启动成功，企业管理前端路由 200，后端企业 API 进入 403 鉴权层。
+- 下一阶段优先级：1）企业管理权限码落地；2）字段中心配置到 Trade CRM 客户页/导出/筛选的完整联动；3）客户导出权限和字段过滤补强；4）企业管理页面组件拆分；5）缓存失效策略落地；6）E2E 冒烟脚本。
+
+## 2026-04-22 企业管理权限基础设施补充
+- 新增企业管理蓝图权限码常量与前端权限 hook：以 `enterprise.*` 权限码作为页面和操作调用口，当前映射到 Twenty 现有 `ENTERPRISE/WORKSPACE` 权限 flag，后续可替换为真实细粒度权限服务。
+- 企业管理左侧菜单已支持按页面权限码过滤子菜单。
+- `EnterprisePermissionGuard` 支持传入 `requiredPermission`，保留登录态和企业入口校验。
+- 客户导出页已接入 `enterprise.customerExport.read/create/download`：页面读权限、创建任务、重新执行、下载按钮和执行入口都有权限判断。
+- 本轮过程中曾因 PowerShell 批量写文件导致中文 TSX 编码损坏，已恢复并重新校验；后续禁止用 `Set-Content` 批量重写含中文 TSX 页面。
+- 验证：`node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front` 通过；`node .\\.yarn\\releases\\yarn-4.13.0.cjs nx build twenty-server` 通过。
+
+## 2026-04-22 企业管理后端权限服务与客户导出闭环
+- 新增后端 `EnterprisePermissionService` 与 `EnterprisePermissionCode` 类型，业务控制器可以用蓝图 `enterprise.*` 权限码调用权限检查。
+- 当前后端权限实现采用 Twenty 现有 `ENTERPRISE` 或 `WORKSPACE` permission flag 作为 fallback，后续可替换为真实细粒度权限表，不需要改业务 controller 调用方式。
+- 客户导出 REST API 已接入权限检查：预估/列表/详情使用 `enterprise.customerExport.read`，创建/重试使用 `enterprise.customerExport.create`，文件访问/下载使用 `enterprise.customerExport.download`。
+- 前端客户导出页与后端权限码保持一致：读权限控制页面，创建/重试/下载控制按钮和执行入口。
+- 验证：`node .\\.yarn\\releases\\yarn-4.13.0.cjs nx build twenty-server` 通过；`node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front` 通过。
+
+## 2026-04-22 企业管理字段与报告权限补充
+- 后端字段中心 API 已接入 `EnterprisePermissionService`：字段列表/详情/选项读取使用 `enterprise.field.read`，新增使用 `enterprise.field.create`，编辑/保存选项使用 `enterprise.field.update`，删除使用 `enterprise.field.delete`。
+- 后端字段显示 API 已接入权限：读取使用 `enterprise.fieldLayout.read`，保存布局使用 `enterprise.fieldLayout.update`。
+- 后端报告模板 API 已接入权限：列表/详情/版本/预览使用 `enterprise.reportTemplate.read`，创建使用 `enterprise.reportTemplate.create`，更新/启停/默认模板使用 `enterprise.reportTemplate.update`，删除使用 `enterprise.reportTemplate.delete`。
+- 当前已形成权限闭环的后端模块：字段中心、字段显示、客户导出、报告模板。
+- 验证：`node .\\.yarn\\releases\\yarn-4.13.0.cjs nx build twenty-server` 通过；`node .\\.yarn\\releases\\yarn-4.13.0.cjs nx typecheck twenty-front` 通过。
+
+## 2026-04-22 企业管理权限闭环补齐
+- 后端剩余企业管理控制器已接入 `EnterprisePermissionService`：回收站、获客来源流转、独立站管理、销售助手管理。
+- 后端操作权限码已覆盖：`enterprise.recycle.read/restore/purge`、`enterprise.sourceConvert.read/update/blacklist.read/blacklist.update`、`enterprise.independentStation.read/bind/update/unbind`、`enterprise.salesPlaybook.read/create/update`。
+- 前端回收站、来源流转、独立站、销售助手页面已接入 `useEnterprisePermissions` 和 `requiredPermission`，读权限控制页面入口，写权限控制按钮与函数入口。
+- 当前企业管理权限落地仍以 Twenty 现有 `ENTERPRISE/WORKSPACE` flag 作为 fallback，业务代码已使用蓝图 `enterprise.*` 权限码，后续可替换为独立细粒度权限表。
+- 验证：`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server` 通过，`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front` 通过。
+
+## 2026-04-22 企业管理细粒度权限持久化第一步
+- 新增 `enterpriseRolePermission` core 表与 TypeORM 实体，用于按 workspace + role + `enterprise.*` permission code 保存企业管理细粒度授权结果。
+- 新增迁移 `1776100000000-add-enterprise-role-permission.ts`，包含角色外键、工作区外键、唯一索引和查询索引。
+- `EnterprisePermissionService` 现在优先解析当前 user workspace / API key / application 对应角色，并读取 `enterpriseRolePermission`；角色没有任何企业权限配置时继续 fallback 到 Twenty 现有 `ENTERPRISE/WORKSPACE` flag，保证兼容当前工作区。
+- 新增权限管理 API：`GET /api/enterprise/permissions`、`GET /api/enterprise/permissions/roles/:roleId`、`PUT /api/enterprise/permissions/roles/:roleId`，支持读取权限目录、读取角色授权、替换角色授权，并写入企业管理审计日志。
+- 新增权限码：`enterprise.permissions.read`、`enterprise.permissions.update`；前端权限常量同步补齐。
+- 验证：`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server` 通过，`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front` 通过。
+- 本地开发库已执行迁移：`node .\.yarn\releases\yarn-4.13.0.cjs nx run twenty-server:database:migrate:prod -- --force`，输出 `Executed 1 migration(s): AddEnterpriseRolePermission1776100000000`。首次未加 `--force` 时被 Apple workspace 版本检查拦截，随后按本地开发库场景强制跳过版本检查。
+
+## 2026-04-22 企业权限配置页落地
+- 新增企业管理安全权限入口：`/enterprise/security/permissions`，并接入企业管理导航、主菜单和应用路由。
+- 新增前端 `EnterprisePermissionsPage`：支持读取权限目录、读取角色列表、选择角色、查看角色企业权限、按权限组全选/清空、保存角色授权。
+- 页面读权限使用 `enterprise.permissions.read`，保存入口使用 `enterprise.permissions.update`；无更新权限时按钮禁用并阻断执行函数。
+- 后端细粒度权限表、REST API 与前端配置页已形成闭环：角色未配置时继续 fallback 到 Twenty 既有 `ENTERPRISE/WORKSPACE` 权限；一旦保存企业权限配置，则按 `enterprise.*` 明细权限执行。
+- 本轮验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`。
+- `nx lint:diff-with-main twenty-front` 与 `nx lint:diff-with-main twenty-server` 命令通过，但脚本仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 企业权限配置页可见文案修复
+- 复查发现 `EnterprisePermissionsPage` 新增页面存在可见中文文案乱码风险，已重写页面文案为正常 UTF-8 中文。
+- 页面仍保留角色列表、权限目录、按组全选/清空、保存授权、只读/更新权限控制等功能。
+- 复测通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+
+## 2026-04-22 客户详情企业字段值闭环第一步
+- 后端 `EnterpriseFieldValueController` 已接入细粒度权限：读取字段值需要 `enterprise.field.read`，保存字段值需要 `enterprise.field.update`，避免字段值 API 绕过角色授权。
+- 新增前端 hook `useTradeCrmEnterpriseCustomerFields`，统一加载客户实体的企业字段定义、字段选项、当前客户字段值，并封装保存到 `enterpriseFieldValue` 的动作。
+- Trade CRM 客户详情 Profile tab 新增 “Enterprise Custom Fields” 编辑区：支持 text、textarea、number、date、select、multiSelect、boolean 类型字段展示与编辑。
+- 客户详情 Profile 摘要区同步展示企业自定义字段值，新增字段不再只停留在企业管理配置页，已进入客户详情实际业务页面。
+- 布尔字段空值已按 null 保存，避免“未选择”被误写成 false。
+- 本轮验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`。
+- `nx lint:diff-with-main twenty-front/server` 命令通过，但仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 客户列表企业字段筛选与展示补充
+- `useTradeCrmEnterpriseCustomerFields` 扩展为同时支持客户详情单记录字段值和客户列表多记录字段值加载，复用企业字段定义、选项和值格式化逻辑。
+- Trade CRM 客户列表工具栏已接入 `searchable=true` 的企业客户字段：文本/数字/日期/multiSelect 使用输入过滤，select/boolean 使用下拉过滤。
+- 客户列表表格支持动态列数，前两个可搜索企业字段会作为列表列展示，字段值来自独立 `enterpriseFieldValue`，不依赖 Twenty 原生字段。
+- 当前列表筛选先在当前已加载客户集合内执行，避免立即改 GraphQL schema；后续需要下沉到后端分页查询，解决大数据量全局筛选。
+- 本轮验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`；`nx lint:diff-with-main twenty-front` 命令通过但仍输出 `No changed files`。
+
+## 2026-04-22 客户字段值批量读取与导出权限补强
+- 后端字段值 API 新增批量读取：`GET /api/enterprise/records/:entityType/field-values?recordIds=...`，返回按 `recordId` 分组的 `enterpriseFieldValue`，并继续使用 `enterprise.field.read` 权限。
+- Trade CRM 客户列表企业字段值加载已从逐条请求改为批量请求，减少列表筛选和字段列展示的 N+1 请求。
+- 客户导出前端字段选择只展示 `enabled && exportable` 的企业客户字段。
+- 客户导出后端新增强制过滤：创建任务和处理任务时都会把字段编码限制在基础字段 + `exportable=true` 企业字段内，避免通过手写字段编码绕过前端限制。
+- 导出标签和字段值解析也只读取可导出的企业字段，确保不可导出字段不会进入 CSV。
+- 本轮验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`、`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- `nx lint:diff-with-main twenty-front/server` 命令通过，但仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 客户导出企业字段条件过滤落地
+- 客户导出 filter 新增 `enterpriseFieldFilters`，支持按企业字段定义 ID、操作符和值过滤导出范围。
+- 后端导出预估数量和实际导出文件生成已共用企业字段过滤逻辑，避免预估数量与实际 CSV 行数不一致。
+- 当前支持操作符：`contains`、`equals`、`isEmpty`、`isNotEmpty`；字段类型覆盖 text/textarea/select/multiSelect/number/boolean/date。
+- 企业字段过滤只允许 `searchable=true` 的客户字段参与，防止不可搜索字段被手工请求用于筛选。
+- 客户导出页面新增“企业字段筛选”区域，展示 `searchable=true` 的企业客户字段；预估数量和创建任务都会提交同一组企业字段条件。
+- 本轮验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`、`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- `nx lint:diff-with-main twenty-front/server` 命令通过，但仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 客户列表企业字段后端筛选落地
+- 客户列表 GraphQL 参数新增 `enterpriseFieldFilters`，支持 `contains`、`equals`、`isEmpty`、`isNotEmpty` 操作符。
+- `CustomerWorkspaceListService` 已接入 `enterpriseEntityBinding`、`enterpriseFieldDefinition`、`enterpriseFieldValue`，按 `searchable=true` 的企业客户字段在后端计算匹配客户 ID，再参与客户列表返回结果。
+- Trade CRM 客户列表前端新增企业字段定义预加载，把工具栏里的企业字段筛选转换为后端过滤 payload；select/multiSelect 使用 optionCode 提交，boolean 使用 true/false 提交。
+- 列表仍保留当前页企业字段值展示和兜底二次过滤，确保后端过滤与表格动态列显示一致。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`、`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- `nx lint:diff-with-main twenty-front/server` 命令通过，但脚本仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 客户列表企业字段列接入字段布局
+- `useTradeCrmEnterpriseCustomerFieldDefinitions` 新增读取 `pageScene=list` 的字段布局配置，按 `visible=true` 与 `sortOrder` 生成客户列表企业字段列。
+- Trade CRM 客户列表表格列不再固定使用前两个 `searchable` 字段；有列表布局时按企业管理“字段显示 / 列表页”配置展示，没有布局时才回退到前两个 searchable 字段。
+- 字段布局读取失败不会阻断客户字段定义加载，会自动回退默认列，避免缺少布局读权限或接口异常导致客户列表不可用。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`。
+- `nx lint:diff-with-main twenty-front/server` 命令通过，但脚本仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 客户详情企业字段接入 detail/edit 布局
+- `useTradeCrmEnterpriseCustomerFields` 新增读取 `pageScene=detail` 与 `pageScene=edit` 的字段布局配置，输出 `detailFields` 与 `editFields`。
+- 客户详情 Profile 摘要区改为按 `detail` 布局展示企业字段，支持 visible 与 sortOrder 控制；无布局时回退所有 enabled 字段。
+- 企业字段编辑区改为按 `edit` 布局展示，支持 visible、sortOrder、readonly、required；只读字段禁用输入，必填字段为空时阻断保存。
+- 保存仍写入 `enterpriseFieldValue` 独立字段值表，布局只控制 UI 显示与编辑约束，不改变底层值存储。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`。
+- `nx lint:diff-with-main twenty-front/server` 命令通过，但脚本仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 客户新建表单接入 create 字段布局
+- `useTradeCrmEnterpriseCustomerFieldDefinitions` 已新增读取 `pageScene=create` 字段布局，输出 `createFields`，按 `visible/sortOrder/readonly/required` 控制新增客户表单字段。
+- Trade CRM 客户列表顶部“Create company customer”入口已渲染 create 布局字段，支持 text、number、date、select、multiSelect、boolean 字段录入；必填字段为空会阻止创建。
+- 创建流程改为先创建公司客户主记录，再调用 `PUT /api/enterprise/records/customer/:recordId/field-values` 保存企业字段值，字段值继续写入独立 `enterpriseFieldValue` 表。
+- 已复用统一字段值归一化函数，避免新增表单和详情编辑对 number、boolean、multiSelect、空值的保存语义不一致。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`、`nx lint:diff-with-main twenty-front/server`；lint diff 仍输出 `No changed files`，只能作为命令可运行参考。
+
+## 2026-04-22 客户企业字段 multiSelect 控件化
+- 客户新增 create 布局中的 `multiSelect` 字段已从逗号分隔输入改为正式复选项控件，选项来源继续使用企业字段选项 API 返回的 `optionCode/optionLabel`。
+- 客户详情 Profile 的企业字段编辑区同步改为复选项控件，新增和编辑的多选字段交互保持一致。
+- 保存语义不变：前端仍提交 `string[]`，后端继续写入独立 `enterpriseFieldValue.valueStringArray`，不依赖 Twenty 原生字段。
+- 未配置选项的 `multiSelect` 字段会显示配置缺失提示，避免运营手填 option code 造成脏数据。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+
+## 2026-04-22 客户企业字段输入组件抽取
+- 新增 `TradeCrmEnterpriseCustomerFieldInput` 通用组件，统一承载 text、textarea、number、date、select、multiSelect、boolean 企业字段输入控件。
+- 客户新增 create 布局和客户详情 Profile 企业字段编辑区已改为复用同一组件，避免两个入口分别维护字段类型渲染逻辑。
+- 组件保持现有保存语义：select/boolean 提交单值，multiSelect 提交 `string[]`，空值仍由保存归一化逻辑处理。
+- 未配置选项的 multiSelect 支持传入业务侧提示文案，后续可统一引导到企业管理字段中心补选项。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`；lint diff 仍输出 `No changed files`。
+
+## 2026-04-22 客户导出企业字段筛选接入通用字段组件
+- 客户导出页的企业字段筛选区已复用 `TradeCrmEnterpriseCustomerFieldInput`，按字段类型渲染 text、textarea、number、date、select、multiSelect、boolean 控件。
+- 导出页现在会为 searchable=true 的 select/multiSelect 企业字段加载字段选项，筛选时展示选项标签并提交 optionCode / string[]，不再要求运营手工输入选项编码。
+- `enterpriseFilterValues` 状态已从纯字符串改为企业字段草稿值类型，支持 boolean 和 string[]；预估数量与创建导出任务继续共用同一组 `enterpriseFieldFilters`。
+- 企业字段筛选仍只暴露 searchable=true 字段；导出列仍只允许基础字段 + exportable=true 企业字段，保持筛选和导出列权限语义分离。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`；lint diff 仍输出 `No changed files`。
+
+## 2026-04-22 客户导出企业字段筛选摘要补充
+- 客户导出页新增企业字段筛选摘要，会把当前已启用的 searchable 企业字段条件展示为字段名和值，select/multiSelect 使用选项标签显示。
+- 新增“清空企业字段筛选”操作，只清理企业字段条件并同步重置预估数量，避免继续显示旧筛选口径下的预估值。
+- 任一企业字段筛选值变更时会清空旧预估数量，提示运营重新预估，减少导出范围误判。
+- 摘要、预估数量和创建导出任务共用同一份 `enterpriseFilterValues`，保证页面展示与提交 payload 一致。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`；lint diff 仍输出 `No changed files`。
+
+## 2026-04-22 企业字段输入组件校验补充
+- `TradeCrmEnterpriseCustomerFieldInput` 新增统一字段级校验提示能力，并导出企业字段值校验函数。
+- 校验覆盖必填为空、number 非法、date 非法，以及 multiSelect 选项配置缺失等场景；控件会设置 `aria-invalid` 并在字段下方展示错误文案。
+- 客户新增 create 布局、客户详情企业字段编辑区、客户导出企业字段筛选区已接入同一套校验消息。
+- 客户新增和详情编辑在存在企业字段校验错误时阻止创建/保存；客户导出在筛选条件校验错误时阻止预估数量和创建导出任务。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`、`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`；lint diff 仍输出 `No changed files`。
+
+## 2026-04-22 客户导出企业字段筛选后端单测补充
+- 新增 `enterprise-customer-export.service.spec.ts`，用 mock query builder 覆盖客户导出企业字段筛选的后端核心逻辑。
+- 已覆盖 text contains、select equals、number equals、boolean equals、date equals、multiSelect 数组 overlap 六类字段过滤，验证生成的 SQL 条件和参数符合 `enterpriseFieldValue` 存储列语义。
+- 已覆盖 `searchable=false` 字段被拒绝参与筛选：服务返回空 customer id 集合，并且不会访问字段值 query builder，防止手工请求绕过 searchable 限制。
+- 验证通过：`npx jest src/modules/enterprise/customer-export/services/enterprise-customer-export.service.spec.ts --config=packages/twenty-server/jest.config.mjs`，7 个测试全部通过。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx build twenty-server`。
+
+## 2026-04-22 客户导出页组件拆分
+- 将客户导出页的导出字段选择抽为 `EnterpriseCustomerExportFieldSelection`，并补上至少保留一个导出字段的前端限制，避免创建空字段导出任务。
+- 将导出任务表格抽为 `EnterpriseCustomerExportJobList`，状态文案、状态颜色、下载和重新执行入口集中维护，主页面只负责加载和动作编排。
+- 新增 `enterprise-customer-export.types.ts` 统一承载导出字段选项、任务和状态 tone 类型，减少页面内重复类型定义。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`，脚本仍输出 `No changed files`，仅作为命令通过参考。
+
+## 2026-04-22 客户导出页组件拆分第二步
+- 将新建导出任务表单抽为 `EnterpriseCustomerExportTaskForm`，任务名称、关键词、负责人 ID、预估数量和创建任务按钮集中维护，主页面只保留状态和回调。
+- 将企业字段筛选区抽为 `EnterpriseCustomerExportEnterpriseFilterSection`，筛选摘要、清空筛选、字段控件渲染和字段级校验展示从主页面移出。
+- 将企业字段结构和筛选摘要类型补入 `enterprise-customer-export.types.ts`，减少页面与组件之间的隐式结构耦合。
+- 拆分后 `EnterpriseCustomerExportPage.tsx` 约 603 行，新增组件分别约 173/159/96/190 行，后续可以按组件补测试。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`，脚本仍输出 `No changed files`，仅作为命令通过参考。
+
+## 2026-04-23 客户导出字段逻辑 hook 抽取
+- 新增 `useEnterpriseCustomerExportFields`，统一封装客户导出字段加载、`enabled/exportable/searchable` 分流、select/multiSelect 选项加载、筛选摘要、字段级校验消息和 `enterpriseFieldFilters` payload 构建。
+- `EnterpriseCustomerExportPage` 不再直接维护企业字段定义、字段选项、筛选摘要和筛选 payload 构建逻辑，页面职责收敛为权限、任务 API、轮询和子组件编排。
+- `EnterpriseCustomerExportPage.tsx` 从约 603 行降到约 371 行，客户导出模块形成 page + hook + 4 个子组件 + types 的结构。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`，脚本仍输出 `No changed files`，仅作为命令通过参考。
+
+## 2026-04-23 客户导出 hook 测试补齐
+- 新增 `useEnterpriseCustomerExportFields.test.ts`，mock 企业字段 API 与字段选项 API，覆盖客户导出字段 hook 的核心规则。
+- 测试覆盖：只把 `enabled && exportable` 字段放入导出字段列表；只把 `enabled && searchable` 字段放入企业字段筛选；select/multiSelect 选项过滤 disabled 并按 sortOrder 排序。
+- 测试覆盖：企业字段筛选摘要使用 optionLabel 展示，payload 中 text 使用 `contains` 且会 trim，select/multiSelect 使用 `equals` 并提交 optionCode/string[]。
+- 测试覆盖：number 非法值会触发字段级校验错误，清空筛选后 payload 为空且错误状态恢复。
+- 定向测试通过：`node .\.yarn\releases\yarn-4.13.0.cjs jest packages/twenty-front/src/pages/enterprise/customer-export/hooks/__tests__/useEnterpriseCustomerExportFields.test.ts --config=packages/twenty-front/jest.config.mjs`，3 个测试通过。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`，脚本仍输出 `No changed files`，仅作为命令通过参考。
+
+## 2026-04-23 客户导出组件测试补齐
+- 新增 `EnterpriseCustomerExportComponents.test.tsx`，覆盖客户导出拆分后的字段选择、任务表单和任务列表组件。
+- 字段选择测试覆盖：最后一个已选导出字段不可取消，新增勾选和取消勾选会回传正确的字段 code 列表。
+- 任务表单测试覆盖：企业字段校验错误时禁用预估和创建；缺少创建权限时只禁用创建按钮。
+- 任务列表测试覆盖：缺少下载权限时 completed 任务下载按钮禁用且不触发回调；failed 任务在有创建权限时触发重新执行回调。
+- 定向测试通过：`node .\.yarn\releases\yarn-4.13.0.cjs jest packages/twenty-front/src/pages/enterprise/customer-export/components/__tests__/EnterpriseCustomerExportComponents.test.tsx --config=packages/twenty-front/jest.config.mjs`，6 个测试通过。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
+- 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`，脚本仍输出 `No changed files`，仅作为命令通过参考。

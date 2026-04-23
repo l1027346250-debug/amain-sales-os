@@ -21,6 +21,8 @@ import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorat
 import { JwtAuthGuard } from 'src/engine/guards/jwt-auth.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
+import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
 import { CreateEnterpriseSalesPlaybookDto } from 'src/modules/enterprise/sales-playbook/dtos/create-enterprise-sales-playbook.dto';
 import { ReplaceEnterpriseSalesPlaybookItemsDto } from 'src/modules/enterprise/sales-playbook/dtos/replace-enterprise-sales-playbook-items.dto';
 import { ReplaceEnterpriseSalesPlaybookStagesDto } from 'src/modules/enterprise/sales-playbook/dtos/replace-enterprise-sales-playbook-stages.dto';
@@ -33,10 +35,20 @@ import { EnterpriseSalesPlaybookService } from 'src/modules/enterprise/sales-pla
 export class EnterpriseSalesPlaybookController {
   constructor(
     private readonly enterpriseSalesPlaybookService: EnterpriseSalesPlaybookService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
 
   @Get('api/enterprise/sales-playbooks')
-  async findPlaybooks(@AuthWorkspace() workspace: WorkspaceEntity) {
+  async findPlaybooks(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.read',
+    );
+
     return this.enterpriseSalesPlaybookService.findPlaybooks(workspace.id);
   }
 
@@ -47,6 +59,12 @@ export class EnterpriseSalesPlaybookController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.create',
+    );
 
     return this.enterpriseSalesPlaybookService.createPlaybook(
       workspace.id,
@@ -64,6 +82,12 @@ export class EnterpriseSalesPlaybookController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.update',
+    );
+
     return this.enterpriseSalesPlaybookService.updatePlaybook(
       workspace.id,
       playbookId,
@@ -76,7 +100,14 @@ export class EnterpriseSalesPlaybookController {
   async findStages(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') playbookId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.read',
+    );
+
     return this.enterpriseSalesPlaybookService.findStages(
       workspace.id,
       playbookId,
@@ -92,6 +123,12 @@ export class EnterpriseSalesPlaybookController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.update',
+    );
+
     return this.enterpriseSalesPlaybookService.replaceStages(
       workspace.id,
       playbookId,
@@ -104,7 +141,14 @@ export class EnterpriseSalesPlaybookController {
   async findItems(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('stageId') stageId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.read',
+    );
+
     return this.enterpriseSalesPlaybookService.findItems(workspace.id, stageId);
   }
 
@@ -117,6 +161,12 @@ export class EnterpriseSalesPlaybookController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.update',
+    );
+
     return this.enterpriseSalesPlaybookService.replaceItems(
       workspace.id,
       stageId,
@@ -128,13 +178,36 @@ export class EnterpriseSalesPlaybookController {
   @Get('api/sales-assistant/contextual-content')
   async findContextualContent(
     @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
     @Query('stageCode') stageCode?: string,
     @Query('objectType') objectType?: string,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.salesPlaybook.read',
+    );
+
     return this.enterpriseSalesPlaybookService.findContextualContent(
       workspace.id,
       stageCode,
       objectType,
     );
+  }
+
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode: EnterprisePermissionCode,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
   }
 }

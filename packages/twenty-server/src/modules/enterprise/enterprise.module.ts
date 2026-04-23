@@ -2,12 +2,16 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { TypeORMModule } from 'src/database/typeorm/typeorm.module';
+import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { AuthModule } from 'src/engine/core-modules/auth/auth.module';
 import { FileModule } from 'src/engine/core-modules/file/file.module';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
+import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
+import { RoleTargetEntity } from 'src/engine/metadata-modules/role-target/role-target.entity';
+import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { WorkspaceCacheStorageModule } from 'src/engine/workspace-cache-storage/workspace-cache-storage.module';
 import { EnterpriseConfigAuditLogEntity } from 'src/modules/enterprise/audit/enterprise-config-audit-log.entity';
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
@@ -41,6 +45,9 @@ import { EnterpriseInquiryFormMappingEntity } from 'src/modules/enterprise/indep
 import { EnterpriseWebsiteBindingEntity } from 'src/modules/enterprise/independent-station/enterprise-website-binding.entity';
 import { EnterpriseWebsiteInquiryEntity } from 'src/modules/enterprise/independent-station/enterprise-website-inquiry.entity';
 import { EnterpriseIndependentStationService } from 'src/modules/enterprise/independent-station/services/enterprise-independent-station.service';
+import { EnterprisePermissionController } from 'src/modules/enterprise/permissions/controllers/enterprise-permission.controller';
+import { EnterpriseRolePermissionEntity } from 'src/modules/enterprise/permissions/enterprise-role-permission.entity';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
 import { EnterpriseMetadataProjectionService } from 'src/modules/enterprise/projection/services/enterprise-metadata-projection.service';
 import { EnterpriseRecycleController } from 'src/modules/enterprise/recycle/controllers/enterprise-recycle.controller';
 import { EnterpriseRecycleRecordEntity } from 'src/modules/enterprise/recycle/enterprise-recycle-record.entity';
@@ -66,9 +73,13 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     ApplicationModule,
     AuthModule,
     FileModule,
+    PermissionsModule,
     WorkspaceCacheStorageModule,
     TypeOrmModule.forFeature([
       WorkspaceEntity,
+      ApplicationEntity,
+      RoleEntity,
+      RoleTargetEntity,
       ObjectMetadataEntity,
       FieldMetadataEntity,
       EnterpriseEntityBindingEntity,
@@ -90,6 +101,7 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
       EnterpriseSalesPlaybookEntity,
       EnterpriseSalesPlaybookStageEntity,
       EnterpriseSalesPlaybookItemEntity,
+      EnterpriseRolePermissionEntity,
       EnterpriseConfigAuditLogEntity,
     ]),
   ],
@@ -105,10 +117,12 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     EnterpriseIndependentStationController,
     EnterpriseIndependentStationWebhookController,
     EnterpriseSalesPlaybookController,
+    EnterprisePermissionController,
   ],
   providers: [
     EnterpriseEntityBindingService,
     EnterpriseConfigAuditService,
+    EnterprisePermissionService,
     EnterpriseCustomerExportService,
     EnterpriseCustomerExportExpiryCleanupJob,
     EnterpriseCustomerExportExpiryCleanupCronJob,
@@ -127,5 +141,3 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
   ],
 })
 export class EnterpriseManagementModule {}
-
-

@@ -134,6 +134,12 @@ const EnterpriseSalesPlaybookPage = lazy(() =>
   })),
 );
 
+const EnterprisePermissionsPage = lazy(() =>
+  import('~/pages/enterprise/EnterprisePermissionsPage').then((module) => ({
+    default: module.EnterprisePermissionsPage,
+  })),
+);
+
 const RecordShowPage = lazy(() =>
   import('~/pages/object-record/RecordShowPage').then((module) => ({
     default: module.RecordShowPage,
@@ -441,6 +447,14 @@ export const useCreateAppRouter = (
             element={
               <LazyRoute>
                 <EnterpriseSalesPlaybookPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterprisePermissions}
+            element={
+              <LazyRoute>
+                <EnterprisePermissionsPage />
               </LazyRoute>
             }
           />

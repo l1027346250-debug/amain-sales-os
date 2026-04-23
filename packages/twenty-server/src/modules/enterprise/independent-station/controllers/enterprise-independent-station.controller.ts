@@ -22,6 +22,8 @@ import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorat
 import { JwtAuthGuard } from 'src/engine/guards/jwt-auth.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
+import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
 import { CreateEnterpriseWebsiteBindingDto } from 'src/modules/enterprise/independent-station/dtos/create-enterprise-website-binding.dto';
 import { FindEnterpriseWebsiteInquiriesDto } from 'src/modules/enterprise/independent-station/dtos/find-enterprise-website-inquiries.dto';
 import { ReprocessEnterpriseWebsiteInquiriesDto } from 'src/modules/enterprise/independent-station/dtos/reprocess-enterprise-website-inquiries.dto';
@@ -38,10 +40,20 @@ import { EnterpriseIndependentStationService } from 'src/modules/enterprise/inde
 export class EnterpriseIndependentStationController {
   constructor(
     private readonly enterpriseIndependentStationService: EnterpriseIndependentStationService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
 
   @Get()
-  async findWebsiteBindings(@AuthWorkspace() workspace: WorkspaceEntity) {
+  async findWebsiteBindings(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.read',
+    );
+
     return this.enterpriseIndependentStationService.findWebsiteBindings(
       workspace.id,
     );
@@ -54,6 +66,12 @@ export class EnterpriseIndependentStationController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.bind',
+    );
 
     return this.enterpriseIndependentStationService.createWebsiteBinding(
       workspace.id,
@@ -71,6 +89,12 @@ export class EnterpriseIndependentStationController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.update',
+    );
+
     return this.enterpriseIndependentStationService.updateWebsiteBinding(
       workspace.id,
       websiteBindingId,
@@ -87,6 +111,12 @@ export class EnterpriseIndependentStationController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.unbind',
+    );
+
     return this.enterpriseIndependentStationService.deleteWebsiteBinding(
       workspace.id,
       websiteBindingId,
@@ -98,7 +128,14 @@ export class EnterpriseIndependentStationController {
   async findFormMappings(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') websiteBindingId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.read',
+    );
+
     return this.enterpriseIndependentStationService.findFormMappings(
       workspace.id,
       websiteBindingId,
@@ -114,6 +151,12 @@ export class EnterpriseIndependentStationController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.update',
+    );
+
     return this.enterpriseIndependentStationService.replaceFormMappings(
       workspace.id,
       websiteBindingId,
@@ -126,7 +169,14 @@ export class EnterpriseIndependentStationController {
   async findAssignmentRules(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') websiteBindingId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.read',
+    );
+
     return this.enterpriseIndependentStationService.findAssignmentRules(
       workspace.id,
       websiteBindingId,
@@ -138,7 +188,14 @@ export class EnterpriseIndependentStationController {
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') websiteBindingId: string,
     @Query() query: FindEnterpriseWebsiteInquiriesDto,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.read',
+    );
+
     return this.enterpriseIndependentStationService.findInquiries(
       workspace.id,
       websiteBindingId,
@@ -155,6 +212,12 @@ export class EnterpriseIndependentStationController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.update',
+    );
 
     return this.enterpriseIndependentStationService.updateInquiry(
       workspace.id,
@@ -174,6 +237,12 @@ export class EnterpriseIndependentStationController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.update',
+    );
+
     return this.enterpriseIndependentStationService.updateInquiries(
       workspace.id,
       websiteBindingId,
@@ -190,6 +259,12 @@ export class EnterpriseIndependentStationController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.update',
+    );
 
     return this.enterpriseIndependentStationService.reprocessInquiries(
       workspace.id,
@@ -208,6 +283,12 @@ export class EnterpriseIndependentStationController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.update',
+    );
+
     return this.enterpriseIndependentStationService.reprocessInquiry(
       workspace.id,
       websiteBindingId,
@@ -225,11 +306,33 @@ export class EnterpriseIndependentStationController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.independentStation.update',
+    );
+
     return this.enterpriseIndependentStationService.replaceAssignmentRules(
       workspace.id,
       websiteBindingId,
       dto,
       authenticatedRequest.workspaceMember?.id ?? null,
     );
+  }
+
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode: EnterprisePermissionCode,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
   }
 }

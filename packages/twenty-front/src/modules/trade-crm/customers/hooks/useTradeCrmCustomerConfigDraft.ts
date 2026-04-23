@@ -1800,7 +1800,7 @@ export const useTradeCrmCustomerConfigDraft = (
         validationMessages[0] ?? 'Customer settings contain invalid data.',
       );
 
-      return;
+      return false;
     }
 
     const changedSections = getChangedConfigSections({
@@ -2010,10 +2010,14 @@ export const useTradeCrmCustomerConfigDraft = (
       setSavedDraft(nextSavedDraft);
       setDraft(nextSavedDraft);
       setLastSavedAt(savedAt);
+
+      return true;
     } catch {
       setSaveError(
         'Saving customer settings failed. Refresh the page state and retry.',
       );
+
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -2021,6 +2025,10 @@ export const useTradeCrmCustomerConfigDraft = (
 
   const resetDraft = () => {
     setDraft(savedDraft);
+  };
+
+  const replaceDraft = (nextDraft: TradeCrmCustomerConfigDraft) => {
+    setDraft(nextDraft);
   };
 
   const setPublicPoolRule = <
@@ -2640,6 +2648,7 @@ export const useTradeCrmCustomerConfigDraft = (
     lastSavedConfigOperationId,
     saveDraft,
     resetDraft,
+    replaceDraft,
     setPublicPoolRule,
     togglePublicPoolStage,
     addGroup,

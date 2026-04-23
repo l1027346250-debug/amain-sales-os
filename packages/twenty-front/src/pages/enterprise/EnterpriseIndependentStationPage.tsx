@@ -4,9 +4,11 @@ import { styled } from '@linaria/react';
 
 import { currentWorkspaceMembersState } from '@/auth/states/currentWorkspaceMembersState';
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
+import { enterprisePermissionCodes } from '@/enterprise/shared/constants/enterprisePermissions';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
+import { useEnterprisePermissions } from '@/enterprise/shared/hooks/useEnterprisePermissions';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Button } from 'twenty-ui/input';
@@ -458,6 +460,7 @@ const generateWebhookSecret = () =>
 
 export const EnterpriseIndependentStationPage = () => {
   const enterpriseApiRequest = useEnterpriseApiRequest();
+  const { hasEnterprisePermission } = useEnterprisePermissions();
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
   const currentWorkspaceMembers = useAtomStateValue(currentWorkspaceMembersState);
   const [activeTab, setActiveTab] = useState<'websites' | 'notifications'>(
@@ -489,6 +492,15 @@ export const EnterpriseIndependentStationPage = () => {
   const [newWebsiteName, setNewWebsiteName] = useState('');
   const [newWebsiteUrl, setNewWebsiteUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const canBindWebsite = hasEnterprisePermission(
+    enterprisePermissionCodes.independentStationBind,
+  );
+  const canUnbindWebsite = hasEnterprisePermission(
+    enterprisePermissionCodes.independentStationUnbind,
+  );
+  const canUpdateWebsite = hasEnterprisePermission(
+    enterprisePermissionCodes.independentStationUpdate,
+  );
 
   const selectedWebsiteBinding = useMemo(
     () =>
@@ -643,6 +655,12 @@ export const EnterpriseIndependentStationPage = () => {
   }, [selectedWebsiteBindingId]);
 
   const createWebsiteBinding = async () => {
+    if (!canBindWebsite) {
+      enqueueErrorSnackBar({ message: '没有绑定独立站的权限' });
+
+      return;
+    }
+
     if (!newWebsiteName.trim() || !newWebsiteUrl.trim()) {
       enqueueErrorSnackBar({ message: '请输入网站名称和网址' });
 
@@ -687,6 +705,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const saveWebsiteBinding = async () => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有保存独立站配置的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding || !websiteForm) {
       return;
     }
@@ -733,6 +757,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const unbindWebsite = async () => {
+    if (!canUnbindWebsite) {
+      enqueueErrorSnackBar({ message: '没有解绑独立站的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding) {
       return;
     }
@@ -759,6 +789,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const saveFormMappings = async () => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有保存表单字段映射的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding) {
       return;
     }
@@ -786,6 +822,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const saveAssignmentRules = async () => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有保存询盘分配规则的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding || !assignmentRuleForm) {
       return;
     }
@@ -834,6 +876,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const reprocessInquiry = async (inquiryId: string) => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有重处理独立站询盘的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding) {
       return;
     }
@@ -859,6 +907,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const reprocessIssueInquiries = async () => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有批量重处理独立站询盘的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding) {
       return;
     }
@@ -982,6 +1036,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const saveBatchInquiryUpdate = async () => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有批量处置独立站询盘的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding || selectedInquiryIds.length === 0) {
       return;
     }
@@ -1030,6 +1090,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const saveInquiryDraft = async (inquiry: WebsiteInquiry) => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有处置独立站询盘的权限' });
+
+      return;
+    }
+
     if (!selectedWebsiteBinding) {
       return;
     }
@@ -1096,6 +1162,12 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   const addFormMapping = () => {
+    if (!canUpdateWebsite) {
+      enqueueErrorSnackBar({ message: '没有维护表单字段映射的权限' });
+
+      return;
+    }
+
     setFormMappings([
       ...formMappings,
       { externalFieldCode: '', crmFieldCode: '', required: false },
@@ -1114,7 +1186,9 @@ export const EnterpriseIndependentStationPage = () => {
   };
 
   return (
-    <EnterprisePermissionGuard>
+    <EnterprisePermissionGuard
+      requiredPermission={enterprisePermissionCodes.independentStationRead}
+    >
       <EnterpriseShell title="企业管理 / 独立站管理" sidebar={buildSidebar()}>
         <StyledGrid>
           <StyledPanel>
@@ -1170,7 +1244,7 @@ export const EnterpriseIndependentStationPage = () => {
                 </StyledField>
                 <Button
                   accent="blue"
-                  disabled={isSaving}
+                  disabled={isSaving || !canBindWebsite}
                   title="绑定新网站"
                   onClick={() => void createWebsiteBinding()}
                 />
@@ -1324,11 +1398,15 @@ export const EnterpriseIndependentStationPage = () => {
                     <StyledActionRow>
                       <Button
                         accent="blue"
-                        disabled={isSaving}
+                        disabled={isSaving || !canUpdateWebsite}
                         title={isSaving ? '保存中...' : '保存网站配置'}
                         onClick={() => void saveWebsiteBinding()}
                       />
-                      <Button title="解绑网站" onClick={() => void unbindWebsite()} />
+                      <Button
+                        disabled={!canUnbindWebsite}
+                        title="解绑网站"
+                        onClick={() => void unbindWebsite()}
+                      />
                     </StyledActionRow>
                   </StyledForm>
                 ) : (
@@ -1339,7 +1417,11 @@ export const EnterpriseIndependentStationPage = () => {
               <StyledPanel>
                 <StyledHeader>
                   <StyledSubTitle>询盘表单字段映射</StyledSubTitle>
-                  <Button title="新增映射" onClick={addFormMapping} />
+                  <Button
+                    disabled={!canUpdateWebsite}
+                    title="新增映射"
+                    onClick={addFormMapping}
+                  />
                 </StyledHeader>
                 <StyledTable>
                   <thead>
@@ -1387,7 +1469,11 @@ export const EnterpriseIndependentStationPage = () => {
                     ))}
                   </tbody>
                 </StyledTable>
-                <Button title="保存字段映射" onClick={() => void saveFormMappings()} />
+                <Button
+                  disabled={!canUpdateWebsite}
+                  title="保存字段映射"
+                  onClick={() => void saveFormMappings()}
+                />
               </StyledPanel>
             </StyledGrid>
 
@@ -1503,6 +1589,7 @@ export const EnterpriseIndependentStationPage = () => {
                   </StyledCheckbox>
                   <Button
                     accent="blue"
+                    disabled={!canUpdateWebsite}
                     title="保存分配规则"
                     onClick={() => void saveAssignmentRules()}
                   />
@@ -1528,6 +1615,7 @@ export const EnterpriseIndependentStationPage = () => {
               </div>
               <StyledActionRow>
                 <Button
+                  disabled={!canUpdateWebsite}
                   title="批量重处理异常询盘"
                   onClick={() => void reprocessIssueInquiries()}
                 />
@@ -1624,7 +1712,7 @@ export const EnterpriseIndependentStationPage = () => {
                   </StyledField>
                   <StyledActionRow>
                     <Button
-                      disabled={selectedInquiryIds.length === 0}
+                      disabled={selectedInquiryIds.length === 0 || !canUpdateWebsite}
                       title="批量保存处置"
                       onClick={() => void saveBatchInquiryUpdate()}
                     />
@@ -1763,11 +1851,14 @@ export const EnterpriseIndependentStationPage = () => {
                         <td>
                           <StyledActionRow>
                             <Button
-                              disabled={!hasInquiryDraftChanges(inquiry)}
+                              disabled={
+                                !hasInquiryDraftChanges(inquiry) || !canUpdateWebsite
+                              }
                               title="保存处置"
                               onClick={() => void saveInquiryDraft(inquiry)}
                             />
                             <Button
+                              disabled={!canUpdateWebsite}
                               title="重处理"
                               onClick={() => void reprocessInquiry(inquiry.id)}
                             />

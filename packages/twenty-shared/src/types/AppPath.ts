@@ -34,6 +34,7 @@ export enum AppPath {
   EnterpriseSourceConvert = '/enterprise/flow/source-convert',
   EnterpriseIndependentStation = '/enterprise/integrations/independent-station',
   EnterpriseSalesPlaybook = '/enterprise/sales/playbook',
+  EnterprisePermissions = '/enterprise/security/permissions',
   TasksPage = '/objects/tasks',
   OpportunitiesPage = '/objects/opportunities',
 

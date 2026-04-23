@@ -27,6 +27,8 @@ import { UpdateEnterpriseFieldDto } from 'src/modules/enterprise/field-definitio
 import { EnterpriseFieldDefinitionService } from 'src/modules/enterprise/field-definition/services/enterprise-field-definition.service';
 import { EnterpriseFieldOptionService } from 'src/modules/enterprise/field-definition/services/enterprise-field-option.service';
 import { type AuthenticatedRequest } from 'src/engine/api/rest/types/authenticated-request';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
+import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
 
 @Controller('api/enterprise')
 @UseGuards(JwtAuthGuard, WorkspaceAuthGuard, NoPermissionGuard)
@@ -35,13 +37,17 @@ export class EnterpriseFieldDefinitionController {
   constructor(
     private readonly enterpriseFieldDefinitionService: EnterpriseFieldDefinitionService,
     private readonly enterpriseFieldOptionService: EnterpriseFieldOptionService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
 
   @Get('fields')
   async findMany(
     @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
     @Query('entityType') entityType?: string,
   ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.field.read');
+
     return this.enterpriseFieldDefinitionService.findMany(workspace.id, entityType);
   }
 
@@ -49,7 +55,10 @@ export class EnterpriseFieldDefinitionController {
   async findOne(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') fieldDefinitionId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.field.read');
+
     return this.enterpriseFieldDefinitionService.findOneOrFail(
       workspace.id,
       fieldDefinitionId,
@@ -63,6 +72,8 @@ export class EnterpriseFieldDefinitionController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(workspace.id, request, 'enterprise.field.create');
 
     return this.enterpriseFieldDefinitionService.create(
       workspace.id,
@@ -80,6 +91,8 @@ export class EnterpriseFieldDefinitionController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(workspace.id, request, 'enterprise.field.update');
+
     return this.enterpriseFieldDefinitionService.update(
       workspace.id,
       fieldDefinitionId,
@@ -96,6 +109,8 @@ export class EnterpriseFieldDefinitionController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(workspace.id, request, 'enterprise.field.delete');
+
     return this.enterpriseFieldDefinitionService.remove(
       workspace.id,
       fieldDefinitionId,
@@ -107,7 +122,10 @@ export class EnterpriseFieldDefinitionController {
   async findOptions(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') fieldDefinitionId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.field.read');
+
     return this.enterpriseFieldOptionService.findByFieldDefinitionId(
       workspace.id,
       fieldDefinitionId,
@@ -119,11 +137,30 @@ export class EnterpriseFieldDefinitionController {
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') fieldDefinitionId: string,
     @Body() dto: ReplaceEnterpriseFieldOptionsDto,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.field.update');
+
     return this.enterpriseFieldOptionService.replaceOptions(
       workspace.id,
       fieldDefinitionId,
       dto.options,
     );
+  }
+
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode: EnterprisePermissionCode,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
   }
 }

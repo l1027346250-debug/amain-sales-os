@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Put,
+  Query,
   Req,
   UseFilters,
   UseGuards,
@@ -20,6 +21,8 @@ import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { UpdateEnterpriseRecordFieldValuesDto } from 'src/modules/enterprise/field-value/dtos/update-enterprise-record-field-values.dto';
 import { EnterpriseFieldValueService } from 'src/modules/enterprise/field-value/services/enterprise-field-value.service';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
+import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
 
 @Controller('api/enterprise/records')
 @UseGuards(JwtAuthGuard, WorkspaceAuthGuard, NoPermissionGuard)
@@ -27,14 +30,34 @@ import { EnterpriseFieldValueService } from 'src/modules/enterprise/field-value/
 export class EnterpriseFieldValueController {
   constructor(
     private readonly enterpriseFieldValueService: EnterpriseFieldValueService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
+
+  @Get(':entityType/field-values')
+  async findManyForRecords(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Param('entityType') entityType: string,
+    @Query('recordIds') recordIds: string | string[] | undefined,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.field.read');
+
+    return this.enterpriseFieldValueService.findManyForRecords(
+      workspace.id,
+      entityType,
+      this.normalizeRecordIds(recordIds),
+    );
+  }
 
   @Get(':entityType/:recordId/field-values')
   async findManyForRecord(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('entityType') entityType: string,
     @Param('recordId') recordId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.field.read');
+
     return this.enterpriseFieldValueService.findManyForRecord(
       workspace.id,
       entityType,
@@ -52,6 +75,8 @@ export class EnterpriseFieldValueController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(workspace.id, request, 'enterprise.field.update');
+
     return this.enterpriseFieldValueService.updateManyForRecord(
       workspace.id,
       entityType,
@@ -59,5 +84,33 @@ export class EnterpriseFieldValueController {
       dto,
       authenticatedRequest.workspaceMember?.id ?? null,
     );
+  }
+
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode: EnterprisePermissionCode,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
+  }
+
+  private normalizeRecordIds(recordIds: string | string[] | undefined) {
+    if (!recordIds) {
+      return [];
+    }
+
+    return (Array.isArray(recordIds) ? recordIds : [recordIds])
+      .flatMap((recordId) => recordId.split(','))
+      .map((recordId) => recordId.trim())
+      .filter(Boolean)
+      .slice(0, 100);
   }
 }

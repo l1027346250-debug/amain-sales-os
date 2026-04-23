@@ -137,6 +137,13 @@ export type TradeCrmCustomerWorkspaceFilters = {
   publicPoolStateLabel?: string | null;
   searchTerm?: string;
   tagLabel?: string | null;
+  enterpriseFieldFilters?: TradeCrmCustomerEnterpriseFieldFilter[];
+};
+
+export type TradeCrmCustomerEnterpriseFieldFilter = {
+  fieldDefinitionId: string;
+  operator: 'contains' | 'equals' | 'isEmpty' | 'isNotEmpty';
+  value?: unknown;
 };
 
 type CustomerWorkspaceListQuery = {
@@ -168,6 +175,7 @@ type CustomerWorkspaceListQueryVariables = {
   stageValue?: string;
   tagValue?: string;
   publicPoolStateValue?: string;
+  enterpriseFieldFilters?: TradeCrmCustomerEnterpriseFieldFilter[];
   limit?: number;
 };
 
@@ -368,6 +376,7 @@ const GET_CUSTOMER_WORKSPACE_LIST = gql`
     $stageValue: String
     $tagValue: String
     $publicPoolStateValue: String
+    $enterpriseFieldFilters: JSON
     $limit: Int
   ) {
     customerWorkspaceList(
@@ -376,6 +385,7 @@ const GET_CUSTOMER_WORKSPACE_LIST = gql`
       stageValue: $stageValue
       tagValue: $tagValue
       publicPoolStateValue: $publicPoolStateValue
+      enterpriseFieldFilters: $enterpriseFieldFilters
       limit: $limit
     ) {
       totalCount
@@ -991,6 +1001,10 @@ export const useTradeCrmCustomerWorkspaceData = (
     ? getTradeCrmPublicPoolStateValueForLabel(filters.publicPoolStateLabel)
     : null;
   const customerWorkspaceListVariables = {
+    enterpriseFieldFilters:
+      filters?.enterpriseFieldFilters && filters.enterpriseFieldFilters.length > 0
+        ? filters.enterpriseFieldFilters
+        : undefined,
     limit: 50,
     publicPoolStateValue: publicPoolStateValue ?? undefined,
     searchTerm: filters?.searchTerm?.trim() || undefined,

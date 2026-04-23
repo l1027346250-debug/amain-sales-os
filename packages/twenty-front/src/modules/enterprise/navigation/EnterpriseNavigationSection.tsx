@@ -1,15 +1,14 @@
-﻿import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { currentUserState } from '@/auth/states/currentUserState';
 import { enterpriseMenuConfig } from '@/enterprise/navigation/enterpriseMenuConfig';
-import { usePermissionFlagMap } from '@/settings/roles/hooks/usePermissionFlagMap';
+import { useEnterprisePermissions } from '@/enterprise/shared/hooks/useEnterprisePermissions';
 import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
 import { NavigationDrawerItemGroup } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItemGroup';
 import { NavigationDrawerSection } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSection';
 import { NavigationDrawerSectionTitle } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSectionTitle';
 import { NavigationDrawerSubItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSubItem';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { IconBriefcase } from 'twenty-ui/display';
 
 const isTargetActive = (target: string, pathname: string, search: string) => {
@@ -34,11 +33,8 @@ const isTargetActive = (target: string, pathname: string, search: string) => {
 export const EnterpriseNavigationSection = () => {
   const location = useLocation();
   const currentUser = useAtomStateValue(currentUserState);
-  const permissionMap = usePermissionFlagMap();
-  const canAccessEnterprise =
-    import.meta.env.DEV ||
-    permissionMap[PermissionFlagType.WORKSPACE] ||
-    permissionMap[PermissionFlagType.ENTERPRISE];
+  const { canAccessEnterprise, hasEnterprisePermission } =
+    useEnterprisePermissions();
 
   if (!currentUser || !canAccessEnterprise) {
     return null;
@@ -48,12 +44,18 @@ export const EnterpriseNavigationSection = () => {
     <NavigationDrawerSection>
       <NavigationDrawerSectionTitle label="企业管理" />
       {enterpriseMenuConfig.map((item) => {
+        if (!hasEnterprisePermission(item.requiredPermission)) {
+          return null;
+        }
+
         const itemActive = isTargetActive(
           item.to,
           location.pathname,
           location.search,
         );
-        const visibleChildren = item.children ?? [];
+        const visibleChildren = (item.children ?? []).filter((child) =>
+          hasEnterprisePermission(child.requiredPermission),
+        );
         const activeChildIndex = visibleChildren.findIndex((child) =>
           isTargetActive(child.to, location.pathname, location.search),
         );
@@ -101,4 +103,3 @@ export const EnterpriseNavigationSection = () => {
     </NavigationDrawerSection>
   );
 };
-

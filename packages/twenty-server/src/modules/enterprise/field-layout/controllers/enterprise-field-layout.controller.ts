@@ -20,6 +20,8 @@ import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { UpsertEnterpriseFieldLayoutsDto } from 'src/modules/enterprise/field-layout/dtos/upsert-enterprise-field-layouts.dto';
 import { EnterpriseFieldLayoutService } from 'src/modules/enterprise/field-layout/services/enterprise-field-layout.service';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
+import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
 
 @Controller('api/enterprise/field-layouts')
 @UseGuards(JwtAuthGuard, WorkspaceAuthGuard, NoPermissionGuard)
@@ -27,6 +29,7 @@ import { EnterpriseFieldLayoutService } from 'src/modules/enterprise/field-layou
 export class EnterpriseFieldLayoutController {
   constructor(
     private readonly enterpriseFieldLayoutService: EnterpriseFieldLayoutService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
 
   @Get()
@@ -34,8 +37,15 @@ export class EnterpriseFieldLayoutController {
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Query('entityType') entityType: string,
     @Query('pageScene') pageScene: string,
+    @Req() request: Request,
     @Query('roleId') roleId?: string,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.fieldLayout.read',
+    );
+
     return this.enterpriseFieldLayoutService.findMany(
       workspace.id,
       entityType,
@@ -52,10 +62,32 @@ export class EnterpriseFieldLayoutController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.fieldLayout.update',
+    );
+
     return this.enterpriseFieldLayoutService.upsertMany(
       workspace.id,
       dto,
       authenticatedRequest.workspaceMember?.id ?? null,
     );
+  }
+
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode: EnterprisePermissionCode,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
   }
 }

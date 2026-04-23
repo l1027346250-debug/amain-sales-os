@@ -21,6 +21,8 @@ import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorat
 import { JwtAuthGuard } from 'src/engine/guards/jwt-auth.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
+import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
 import { CreateEnterpriseSourceBlacklistRuleDto } from 'src/modules/enterprise/source-convert/dtos/create-enterprise-source-blacklist-rule.dto';
 import { ExecuteEnterpriseSourceConvertDto } from 'src/modules/enterprise/source-convert/dtos/execute-enterprise-source-convert.dto';
 import { UpdateEnterpriseSourceConvertRuleEnabledDto } from 'src/modules/enterprise/source-convert/dtos/update-enterprise-source-convert-rule-enabled.dto';
@@ -33,18 +35,35 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
 export class EnterpriseSourceConvertController {
   constructor(
     private readonly enterpriseSourceConvertService: EnterpriseSourceConvertService,
+    private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
 
   @Get('api/enterprise/source-convert/categories')
-  async findCategories(@AuthWorkspace() workspace: WorkspaceEntity) {
+  async findCategories(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.read',
+    );
+
     return this.enterpriseSourceConvertService.findCategories(workspace.id);
   }
 
   @Get('api/enterprise/source-convert/rules')
   async findRules(
     @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
     @Query('categoryCode') categoryCode?: string,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.read',
+    );
+
     return this.enterpriseSourceConvertService.findRules(
       workspace.id,
       categoryCode,
@@ -55,7 +74,14 @@ export class EnterpriseSourceConvertController {
   async findRule(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('id') ruleId: string,
+    @Req() request: Request,
   ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.read',
+    );
+
     return this.enterpriseSourceConvertService.findRuleOrFail(
       workspace.id,
       ruleId,
@@ -70,6 +96,12 @@ export class EnterpriseSourceConvertController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.update',
+    );
 
     return this.enterpriseSourceConvertService.updateRule(
       workspace.id,
@@ -88,6 +120,12 @@ export class EnterpriseSourceConvertController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.update',
+    );
+
     return this.enterpriseSourceConvertService.updateRuleEnabled(
       workspace.id,
       ruleId,
@@ -97,7 +135,16 @@ export class EnterpriseSourceConvertController {
   }
 
   @Get('api/enterprise/source-convert/blacklist')
-  async findBlacklist(@AuthWorkspace() workspace: WorkspaceEntity) {
+  async findBlacklist(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.blacklist.read',
+    );
+
     return this.enterpriseSourceConvertService.findBlacklist(workspace.id);
   }
 
@@ -108,6 +155,12 @@ export class EnterpriseSourceConvertController {
     @Req() request: Request,
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.blacklist.update',
+    );
 
     return this.enterpriseSourceConvertService.createBlacklistRule(
       workspace.id,
@@ -124,6 +177,12 @@ export class EnterpriseSourceConvertController {
   ) {
     const authenticatedRequest = request as AuthenticatedRequest;
 
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.sourceConvert.blacklist.update',
+    );
+
     return this.enterpriseSourceConvertService.deleteBlacklistRule(
       workspace.id,
       blacklistRuleId,
@@ -138,5 +197,20 @@ export class EnterpriseSourceConvertController {
   ) {
     return this.enterpriseSourceConvertService.execute(workspace.id, dto);
   }
-}
 
+  private async assertPermission(
+    workspaceId: string,
+    request: Request,
+    permissionCode: EnterprisePermissionCode,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.enterprisePermissionService.assertCanAccess({
+      apiKeyId: authenticatedRequest.apiKey?.id,
+      applicationId: authenticatedRequest.application?.id,
+      permissionCode,
+      userWorkspaceId: authenticatedRequest.userWorkspaceId,
+      workspaceId,
+    });
+  }
+}

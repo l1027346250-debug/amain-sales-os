@@ -3,38 +3,19 @@
 import { styled } from '@linaria/react';
 
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
+import { enterprisePermissionCodes } from '@/enterprise/shared/constants/enterprisePermissions';
+import { useEnterprisePermissions } from '@/enterprise/shared/hooks/useEnterprisePermissions';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterpriseNavigationGroups } from '@/enterprise/shared/constants/enterpriseNavigation';
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
-import { Button } from 'twenty-ui/input';
+import { EnterpriseCustomerExportEnterpriseFilterSection } from '~/pages/enterprise/customer-export/components/EnterpriseCustomerExportEnterpriseFilterSection';
+import { EnterpriseCustomerExportFieldSelection } from '~/pages/enterprise/customer-export/components/EnterpriseCustomerExportFieldSelection';
+import { EnterpriseCustomerExportJobList } from '~/pages/enterprise/customer-export/components/EnterpriseCustomerExportJobList';
+import { EnterpriseCustomerExportTaskForm } from '~/pages/enterprise/customer-export/components/EnterpriseCustomerExportTaskForm';
+import { useEnterpriseCustomerExportFields } from '~/pages/enterprise/customer-export/hooks/useEnterpriseCustomerExportFields';
+import { type EnterpriseCustomerExportJob } from '~/pages/enterprise/customer-export/types/enterprise-customer-export.types';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
-
-type EnterpriseField = {
-  id: string;
-  fieldCode: string;
-  fieldName: string;
-};
-
-type EnterpriseCustomerExportJob = {
-  id: string;
-  taskName: string;
-  selectedFieldCodes: string[];
-  customerCount: number | null;
-  status: string;
-  fileUrl: string | null;
-  fileExpiresAt: string | null;
-  retryCount: number;
-  errorMessage: string | null;
-  createdAt: string;
-};
-
-const baseCustomerExportFields = [
-  { fieldCode: 'name', fieldName: '客户名称' },
-  { fieldCode: 'domainName', fieldName: '网站域名' },
-  { fieldCode: 'accountOwnerId', fieldName: '负责人' },
-  { fieldCode: 'createdAt', fieldName: '创建时间' },
-];
 
 const StyledGrid = styled.div`
   display: grid;
@@ -72,147 +53,6 @@ const StyledPanel = styled.section`
   padding: ${themeCssVariables.spacing[4]};
 `;
 
-const StyledHeader = styled.div`
-  align-items: center;
-  display: flex;
-  gap: ${themeCssVariables.spacing[3]};
-  justify-content: space-between;
-`;
-
-const StyledTitle = styled.div`
-  color: ${themeCssVariables.font.color.primary};
-  font-size: ${themeCssVariables.font.size.md};
-  font-weight: ${themeCssVariables.font.weight.semiBold};
-`;
-
-const StyledDescription = styled.div`
-  color: ${themeCssVariables.font.color.secondary};
-  font-size: ${themeCssVariables.font.size.sm};
-`;
-
-const StyledFormGrid = styled.div`
-  display: grid;
-  gap: ${themeCssVariables.spacing[3]};
-  grid-template-columns: 1fr 280px 220px auto;
-
-  @media (max-width: 1080px) {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  @media (max-width: 720px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const StyledField = styled.label`
-  display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing[1]};
-`;
-
-const StyledLabel = styled.span`
-  color: ${themeCssVariables.font.color.light};
-  font-size: ${themeCssVariables.font.size.sm};
-`;
-
-const inputStyles = `
-  background: ${themeCssVariables.background.primary};
-  border: 1px solid ${themeCssVariables.border.color.medium};
-  border-radius: ${themeCssVariables.border.radius.sm};
-  color: ${themeCssVariables.font.color.primary};
-  font-family: ${themeCssVariables.font.family};
-  font-size: ${themeCssVariables.font.size.md};
-  min-height: 40px;
-  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
-
-  &:focus {
-    border-color: ${themeCssVariables.border.color.blue};
-    outline: none;
-  }
-`;
-
-const StyledInput = styled.input`
-  ${inputStyles}
-`;
-
-const StyledMultiSelect = styled.div`
-  display: grid;
-  gap: ${themeCssVariables.spacing[2]};
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-`;
-
-const StyledFieldOption = styled.label`
-  align-items: center;
-  background: ${themeCssVariables.background.secondary};
-  border: 1px solid ${themeCssVariables.border.color.light};
-  border-radius: ${themeCssVariables.border.radius.sm};
-  color: ${themeCssVariables.font.color.primary};
-  display: inline-flex;
-  gap: ${themeCssVariables.spacing[2]};
-  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
-`;
-
-const StyledHint = styled.div`
-  color: ${themeCssVariables.font.color.secondary};
-  font-size: ${themeCssVariables.font.size.sm};
-`;
-
-const StyledMetric = styled.div`
-  align-items: center;
-  display: inline-flex;
-  gap: ${themeCssVariables.spacing[2]};
-`;
-
-const StyledMetricValue = styled.span`
-  color: ${themeCssVariables.font.color.primary};
-  font-size: ${themeCssVariables.font.size.lg};
-  font-weight: ${themeCssVariables.font.weight.semiBold};
-`;
-
-const StyledTable = styled.table`
-  border-collapse: collapse;
-  width: 100%;
-
-  th,
-  td {
-    border-bottom: 1px solid ${themeCssVariables.border.color.light};
-    padding: ${themeCssVariables.spacing[3]};
-    text-align: left;
-    vertical-align: top;
-  }
-
-  th {
-    color: ${themeCssVariables.font.color.light};
-    font-size: ${themeCssVariables.font.size.sm};
-    font-weight: ${themeCssVariables.font.weight.medium};
-  }
-`;
-
-const StyledActionCell = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${themeCssVariables.spacing[2]};
-`;
-
-const StyledStatus = styled.span<{ tone: 'neutral' | 'danger' | 'success' | 'warning' }>`
-  color: ${({ tone }) =>
-    tone === 'danger'
-      ? themeCssVariables.font.color.danger
-      : tone === 'success'
-        ? themeCssVariables.snackBar.success.color
-        : tone === 'warning'
-          ? themeCssVariables.color.yellow7
-          : themeCssVariables.font.color.secondary};
-  font-weight: ${themeCssVariables.font.weight.medium};
-`;
-
-const StyledEmpty = styled.div`
-  color: ${themeCssVariables.font.color.secondary};
-  font-size: ${themeCssVariables.font.size.md};
-  padding: ${themeCssVariables.spacing[6]} 0;
-  text-align: center;
-`;
-
 const buildSidebar = () =>
   enterpriseNavigationGroups.map((section) => ({
     title: section.label,
@@ -230,19 +70,37 @@ const hasProcessingJobs = (jobs: EnterpriseCustomerExportJob[]) =>
 export const EnterpriseCustomerExportPage = () => {
   const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
   const enterpriseApiRequest = useEnterpriseApiRequest();
+  const { hasEnterprisePermission } = useEnterprisePermissions();
   const [jobs, setJobs] = useState<EnterpriseCustomerExportJob[]>([]);
-  const [fieldOptions, setFieldOptions] = useState(baseCustomerExportFields);
+  const {
+    activeEnterpriseFilterSummaries,
+    clearEnterpriseFilterValues,
+    enterpriseFilterFieldOptionsByFieldId,
+    enterpriseFilterFields,
+    enterpriseFilterValidationMessages,
+    enterpriseFilterValues,
+    fieldOptions,
+    getEnterpriseFieldFilters,
+    hasEnterpriseFilterValidationErrors,
+    loadFieldOptions,
+    selectedFieldCodes,
+    setSelectedFieldCodes,
+    updateEnterpriseFilterValue,
+  } = useEnterpriseCustomerExportFields();
   const [taskName, setTaskName] = useState('客户导出任务');
   const [keyword, setKeyword] = useState('');
   const [accountOwnerId, setAccountOwnerId] = useState('');
-  const [selectedFieldCodes, setSelectedFieldCodes] = useState<string[]>(
-    baseCustomerExportFields.map((field) => field.fieldCode),
-  );
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const sidebar = useMemo(buildSidebar, []);
+  const canCreateExport = hasEnterprisePermission(
+    enterprisePermissionCodes.customerExportCreate,
+  );
+  const canDownloadExport = hasEnterprisePermission(
+    enterprisePermissionCodes.customerExportDownload,
+  );
 
   const loadJobs = useCallback(async () => {
     const response = await enterpriseApiRequest(
@@ -259,37 +117,6 @@ export const EnterpriseCustomerExportPage = () => {
     const data = (await response.json()) as EnterpriseCustomerExportJob[];
 
     setJobs(data);
-  }, []);
-
-  const loadFieldOptions = useCallback(async () => {
-    const response = await enterpriseApiRequest(
-      '/api/enterprise/fields?entityType=customer',
-      {
-        credentials: 'include',
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to load customer export fields');
-    }
-
-    const customFields = (await response.json()) as EnterpriseField[];
-    const mergedFieldOptions = [
-      ...baseCustomerExportFields,
-      ...customFields.map((field) => ({
-        fieldCode: field.fieldCode,
-        fieldName: field.fieldName,
-      })),
-    ];
-
-    setFieldOptions(mergedFieldOptions);
-    setSelectedFieldCodes((currentFieldCodes) => {
-      if (currentFieldCodes.length > 0) {
-        return currentFieldCodes;
-      }
-
-      return mergedFieldOptions.map((field) => field.fieldCode);
-    });
   }, []);
 
   useEffect(() => {
@@ -311,7 +138,14 @@ export const EnterpriseCustomerExportPage = () => {
   }, [jobs, loadJobs]);
 
   const runPreviewCount = async () => {
+    if (hasEnterpriseFilterValidationErrors) {
+      enqueueErrorSnackBar({ message: '请先修正企业字段筛选条件' });
+
+      return;
+    }
+
     setIsPreviewLoading(true);
+    const enterpriseFieldFilters = getEnterpriseFieldFilters();
 
     try {
       const response = await enterpriseApiRequest(
@@ -325,6 +159,10 @@ export const EnterpriseCustomerExportPage = () => {
           body: JSON.stringify({
             keyword: keyword.trim() || undefined,
             accountOwnerId: accountOwnerId.trim() || undefined,
+            enterpriseFieldFilters:
+              enterpriseFieldFilters.length > 0
+                ? enterpriseFieldFilters
+                : undefined,
           }),
         },
       );
@@ -346,7 +184,20 @@ export const EnterpriseCustomerExportPage = () => {
   };
 
   const createExportJob = async () => {
+    if (!canCreateExport) {
+      enqueueErrorSnackBar({ message: '没有创建客户导出任务的权限' });
+
+      return;
+    }
+
+    if (hasEnterpriseFilterValidationErrors) {
+      enqueueErrorSnackBar({ message: '请先修正企业字段筛选条件' });
+
+      return;
+    }
+
     setIsSaving(true);
+    const enterpriseFieldFilters = getEnterpriseFieldFilters();
 
     try {
       const response = await enterpriseApiRequest(
@@ -362,6 +213,10 @@ export const EnterpriseCustomerExportPage = () => {
           filter: {
             keyword: keyword.trim() || undefined,
             accountOwnerId: accountOwnerId.trim() || undefined,
+            enterpriseFieldFilters:
+              enterpriseFieldFilters.length > 0
+                ? enterpriseFieldFilters
+                : undefined,
           },
           selectedFieldCodes,
         }),
@@ -382,6 +237,12 @@ export const EnterpriseCustomerExportPage = () => {
   };
 
   const requeueExportJob = async (job: EnterpriseCustomerExportJob) => {
+    if (!canCreateExport) {
+      enqueueErrorSnackBar({ message: '没有重新执行客户导出任务的权限' });
+
+      return;
+    }
+
     try {
       const response = await enterpriseApiRequest(
         `/api/enterprise/customer-export/jobs/${job.id}/enqueue`,
@@ -403,6 +264,12 @@ export const EnterpriseCustomerExportPage = () => {
   };
 
   const downloadExportJob = async (job: EnterpriseCustomerExportJob) => {
+    if (!canDownloadExport) {
+      enqueueErrorSnackBar({ message: '没有下载客户导出文件的权限' });
+
+      return;
+    }
+
     try {
       const response = await enterpriseApiRequest(
         `/api/enterprise/customer-export/jobs/${job.id}/file-access`,
@@ -433,43 +300,10 @@ export const EnterpriseCustomerExportPage = () => {
     }
   };
 
-  const renderStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '待执行';
-      case 'running':
-        return '执行中';
-      case 'retrying':
-        return '重试中';
-      case 'completed':
-        return '已完成';
-      case 'failed':
-        return '失败';
-      case 'expired':
-        return '已过期';
-      default:
-        return status;
-    }
-  };
-
-  const renderStatusTone = (
-    status: string,
-  ): 'neutral' | 'danger' | 'success' | 'warning' => {
-    switch (status) {
-      case 'completed':
-        return 'success';
-      case 'failed':
-        return 'danger';
-      case 'expired':
-      case 'retrying':
-        return 'warning';
-      default:
-        return 'neutral';
-    }
-  };
-
   return (
-    <EnterprisePermissionGuard>
+    <EnterprisePermissionGuard
+      requiredPermission={enterprisePermissionCodes.customerExportRead}
+    >
       <EnterpriseShell title="客户导出" sidebar={sidebar}>
         <StyledGrid>
           <StyledHero>
@@ -480,168 +314,53 @@ export const EnterpriseCustomerExportPage = () => {
           </StyledHero>
 
           <StyledPanel>
-            <StyledHeader>
-              <div>
-                <StyledTitle>新建导出任务</StyledTitle>
-                <StyledDescription>
-                  先定义筛选条件和字段范围，再把任务送入后台。导出文件默认保留 7 天，过期后会被自动清理。
-                </StyledDescription>
-              </div>
-              <StyledMetric>
-                <span>预计客户数</span>
-                <StyledMetricValue>
-                  {isPreviewLoading ? '...' : previewCount ?? '--'}
-                </StyledMetricValue>
-              </StyledMetric>
-            </StyledHeader>
+            <EnterpriseCustomerExportTaskForm
+              accountOwnerId={accountOwnerId}
+              canCreateExport={canCreateExport}
+              hasValidationErrors={hasEnterpriseFilterValidationErrors}
+              isPreviewLoading={isPreviewLoading}
+              isSaving={isSaving}
+              keyword={keyword}
+              previewCount={previewCount}
+              taskName={taskName}
+              onAccountOwnerIdChange={setAccountOwnerId}
+              onCreateExportJob={createExportJob}
+              onKeywordChange={setKeyword}
+              onPreviewCount={runPreviewCount}
+              onTaskNameChange={setTaskName}
+            />
 
-            <StyledFormGrid>
-              <StyledField>
-                <StyledLabel>任务名称</StyledLabel>
-                <StyledInput
-                  value={taskName}
-                  onChange={(event) => setTaskName(event.target.value)}
-                />
-              </StyledField>
+            <EnterpriseCustomerExportEnterpriseFilterSection
+              activeFilterSummaries={activeEnterpriseFilterSummaries}
+              fieldOptionsByFieldId={enterpriseFilterFieldOptionsByFieldId}
+              fields={enterpriseFilterFields}
+              filterValues={enterpriseFilterValues}
+              validationMessages={enterpriseFilterValidationMessages}
+              onClearFilters={() => {
+                clearEnterpriseFilterValues();
+                setPreviewCount(null);
+              }}
+              onFilterValueChange={(fieldId, nextValue) => {
+                updateEnterpriseFilterValue(fieldId, nextValue);
+                setPreviewCount(null);
+              }}
+            />
 
-              <StyledField>
-                <StyledLabel>关键词</StyledLabel>
-                <StyledInput
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                />
-              </StyledField>
-
-              <StyledField>
-                <StyledLabel>负责人 ID</StyledLabel>
-                <StyledInput
-                  value={accountOwnerId}
-                  onChange={(event) => setAccountOwnerId(event.target.value)}
-                />
-              </StyledField>
-
-              <StyledActionCell>
-                <Button
-                  title={isPreviewLoading ? '计算中...' : '预估数量'}
-                  onClick={() => void runPreviewCount()}
-                />
-                <Button
-                  accent="blue"
-                  disabled={isSaving}
-                  title={isSaving ? '提交中...' : '创建任务'}
-                  onClick={() => void createExportJob()}
-                />
-              </StyledActionCell>
-            </StyledFormGrid>
-
-            <div>
-              <StyledTitle>导出字段</StyledTitle>
-              <StyledHint>
-                基础字段和企业管理自定义字段可以混合导出。至少保留一个字段。
-              </StyledHint>
-            </div>
-
-            <StyledMultiSelect>
-              {fieldOptions.map((field) => {
-                const checked = selectedFieldCodes.includes(field.fieldCode);
-
-                return (
-                  <StyledFieldOption key={field.fieldCode}>
-                    <input
-                      checked={checked}
-                      type="checkbox"
-                      onChange={(event) => {
-                        if (event.target.checked) {
-                          setSelectedFieldCodes((currentFieldCodes) => [
-                            ...currentFieldCodes,
-                            field.fieldCode,
-                          ]);
-
-                          return;
-                        }
-
-                        setSelectedFieldCodes((currentFieldCodes) =>
-                          currentFieldCodes.filter(
-                            (fieldCode) => fieldCode !== field.fieldCode,
-                          ),
-                        );
-                      }}
-                    />
-                    <span>{field.fieldName}</span>
-                  </StyledFieldOption>
-                );
-              })}
-            </StyledMultiSelect>
+            <EnterpriseCustomerExportFieldSelection
+              fieldOptions={fieldOptions}
+              selectedFieldCodes={selectedFieldCodes}
+              onSelectedFieldCodesChange={setSelectedFieldCodes}
+            />
           </StyledPanel>
 
           <StyledPanel>
-            <div>
-              <StyledTitle>导出任务列表</StyledTitle>
-              <StyledDescription>
-                完成后的文件会通过临时签名链接访问。失败任务会自动尝试重试，达到上限后再进入失败状态。
-              </StyledDescription>
-            </div>
-
-            {jobs.length === 0 ? (
-              <StyledEmpty>还没有客户导出任务。</StyledEmpty>
-            ) : (
-              <StyledTable>
-                <thead>
-                  <tr>
-                    <th>任务</th>
-                    <th>状态</th>
-                    <th>客户数</th>
-                    <th>字段数</th>
-                    <th>过期时间</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobs.map((job) => (
-                    <tr key={job.id}>
-                      <td>
-                        <div>{job.taskName}</div>
-                        <StyledHint>
-                          创建时间：{new Date(job.createdAt).toLocaleString()}
-                          {job.retryCount > 0 ? ` · 已重试 ${job.retryCount} 次` : ''}
-                        </StyledHint>
-                        {job.errorMessage ? (
-                          <StyledHint>{job.errorMessage}</StyledHint>
-                        ) : null}
-                      </td>
-                      <td>
-                        <StyledStatus tone={renderStatusTone(job.status)}>
-                          {renderStatusLabel(job.status)}
-                        </StyledStatus>
-                      </td>
-                      <td>{job.customerCount ?? '--'}</td>
-                      <td>{job.selectedFieldCodes.length}</td>
-                      <td>
-                        {job.fileExpiresAt
-                          ? new Date(job.fileExpiresAt).toLocaleString()
-                          : '--'}
-                      </td>
-                      <td>
-                        <StyledActionCell>
-                          {job.status === 'completed' ? (
-                            <Button
-                              title="下载"
-                              onClick={() => void downloadExportJob(job)}
-                            />
-                          ) : null}
-                          {job.status === 'failed' || job.status === 'expired' ? (
-                            <Button
-                              title="重新执行"
-                              onClick={() => void requeueExportJob(job)}
-                            />
-                          ) : null}
-                        </StyledActionCell>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </StyledTable>
-            )}
+            <EnterpriseCustomerExportJobList
+              canCreateExport={canCreateExport}
+              canDownloadExport={canDownloadExport}
+              jobs={jobs}
+              onDownloadExportJob={downloadExportJob}
+              onRequeueExportJob={requeueExportJob}
+            />
           </StyledPanel>
         </StyledGrid>
       </EnterpriseShell>

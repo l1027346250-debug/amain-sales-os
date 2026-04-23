@@ -401,6 +401,44 @@ export class EnterpriseReportTemplateService {
     return this.findOneOrFail(workspaceId, templateId);
   }
 
+  async deleteTemplate(
+    workspaceId: string,
+    templateId: string,
+    actorWorkspaceMemberId?: string | null,
+  ) {
+    const template = await this.findOneOrFail(workspaceId, templateId);
+
+    await this.enterpriseReportTemplateVersionRepository.delete({
+      workspaceId,
+      templateId,
+    });
+    await this.enterpriseReportTemplateRepository.delete({
+      id: templateId,
+      workspaceId,
+    });
+    await this.ensureSingleDefaultTemplate(workspaceId, template.reportType);
+    await this.enterpriseConfigAuditService.createLog({
+      workspaceId,
+      action: 'enterprise.reportTemplate.delete',
+      resourceType: 'enterpriseReportTemplate',
+      resourceId: template.id,
+      actorWorkspaceMemberId,
+      beforeJson: {
+        templateName: template.templateName,
+        templateCode: template.templateCode,
+        reportType: template.reportType,
+        isActive: template.isActive,
+        isDefault: template.isDefault,
+        version: template.version,
+      },
+    });
+
+    return {
+      deleted: true,
+      id: templateId,
+    };
+  }
+
   private async assertTemplateCodeAvailable(
     workspaceId: string,
     templateCode: string,
@@ -603,4 +641,3 @@ export class EnterpriseReportTemplateService {
     return [...new Set((values ?? []).map((value) => value.trim()).filter(Boolean))];
   }
 }
-

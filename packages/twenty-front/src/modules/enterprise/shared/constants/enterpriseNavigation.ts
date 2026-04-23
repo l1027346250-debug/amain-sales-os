@@ -28,5 +28,8 @@
     label: '销售辅助',
     items: [{ label: '销售助手管理', key: 'sales-playbook' }],
   },
+  {
+    label: '安全权限',
+    items: [{ label: '企业权限配置', key: 'enterprise-permissions' }],
+  },
 ];
-

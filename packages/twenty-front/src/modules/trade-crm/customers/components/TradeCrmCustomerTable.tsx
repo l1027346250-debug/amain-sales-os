@@ -68,13 +68,17 @@ const StyledTable = styled.div`
   flex-direction: column;
 `;
 
-const StyledRow = styled.div<{ $isHeader?: boolean }>`
+const StyledRow = styled.div<{ $columnCount: number; $isHeader?: boolean }>`
   align-items: stretch;
   border-top: ${({ $isHeader }) =>
     $isHeader ? '0' : `1px solid ${tradeCrmUiTheme.colors.border}`};
   display: grid;
   gap: ${themeCssVariables.spacing[2]};
-  grid-template-columns: repeat(5, minmax(0, 1fr)) 120px;
+  grid-template-columns: repeat(
+      ${({ $columnCount }) => $columnCount},
+      minmax(0, 1fr)
+    )
+    120px;
   padding: ${({ $isHeader }) =>
     $isHeader
       ? `${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]}`
@@ -194,7 +198,7 @@ export const TradeCrmCustomerTable = ({
         </StyledTitleBlock>
       </StyledHeader>
       <StyledTable>
-        <StyledRow $isHeader>
+        <StyledRow $columnCount={columns.length} $isHeader>
           {columns.map((column) => (
             <StyledHeaderCell key={column}>{column}</StyledHeaderCell>
           ))}
@@ -202,7 +206,7 @@ export const TradeCrmCustomerTable = ({
         </StyledRow>
         {rows.length > 0 ? (
           rows.map((row) => (
-            <StyledRow key={row.id}>
+            <StyledRow $columnCount={columns.length} key={row.id}>
               {row.cells.map((cell, cellIndex) => (
                 <StyledCell key={`${row.id}-${cellIndex}`}>
                   {cell.badgeLabel ? (
