@@ -150,6 +150,8 @@
 - 已落地：公海工作区的 hero/insights/sidebar/workspaceContext 组装已下沉到 `tradeCrmCustomerPublicPoolLayout` 并补工具测试，公海页继续保留搜索、认领和规则摘要动作，页面职责进一步收敛。
 - 已落地：查重工作区的 hero/insights/sidebar/workspaceContext 组装已下沉到 `tradeCrmCustomerDedupLayout` 并补工具测试，查重页继续保留搜索、合并和命中列表动作，页面职责进一步收敛。
 - 已落地：配置快照下载和预览报告下载已下沉到 `tradeCrmCustomerConfigDownload` 并补浏览器下载单测，主页面继续剥离纯函数工具逻辑。
+- 已落地：顶部运营指标卡已拆成 `TradeCrmCustomerSignalsCards` 独立组件并补轻量渲染测试，主页面继续剥离纯展示结构。
+- 已落地：公海页双栏布局壳已拆成 `TradeCrmCustomerTwoColumnWorkspaceSection` 独立组件并补轻量渲染测试，主页面不再保留双栏样式定义。
 - 风险：`TradeCrmCustomersPage.tsx` 仍然过大，列表、设置、导入 UI 仍需继续拆组件和补测试。
 
 ### 下一阶段任务
@@ -159,3 +161,10 @@
 4. 公海运营：补公海规则定时执行入口、执行结果可视化、规则命中预估、角色权限控制和批量认领权限校验。
 5. 跨模块联动：补商机/报价/订单/邮件/聊天/日程事件的客户时间线回写验收用例，确保详情工作台不是静态拼装。
 6. 回归自动化：新增客户模块 smoke，覆盖 `/trade-crm/customers/list`、`public`、`dedup`、`config/*`、详情页基础渲染和关键按钮禁用逻辑。
+
+## 2026-04-23 客户模块后续开发计划与试运行记录
+
+- 已新增详细计划文档：`客户模块后续开发计划与试运行记录.md`。
+- 试运行通过：`nx lint:diff-with-main twenty-front`、客户模块 15 个测试文件共 32 个测试、`nx typecheck twenty-front`。
+- 构建试运行：`nx build twenty-front` 中 Vite 已完成生产打包，输出 `TradeCrmCustomersPage` chunk；Nx 最终失败在 Windows 环境缺少 `sh` 的后置步骤，非客户模块编译错误。
+- 下一步推荐：优先抽 `useTradeCrmCustomerCreateCustomerForm`，将客户新建表单状态、企业字段校验和保存逻辑从 `TradeCrmCustomersPage.tsx` 下沉。
