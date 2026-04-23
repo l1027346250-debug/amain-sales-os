@@ -19,7 +19,7 @@ import { PageContainer } from '@/ui/layout/page/components/PageContainer';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
-type CustomerWorkspaceInsight = {
+export type CustomerWorkspaceInsight = {
   label: string;
   value: string;
   description: string;

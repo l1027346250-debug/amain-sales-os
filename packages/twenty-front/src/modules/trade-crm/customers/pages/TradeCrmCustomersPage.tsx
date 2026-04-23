@@ -1,27 +1,10 @@
 import { styled } from '@linaria/react';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  Navigate,
-  Route,
-  Routes,
-  useBeforeUnload,
-  useBlocker,
-  useLocation,
-  useNavigate,
-  useParams,
-} from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
-import {
-  TradeCrmCustomerConfigSourcesPanel,
-  TradeCrmCustomerConfigTagsPanel,
-} from '@/trade-crm/customers/components/TradeCrmCustomerConfigDictionaryPanels';
-import { TradeCrmCustomerConfigGroupTreeEditor } from '@/trade-crm/customers/components/TradeCrmCustomerConfigGroupTreeEditor';
+import { TradeCrmCustomerConfigContent } from '@/trade-crm/customers/components/TradeCrmCustomerConfigContent';
 import { TradeCrmCustomerConfigHistoryPanel } from '@/trade-crm/customers/components/TradeCrmCustomerConfigHistoryPanel';
-import { TradeCrmCustomerConfigImportPanel } from '@/trade-crm/customers/components/TradeCrmCustomerConfigImportPanel';
-import { TradeCrmCustomerConfigMatchingRulesPanel } from '@/trade-crm/customers/components/TradeCrmCustomerConfigMatchingRulesPanel';
-import { TradeCrmCustomerConfigPublicPoolRulesPanel } from '@/trade-crm/customers/components/TradeCrmCustomerConfigPublicPoolRulesPanel';
-import { TradeCrmCustomerConfigSnapshotImportPanel } from '@/trade-crm/customers/components/TradeCrmCustomerConfigSnapshotImportPanel';
 import { TradeCrmCustomerConfigStatusPanels } from '@/trade-crm/customers/components/TradeCrmCustomerConfigStatusPanels';
 import { TradeCrmCustomerDetailWorkbench } from '@/trade-crm/customers/components/TradeCrmCustomerDetailWorkbench';
 import {
@@ -44,11 +27,14 @@ import {
 import {
   getTradeCrmEnterpriseCustomerFieldValidationMessage,
 } from '@/trade-crm/customers/components/TradeCrmEnterpriseCustomerFieldInput';
-import { useTradeCrmCustomerConfigDraft } from '@/trade-crm/customers/hooks/useTradeCrmCustomerConfigDraft';
 import { useTradeCrmCustomerDedupSearch } from '@/trade-crm/customers/hooks/useTradeCrmCustomerDedupSearch';
 import { useTradeCrmCustomerImportJobs } from '@/trade-crm/customers/hooks/useTradeCrmCustomerImportJobs';
 import { useTradeCrmLeadConversion } from '@/trade-crm/customers/hooks/useTradeCrmLeadConversion';
 import { useTradeCrmCustomerRecordMutations } from '@/trade-crm/customers/hooks/useTradeCrmCustomerRecordMutations';
+import { useTradeCrmCustomerConfigEditorState } from '@/trade-crm/customers/hooks/useTradeCrmCustomerConfigEditorState';
+import { useTradeCrmCustomerConfigNavigationGuard } from '@/trade-crm/customers/hooks/useTradeCrmCustomerConfigNavigationGuard';
+import { useTradeCrmCustomerRuntimeConfig } from '@/trade-crm/customers/hooks/useTradeCrmCustomerRuntimeConfig';
+import { useTradeCrmCustomerConfigSnapshotManager } from '@/trade-crm/customers/hooks/useTradeCrmCustomerConfigSnapshotManager';
 import {
   normalizeTradeCrmEnterpriseCustomerFieldValueForSave,
   useTradeCrmEnterpriseCustomerFieldDefinitions,
@@ -72,26 +58,25 @@ import {
   getTradeCrmCustomerDetailPath,
   getTradeCrmCustomerLegacyViewRedirectPath,
   getTradeCrmCustomerPath,
-  tradeCrmCustomerRouteLabels,
   type TradeCrmCustomerConfigSection,
 } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 import {
   getTradeCrmCustomerConfigTabs,
   getTradeCrmCustomerPrimaryTabs,
-  getTradeCrmCustomerSidebarItems,
 } from '@/trade-crm/customers/utils/tradeCrmCustomerNavigation';
+import { getTradeCrmCustomerConfigLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerConfigLayout';
 import {
-  buildCustomerConfigDraftWithSnapshotSections,
-  buildCustomerConfigSnapshotExport,
-  buildCustomerConfigSnapshotPreviewReport,
-  canApplyCustomerConfigSnapshotPreview,
-  CUSTOMER_CONFIG_SNAPSHOT_DIFF_SECTIONS,
-  getCustomerConfigSnapshotSectionLabel,
-  previewCustomerConfigSnapshot,
-  type CustomerConfigSnapshotApplyNotice,
-  type CustomerConfigSnapshotPreview,
-  type CustomerConfigSnapshotSectionKey,
-} from '@/trade-crm/customers/utils/tradeCrmCustomerConfigSnapshot';
+  downloadTradeCrmCustomerConfigSnapshot,
+  downloadTradeCrmCustomerConfigSnapshotPreviewReport,
+} from '@/trade-crm/customers/utils/tradeCrmCustomerConfigDownload';
+import { getTradeCrmCustomerDedupLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerDedupLayout';
+import { getTradeCrmCustomerDetailLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerDetailLayout';
+import { getTradeCrmCustomerListLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerListLayout';
+import { getTradeCrmCustomerPublicPoolLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerPublicPoolLayout';
+import {
+  CUSTOMER_CONFIG_UNSAVED_CHANGES_MESSAGE,
+  getCustomerConfigSectionLabel,
+} from '@/trade-crm/customers/utils/tradeCrmCustomerConfigWorkspace';
 import {
   getTradeCrmCustomerCodeLabelForRecord,
   getTradeCrmCustomerCountryLabel,
@@ -106,7 +91,6 @@ import {
   getTradeCrmPublicPoolGroupLabelForRecord,
   getTradeCrmPublicPoolStateLabelForRecord,
   getTradeCrmRecordName,
-  type TradeCrmCustomerPresentationRecord,
 } from '@/trade-crm/customers/utils/tradeCrmCustomerPresentation';
 import { tradeCrmRouteMap } from '@/trade-crm/navigation/tradeCrmRouteMap';
 import { tradeCrmUiTheme } from '@/trade-crm/shared/ui/tradeCrmUiTheme';
@@ -211,345 +195,6 @@ const CustomerSignalsCards = ({
   </StyledMetricGrid>
 );
 
-const getPublicPoolGroupLabels = (
-  publicPoolRecords: TradeCrmCustomerPresentationRecord[] | undefined,
-) => {
-  const labels = (publicPoolRecords ?? [])
-    .map((record) => getTradeCrmPublicPoolGroupLabelForRecord(record))
-    .filter(
-      (label): label is string => typeof label === 'string' && label.length > 0,
-    );
-
-  return labels.length > 0 ? [...new Set(labels)] : ['Default Public Pool'];
-};
-
-const downloadCustomerConfigSnapshot = ({
-  activeSection,
-  configDraft,
-}: {
-  activeSection: ConfigSection;
-  configDraft: ReturnType<typeof useTradeCrmCustomerConfigDraft>;
-}) => {
-  const exportedAt = new Date().toISOString();
-  const snapshot = buildCustomerConfigSnapshotExport({
-    activeSection,
-    exportedAt,
-    configDraft,
-  });
-  const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
-    type: 'application/json;charset=utf-8;',
-  });
-  const url = window.URL.createObjectURL(blob);
-  const anchorElement = document.createElement('a');
-
-  anchorElement.href = url;
-  anchorElement.download = `customer-config-${activeSection}-${exportedAt.slice(
-    0,
-    10,
-  )}.json`;
-  anchorElement.click();
-  window.URL.revokeObjectURL(url);
-};
-
-const downloadCustomerConfigSnapshotPreviewReport = ({
-  applyNotice,
-  selectedSectionKeys,
-  snapshotPreview,
-  warningsAcknowledged,
-}: {
-  applyNotice: CustomerConfigSnapshotApplyNotice | null;
-  selectedSectionKeys: CustomerConfigSnapshotSectionKey[];
-  snapshotPreview: CustomerConfigSnapshotPreview;
-  warningsAcknowledged: boolean;
-}) => {
-  const exportedAt = new Date().toISOString();
-  const report = buildCustomerConfigSnapshotPreviewReport({
-    applyNotice,
-    exportedAt,
-    selectedSectionKeys,
-    snapshotPreview,
-    warningsAcknowledged,
-  });
-  const blob = new Blob([JSON.stringify(report, null, 2)], {
-    type: 'application/json;charset=utf-8;',
-  });
-  const url = window.URL.createObjectURL(blob);
-  const anchorElement = document.createElement('a');
-
-  anchorElement.href = url;
-  anchorElement.download = `customer-config-preview-report-${exportedAt.slice(
-    0,
-    10,
-  )}.json`;
-  anchorElement.click();
-  window.URL.revokeObjectURL(url);
-};
-
-const useTradeCrmCustomerRuntimeConfig = (
-  workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>,
-) => {
-  const configDraft = useTradeCrmCustomerConfigDraft({
-    customerStageSummary: workspaceData.customerStageSummary,
-    customerGroupSummary: workspaceData.customerGroupSummary,
-    customerTagSummary: workspaceData.customerTagSummary,
-    customerSourceSummary: workspaceData.customerSourceSummary,
-    publicPoolGroupLabels: getPublicPoolGroupLabels(
-      workspaceData.publicPoolRecords,
-    ),
-  });
-  const publicPoolGroupLabels = useMemo(
-    () =>
-      [
-        ...getPublicPoolGroupLabels(workspaceData.publicPoolRecords),
-        configDraft.draft.publicPoolRule.publicPoolGroup,
-      ].filter(
-        (label, index, labels) =>
-          label.length > 0 && labels.indexOf(label) === index,
-      ),
-    [
-      configDraft.draft.publicPoolRule.publicPoolGroup,
-      workspaceData.publicPoolRecords,
-    ],
-  );
-
-  return {
-    configDraft,
-    publicPoolGroupLabels,
-  };
-};
-
-const getCustomerConfigSectionLabel = (sectionKey: string) =>
-  tradeCrmCustomerRouteLabels[
-    `config-${sectionKey}` as keyof typeof tradeCrmCustomerRouteLabels
-  ] ?? sectionKey;
-
-const hasPendingConfigSectionChange = (
-  pendingChangedSections: Array<{ key: string }>,
-  sectionKey: string,
-) => pendingChangedSections.some((section) => section.key === sectionKey);
-
-const CUSTOMER_CONFIG_UNSAVED_CHANGES_MESSAGE =
-  'Customer settings have unsaved changes. Leave without saving?';
-
-type CustomerConfigTagInputState = {
-  company: string;
-  mine: string;
-  subordinate: string;
-};
-
-type CustomerConfigEditorState = Record<string, string>;
-
-const renderConfigContent = ({
-  activeSection,
-  workspaceData,
-  configDraft,
-  newGroupLabel,
-  onNewGroupLabelChange,
-  groupParentId,
-  onGroupParentIdChange,
-  newTagLabels,
-  onNewTagLabelChange,
-  tagEditorValues,
-  onTagEditorValueChange,
-  clearTagEditorValue,
-  newSourceLabel,
-  onNewSourceLabelChange,
-  sourceEditorValues,
-  onSourceEditorValueChange,
-  clearSourceEditorValue,
-  importFileName,
-  onImportFileNameChange,
-  snapshotJsonInput,
-  onSnapshotJsonInputChange,
-  snapshotApplyNotice,
-  snapshotPreview,
-  snapshotWarningsAcknowledged,
-  selectedSnapshotSectionKeys,
-  onPreviewSnapshot,
-  onApplySnapshot,
-  onApplySelectedSnapshotSections,
-  onApplySnapshotSection,
-  onClearSnapshotSectionSelection,
-  onSelectAllSnapshotSections,
-  onSnapshotWarningsAcknowledgedChange,
-  onToggleSnapshotSection,
-  importJobs,
-  publicPoolGroupLabels,
-}: {
-  activeSection: ConfigSection;
-  workspaceData: ReturnType<typeof useTradeCrmCustomerWorkspaceData>;
-  configDraft: ReturnType<typeof useTradeCrmCustomerConfigDraft>;
-  newGroupLabel: string;
-  onNewGroupLabelChange: (value: string) => void;
-  groupParentId: string | null;
-  onGroupParentIdChange: (value: string | null) => void;
-  newTagLabels: CustomerConfigTagInputState;
-  onNewTagLabelChange: (
-    scope: keyof CustomerConfigTagInputState,
-    value: string,
-  ) => void;
-  tagEditorValues: CustomerConfigEditorState;
-  onTagEditorValueChange: (key: string, value: string) => void;
-  clearTagEditorValue: (key: string) => void;
-  newSourceLabel: string;
-  onNewSourceLabelChange: (value: string) => void;
-  sourceEditorValues: CustomerConfigEditorState;
-  onSourceEditorValueChange: (key: string, value: string) => void;
-  clearSourceEditorValue: (key: string) => void;
-  importFileName: string;
-  onImportFileNameChange: (value: string) => void;
-  snapshotJsonInput: string;
-  onSnapshotJsonInputChange: (value: string) => void;
-  snapshotApplyNotice: CustomerConfigSnapshotApplyNotice | null;
-  snapshotPreview: CustomerConfigSnapshotPreview | null;
-  snapshotWarningsAcknowledged: boolean;
-  selectedSnapshotSectionKeys: CustomerConfigSnapshotSectionKey[];
-  onPreviewSnapshot: () => void;
-  onApplySnapshot: () => void;
-  onApplySelectedSnapshotSections: () => void;
-  onApplySnapshotSection: (
-    sectionKey: CustomerConfigSnapshotSectionKey,
-  ) => void;
-  onClearSnapshotSectionSelection: () => void;
-  onSelectAllSnapshotSections: () => void;
-  onSnapshotWarningsAcknowledgedChange: (value: boolean) => void;
-  onToggleSnapshotSection: (
-    sectionKey: CustomerConfigSnapshotSectionKey,
-  ) => void;
-  importJobs: ReturnType<typeof useTradeCrmCustomerImportJobs>;
-  publicPoolGroupLabels: string[];
-}) => {
-  if (activeSection === 'public-pool-rules') {
-    return (
-      <TradeCrmCustomerConfigPublicPoolRulesPanel
-        configDraft={configDraft}
-        currentPublicPoolRecordCount={workspaceData.publicPoolRecords.length}
-        hasUnsavedPublicPoolRules={hasPendingConfigSectionChange(
-          configDraft.pendingChangedSections,
-          'public-pool-rules',
-        )}
-        isExecutingPublicPoolRules={
-          workspaceData.executeCustomerPublicPoolRulesLoading
-        }
-        publicPoolGroupLabels={publicPoolGroupLabels}
-        stageLabels={workspaceData.customerStageSummary.map(
-          (item) => item.label,
-        )}
-        onExecutePublicPoolRules={() => {
-          void workspaceData.executeCustomerPublicPoolRules();
-        }}
-      />
-    );
-  }
-
-  if (activeSection === 'groups') {
-    return (
-      <TradeCrmCustomerConfigGroupTreeEditor
-        configDraft={configDraft}
-        groupParentId={groupParentId}
-        hasUnsavedGroups={hasPendingConfigSectionChange(
-          configDraft.pendingChangedSections,
-          'groups',
-        )}
-        newGroupLabel={newGroupLabel}
-        onGroupParentIdChange={onGroupParentIdChange}
-        onNewGroupLabelChange={onNewGroupLabelChange}
-      />
-    );
-  }
-
-  if (activeSection === 'tags') {
-    return (
-      <TradeCrmCustomerConfigTagsPanel
-        clearTagEditorValue={clearTagEditorValue}
-        configDraft={configDraft}
-        hasUnsavedTags={hasPendingConfigSectionChange(
-          configDraft.pendingChangedSections,
-          'tags',
-        )}
-        newTagLabels={newTagLabels}
-        onNewTagLabelChange={onNewTagLabelChange}
-        onTagEditorValueChange={onTagEditorValueChange}
-        tagEditorValues={tagEditorValues}
-      />
-    );
-  }
-
-  if (activeSection === 'sources') {
-    return (
-      <TradeCrmCustomerConfigSourcesPanel
-        clearSourceEditorValue={clearSourceEditorValue}
-        configDraft={configDraft}
-        hasUnsavedSources={hasPendingConfigSectionChange(
-          configDraft.pendingChangedSections,
-          'sources',
-        )}
-        newSourceLabel={newSourceLabel}
-        onNewSourceLabelChange={onNewSourceLabelChange}
-        onSourceEditorValueChange={onSourceEditorValueChange}
-        sourceEditorValues={sourceEditorValues}
-      />
-    );
-  }
-
-  if (activeSection === 'matching') {
-    return (
-      <TradeCrmCustomerConfigMatchingRulesPanel
-        configDraft={configDraft}
-        hasUnsavedMatchingRules={hasPendingConfigSectionChange(
-          configDraft.pendingChangedSections,
-          'matching',
-        )}
-      />
-    );
-  }
-
-  return (
-    <>
-      <TradeCrmCustomerConfigImportPanel
-        configDraft={configDraft}
-        hasUnsavedImportConfig={hasPendingConfigSectionChange(
-          configDraft.pendingChangedSections,
-          'import',
-        )}
-        importFileName={importFileName}
-        importJobs={importJobs}
-        onImportFileNameChange={onImportFileNameChange}
-      />
-      <TradeCrmCustomerConfigSnapshotImportPanel
-        getSectionLabel={getCustomerConfigSectionLabel}
-        onApplySelectedSnapshotSections={onApplySelectedSnapshotSections}
-        onApplySnapshot={onApplySnapshot}
-        onApplySnapshotSection={onApplySnapshotSection}
-        onClearSnapshotSectionSelection={onClearSnapshotSectionSelection}
-        onExportPreviewReport={() => {
-          if (snapshotPreview === null) {
-            return;
-          }
-
-          downloadCustomerConfigSnapshotPreviewReport({
-            applyNotice: snapshotApplyNotice,
-            selectedSectionKeys: selectedSnapshotSectionKeys,
-            snapshotPreview,
-            warningsAcknowledged: snapshotWarningsAcknowledged,
-          });
-        }}
-        onPreviewSnapshot={onPreviewSnapshot}
-        onSelectAllSnapshotSections={onSelectAllSnapshotSections}
-        onSnapshotJsonInputChange={onSnapshotJsonInputChange}
-        onSnapshotWarningsAcknowledgedChange={
-          onSnapshotWarningsAcknowledgedChange
-        }
-        onToggleSnapshotSection={onToggleSnapshotSection}
-        selectedSnapshotSectionKeys={selectedSnapshotSectionKeys}
-        snapshotJsonInput={snapshotJsonInput}
-        snapshotPreview={snapshotPreview}
-        snapshotWarningsAcknowledged={snapshotWarningsAcknowledged}
-      />
-    </>
-  );
-};
-
 const TradeCrmCustomerListWorkspace = () => {
   const navigate = useNavigate();
   const enterpriseApiRequest = useEnterpriseApiRequest();
@@ -629,6 +274,19 @@ const TradeCrmCustomerListWorkspace = () => {
       }),
     [filters, workspaceData.peopleRecords],
   );
+  const layoutData = getTradeCrmCustomerListLayoutData({
+    companyTotalCount: workspaceData.companyTotalCount,
+    filteredCompanyCount: filteredCompanyRecords.length,
+    filteredPeopleCount: filteredPeopleRecords.length,
+    materialAlignmentNotice: workspaceData.materialAlignmentNotice,
+    peopleTotalCount: workspaceData.peopleTotalCount,
+    publicPoolRuleInactivityDays:
+      configDraft.draft.publicPoolRule.inactivityDays,
+    publicPoolRuleName: configDraft.draft.publicPoolRule.ruleName,
+    totalOpportunityCount: workspaceData.opportunityTotalCount,
+    totalTaskCount: workspaceData.taskTotalCount,
+    totalTasksDueTodayCount: workspaceData.totalTasksDueTodayCount,
+  });
   const visibleCustomerIds = filteredCompanyRecords
     .slice(0, 6)
     .map((record) => record.id);
@@ -714,52 +372,14 @@ const TradeCrmCustomerListWorkspace = () => {
   return (
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
-      heroTitle="Operate customers from one working surface, not scattered across records, tasks, and ad-hoc follow-up."
-      heroDescription="This page now behaves like a real customer operations desk: left-side segment tree, central account table, and immediate links into public pool, dedup, and customer detail."
-      heroPills={[
-        `${filteredCompanyRecords.length} companies`,
-        `${filteredPeopleRecords.length} contacts`,
-        `${workspaceData.opportunityTotalCount} opportunities`,
-        `${workspaceData.taskTotalCount} tasks`,
-      ]}
+      heroTitle={layoutData.heroTitle}
+      heroDescription={layoutData.heroDescription}
+      heroPills={layoutData.heroPills}
       tabs={getTradeCrmCustomerPrimaryTabs('list')}
-      sidebarTitle="Customer Module"
-      sidebarItems={getTradeCrmCustomerSidebarItems({
-        activePath: 'list',
-        companyTotalCount: workspaceData.companyTotalCount,
-        peopleTotalCount: workspaceData.peopleTotalCount,
-      })}
-      insights={[
-        {
-          label: 'Current anchor',
-          value: 'Company customer',
-          description:
-            'This rebuild treats company records as the formal customer master while contacts stay visible as related operators.',
-        },
-        {
-          label: 'Main risk',
-          value: `${workspaceData.totalTasksDueTodayCount} due today`,
-          description:
-            'Follow-up pressure stays in view so the customer list remains an execution page.',
-        },
-        {
-          label: 'Implementation note',
-          value: 'Saved URLs over filenames',
-          description: workspaceData.materialAlignmentNotice,
-        },
-        {
-          label: 'Public-pool rule',
-          value: configDraft.draft.publicPoolRule.ruleName,
-          description: `Configured recycle threshold: ${configDraft.draft.publicPoolRule.inactivityDays} days.`,
-        },
-      ]}
-      workspaceContext={{
-        workspace: 'Customers',
-        entityType: 'customer',
-        channel: 'ownership-and-follow-up',
-        stage: 'Customer list',
-        pathname: tradeCrmRouteMap.customers,
-      }}
+      sidebarTitle={layoutData.sidebarTitle}
+      sidebarItems={layoutData.sidebarItems}
+      insights={layoutData.insights}
+      workspaceContext={layoutData.workspaceContext}
     >
       <CustomerSignalsCards
         companyTotalCount={workspaceData.companyTotalCount}
@@ -939,6 +559,17 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
   const publicPoolStageScopeLabel =
     configDraft.draft.publicPoolRule.scopeStages.join(', ') ||
     'No stage scope selected';
+  const layoutData = getTradeCrmCustomerPublicPoolLayoutData({
+    companyTotalCount: workspaceData.companyTotalCount,
+    filteredPublicPoolCount: filteredPublicPoolRecords.length,
+    notifyOwnersFirst: configDraft.draft.publicPoolRule.notifyOwnersFirst,
+    peopleTotalCount: workspaceData.peopleTotalCount,
+    publicPoolGroup: configDraft.draft.publicPoolRule.publicPoolGroup,
+    publicPoolRuleInactivityDays: configDraft.draft.publicPoolRule.inactivityDays,
+    publicPoolRuleName: configDraft.draft.publicPoolRule.ruleName,
+    publicPoolStageScopeLabel,
+    totalPublicPoolCount: workspaceData.publicPoolRecords.length,
+  });
   const firstClaimablePublicPoolRecord = filteredPublicPoolRecords[0] ?? null;
   const visiblePublicPoolCustomerIds = filteredPublicPoolRecords
     .slice(0, 20)
@@ -996,42 +627,14 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
   return (
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
-      heroTitle="Keep public-pool review inside the customer workspace, not hidden behind settings."
-      heroDescription="This page now carries the operating frame for claim, recycle, and ownership transfer. Rule execution, reclaim actions, and public-pool audit are all available from this workspace."
-      heroPills={[
-        `${filteredPublicPoolRecords.length} claimable`,
-        `${workspaceData.publicPoolRecords.length} already pooled`,
-        `${configDraft.draft.publicPoolRule.inactivityDays} day rule`,
-        configDraft.draft.publicPoolRule.publicPoolGroup,
-      ]}
+      heroTitle={layoutData.heroTitle}
+      heroDescription={layoutData.heroDescription}
+      heroPills={layoutData.heroPills}
       tabs={getTradeCrmCustomerPrimaryTabs('public')}
-      sidebarTitle="Customer Module"
-      sidebarItems={getTradeCrmCustomerSidebarItems({
-        activePath: 'public',
-        companyTotalCount: workspaceData.companyTotalCount,
-        peopleTotalCount: workspaceData.peopleTotalCount,
-      })}
-      insights={[
-        {
-          label: 'Ownership rule',
-          value: configDraft.draft.publicPoolRule.ruleName,
-          description:
-            'Public pool remains visible as an execution queue rather than a hidden rule screen.',
-        },
-        {
-          label: 'Configured scope',
-          value: publicPoolStageScopeLabel,
-          description: configDraft.draft.publicPoolRule.notifyOwnersFirst
-            ? 'Owner reminder is enabled before public-pool transfer.'
-            : 'Owner reminder is disabled for direct recycle.',
-        },
-      ]}
-      workspaceContext={{
-        workspace: 'Customers',
-        entityType: 'customer',
-        channel: 'public-pool',
-        stage: 'Public pool',
-      }}
+      sidebarTitle={layoutData.sidebarTitle}
+      sidebarItems={layoutData.sidebarItems}
+      insights={layoutData.insights}
+      workspaceContext={layoutData.workspaceContext}
     >
       <CustomerSignalsCards
         companyTotalCount={workspaceData.companyTotalCount}
@@ -1139,6 +742,14 @@ const TradeCrmCustomerDedupWorkspace = () => {
     mergePrimaryHit !== null &&
     mergeDuplicateIds.length > 0 &&
     !dedupSearch.mergeCustomersLoading;
+  const layoutData = getTradeCrmCustomerDedupLayoutData({
+    companyTotalCount: workspaceData.companyTotalCount,
+    importDestination: configDraft.draft.importConfig.destination,
+    matchingRuleLabel,
+    peopleTotalCount: workspaceData.peopleTotalCount,
+    totalHitCount: dedupSearch.totalCount,
+    totalMatchingWeight,
+  });
 
   const dedupRows = dedupSearch.hits.slice(0, 6).map((hit, index) => ({
     id: hit.customer.id,
@@ -1203,44 +814,18 @@ const TradeCrmCustomerDedupWorkspace = () => {
     }),
   }));
 
-  return (
-    <TradeCrmCustomerWorkspaceLayout
-      title="Customers"
-      heroTitle="Make pre-claim and pre-import duplicate checks a first-class customer workflow."
-      heroDescription="This route is now the canonical target for matching rules and dedup search. It is positioned to receive import collision review and merge actions without mixing those concerns back into list or settings."
-      heroPills={[
-        `${dedupSearch.totalCount} hits`,
-        `${workspaceData.peopleTotalCount} contacts`,
-        `${totalMatchingWeight}% configured weight`,
-      ]}
-      tabs={getTradeCrmCustomerPrimaryTabs('dedup')}
-      sidebarTitle="Customer Module"
-      sidebarItems={getTradeCrmCustomerSidebarItems({
-        activePath: 'dedup',
-        companyTotalCount: workspaceData.companyTotalCount,
-        peopleTotalCount: workspaceData.peopleTotalCount,
-      })}
-      insights={[
-        {
-          label: 'Primary fields',
-          value: matchingRuleLabel || 'No weighted fields configured',
-          description:
-            'The backend matching rules will extend this with social links and country weighting.',
-        },
-        {
-          label: 'Import impact',
-          value: configDraft.draft.importConfig.destination,
-          description:
-            'Import should call into the same dedup logic instead of keeping a separate collision model.',
-        },
-      ]}
-      workspaceContext={{
-        workspace: 'Customers',
-        entityType: 'customer',
-        channel: 'dedup',
-        stage: 'Customer dedup',
-      }}
-    >
+    return (
+      <TradeCrmCustomerWorkspaceLayout
+        title="Customers"
+        heroTitle={layoutData.heroTitle}
+        heroDescription={layoutData.heroDescription}
+        heroPills={layoutData.heroPills}
+        tabs={getTradeCrmCustomerPrimaryTabs('dedup')}
+        sidebarTitle={layoutData.sidebarTitle}
+        sidebarItems={layoutData.sidebarItems}
+        insights={layoutData.insights}
+        workspaceContext={layoutData.workspaceContext}
+      >
       <TradeCrmCustomerDedupToolbar
         isSearchingDedupCandidates={dedupSearch.loading}
         searchTerm={searchTerm}
@@ -1300,365 +885,116 @@ const TradeCrmCustomerConfigWorkspace = ({
   const { configDraft, publicPoolGroupLabels } =
     useTradeCrmCustomerRuntimeConfig(workspaceData);
   const importJobs = useTradeCrmCustomerImportJobs();
-  const leaveBlocker = useBlocker(configDraft.hasUnsavedChanges);
   const pendingConfigSectionKeys = configDraft.pendingChangedSections.map(
     (section) => section.key,
   );
-  const [newGroupLabel, setNewGroupLabel] = useState('');
-  const [groupParentId, setGroupParentId] = useState<string | null>(null);
-  const [newTagLabels, setNewTagLabels] = useState<CustomerConfigTagInputState>(
-    {
-      company: '',
-      mine: '',
-      subordinate: '',
-    },
+  const layoutData = getTradeCrmCustomerConfigLayoutData({
+    activeSection,
+    companyTotalCount: workspaceData.companyTotalCount,
+    pendingConfigSectionKeys,
+    peopleTotalCount: workspaceData.peopleTotalCount,
+  });
+  const editorState = useTradeCrmCustomerConfigEditorState(
+    configDraft.hasUnsavedChanges,
   );
-  const [tagEditorValues, setTagEditorValues] =
-    useState<CustomerConfigEditorState>({});
-  const [newSourceLabel, setNewSourceLabel] = useState('');
-  const [sourceEditorValues, setSourceEditorValues] =
-    useState<CustomerConfigEditorState>({});
-  const [importFileName, setImportFileName] = useState('');
-  const [snapshotJsonInput, setSnapshotJsonInput] = useState('');
-  const [snapshotPreview, setSnapshotPreview] =
-    useState<CustomerConfigSnapshotPreview | null>(null);
-  const [snapshotWarningsAcknowledged, setSnapshotWarningsAcknowledged] =
-    useState(false);
-  const [selectedSnapshotSectionKeys, setSelectedSnapshotSectionKeys] =
-    useState<CustomerConfigSnapshotSectionKey[]>([]);
-  const [snapshotApplyNotice, setSnapshotApplyNotice] =
-    useState<CustomerConfigSnapshotApplyNotice | null>(null);
-  const [blockedNavigationError, setBlockedNavigationError] = useState<
-    string | null
-  >(null);
-
-  useBeforeUnload(
-    (event) => {
-      if (!configDraft.hasUnsavedChanges) {
-        return;
-      }
-
-      event.preventDefault();
-      event.returnValue = CUSTOMER_CONFIG_UNSAVED_CHANGES_MESSAGE;
-    },
-    {
-      capture: true,
-    },
-  );
-
-  useEffect(() => {
-    if (configDraft.hasUnsavedChanges) {
-      return;
-    }
-
-    setBlockedNavigationError(null);
-    setNewGroupLabel('');
-    setGroupParentId(null);
-    setNewTagLabels({
-      company: '',
-      mine: '',
-      subordinate: '',
-    });
-    setTagEditorValues({});
-    setNewSourceLabel('');
-    setSourceEditorValues({});
-    setImportFileName('');
-    setSnapshotJsonInput('');
-    setSnapshotPreview(null);
-    setSnapshotWarningsAcknowledged(false);
-    setSelectedSnapshotSectionKeys([]);
-    setSnapshotApplyNotice(null);
-  }, [configDraft.hasUnsavedChanges]);
+  const snapshotManager = useTradeCrmCustomerConfigSnapshotManager(configDraft);
+  const navigationGuard = useTradeCrmCustomerConfigNavigationGuard({
+    configDraft,
+    unsavedChangesMessage: CUSTOMER_CONFIG_UNSAVED_CHANGES_MESSAGE,
+  });
 
   return (
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
-      heroTitle="Run customer configuration inside a dedicated control layer with stable deep links for each settings slice."
-      heroDescription="Public-pool rules, groups, tags, sources, matching, and import now have canonical URLs backed by workspace persistence. This keeps the customer module operating as a real configuration center."
-      heroPills={[
-        `${workspaceData.companyTotalCount} companies`,
-        `${workspaceData.peopleTotalCount} contacts`,
-        tradeCrmCustomerRouteLabels[`config-${activeSection}`],
-      ]}
+      heroTitle={layoutData.heroTitle}
+      heroDescription={layoutData.heroDescription}
+      heroPills={layoutData.heroPills}
       tabs={getTradeCrmCustomerPrimaryTabs('settings')}
       secondaryTabs={getTradeCrmCustomerConfigTabs(
         activeSection,
         pendingConfigSectionKeys,
       )}
-      sidebarTitle="Customer Module"
-      sidebarItems={getTradeCrmCustomerSidebarItems({
-        activePath: `config-${activeSection}`,
-        companyTotalCount: workspaceData.companyTotalCount,
-        peopleTotalCount: workspaceData.peopleTotalCount,
-        pendingConfigSectionKeys,
-      })}
-      insights={[
-        {
-          label: 'Config slice',
-          value: tradeCrmCustomerRouteLabels[`config-${activeSection}`],
-          description:
-            'Each configuration concern now has a stable route instead of sharing one generic workspace tab.',
-        },
-        {
-          label: 'Operational rule',
-          value: 'Persist to workspace',
-          description:
-            'Customer settings now persist in workspace records instead of browser-local drafts.',
-        },
-      ]}
-      workspaceContext={{
-        workspace: 'Customers',
-        entityType: 'customer-config',
-        channel: activeSection,
-        stage: tradeCrmCustomerRouteLabels[`config-${activeSection}`],
-      }}
+      sidebarTitle={layoutData.sidebarTitle}
+      sidebarItems={layoutData.sidebarItems}
+      insights={layoutData.insights}
+      workspaceContext={layoutData.workspaceContext}
     >
       <TradeCrmCustomerConfigStatusPanels
-        blockedNavigationError={blockedNavigationError}
+        blockedNavigationError={navigationGuard.blockedNavigationError}
         configDraft={configDraft}
         getSectionLabel={getCustomerConfigSectionLabel}
-        isNavigationBlocked={leaveBlocker.state === 'blocked'}
-        snapshotApplyNotice={snapshotApplyNotice}
+        isNavigationBlocked={navigationGuard.isNavigationBlocked}
+        snapshotApplyNotice={snapshotManager.snapshotApplyNotice}
         unsavedChangesMessage={CUSTOMER_CONFIG_UNSAVED_CHANGES_MESSAGE}
-        onDiscardAndProceed={() => {
-          setBlockedNavigationError(null);
-          configDraft.resetDraft();
-
-          if (leaveBlocker.state === 'blocked') {
-            leaveBlocker.proceed();
-          }
-        }}
+        onDiscardAndProceed={navigationGuard.onDiscardAndProceed}
         onExportSnapshot={() =>
-          downloadCustomerConfigSnapshot({
+          downloadTradeCrmCustomerConfigSnapshot({
             activeSection,
             configDraft,
           })
         }
         onResetConfig={configDraft.resetDraft}
-        onSaveAndProceed={() => {
-          void (async () => {
-            setBlockedNavigationError(null);
-            const didSave = await configDraft.saveDraft();
-
-            if (didSave && leaveBlocker.state === 'blocked') {
-              leaveBlocker.proceed();
-
-              return;
-            }
-
-            setBlockedNavigationError(
-              configDraft.saveError ??
-                'Saving failed. Resolve validation issues or retry before leaving.',
-            );
-          })();
-        }}
-        onSaveConfig={() => {
-          void configDraft.saveDraft();
-        }}
-        onStayOnPage={() => {
-          setBlockedNavigationError(null);
-          if (leaveBlocker.state === 'blocked') {
-            leaveBlocker.reset();
-          }
-        }}
+        onSaveAndProceed={navigationGuard.onSaveAndProceed}
+        onSaveConfig={navigationGuard.onSaveConfig}
+        onStayOnPage={navigationGuard.onStayOnPage}
       />
-      {renderConfigContent({
-        activeSection,
-        workspaceData,
-        configDraft,
-        newGroupLabel,
-        onNewGroupLabelChange: setNewGroupLabel,
-        groupParentId,
-        onGroupParentIdChange: setGroupParentId,
-        newTagLabels,
-        onNewTagLabelChange: (scope, value) =>
-          setNewTagLabels((currentState) => ({
-            ...currentState,
-            [scope]: value,
-          })),
-        tagEditorValues,
-        onTagEditorValueChange: (key, value) =>
-          setTagEditorValues((currentState) => ({
-            ...currentState,
-            [key]: value,
-          })),
-        clearTagEditorValue: (key) =>
-          setTagEditorValues((currentState) => {
-            const nextState = { ...currentState };
-
-            delete nextState[key];
-
-            return nextState;
-          }),
-        newSourceLabel,
-        onNewSourceLabelChange: setNewSourceLabel,
-        sourceEditorValues,
-        onSourceEditorValueChange: (key, value) =>
-          setSourceEditorValues((currentState) => ({
-            ...currentState,
-            [key]: value,
-          })),
-        clearSourceEditorValue: (key) =>
-          setSourceEditorValues((currentState) => {
-            const nextState = { ...currentState };
-
-            delete nextState[key];
-
-            return nextState;
-          }),
-        importFileName,
-        onImportFileNameChange: setImportFileName,
-        snapshotJsonInput,
-        onSnapshotJsonInputChange: (value) => {
-          setSnapshotJsonInput(value);
-          setSnapshotPreview(null);
-          setSnapshotWarningsAcknowledged(false);
-          setSelectedSnapshotSectionKeys([]);
-        },
-        snapshotPreview,
-        snapshotApplyNotice,
-        snapshotWarningsAcknowledged,
-        selectedSnapshotSectionKeys,
-        onPreviewSnapshot: () => {
-          const nextSnapshotPreview = previewCustomerConfigSnapshot({
-            currentConfig: configDraft.draft,
-            snapshotJsonInput,
-          });
-
-          setSnapshotPreview(nextSnapshotPreview);
-          setSnapshotWarningsAcknowledged(
-            nextSnapshotPreview.impactWarnings.length === 0,
-          );
-          setSelectedSnapshotSectionKeys(
-            nextSnapshotPreview.currentDraftDiffSections.map(
-              (section) => section.key,
-            ),
-          );
-        },
-        onApplySnapshot: () => {
-          const snapshotConfigDraft =
-            snapshotPreview?.snapshotConfigDraft ?? null;
-
-          if (
-            !canApplyCustomerConfigSnapshotPreview({
-              snapshotPreview,
-              warningsAcknowledged: snapshotWarningsAcknowledged,
-            }) ||
-            snapshotConfigDraft === null
-          ) {
+      <TradeCrmCustomerConfigContent
+        activeSection={activeSection}
+        clearSourceEditorValue={editorState.clearSourceEditorValue}
+        clearTagEditorValue={editorState.clearTagEditorValue}
+        configDraft={configDraft}
+        groupParentId={editorState.groupParentId}
+        importFileName={editorState.importFileName}
+        importJobs={importJobs}
+        newGroupLabel={editorState.newGroupLabel}
+        newSourceLabel={editorState.newSourceLabel}
+        newTagLabels={editorState.newTagLabels}
+        onApplySelectedSnapshotSections={
+          snapshotManager.onApplySelectedSnapshotSections
+        }
+        onApplySnapshot={snapshotManager.onApplySnapshot}
+        onApplySnapshotSection={snapshotManager.onApplySnapshotSection}
+        onClearSnapshotSectionSelection={
+          snapshotManager.onClearSnapshotSectionSelection
+        }
+        onExportPreviewReport={() => {
+          if (snapshotManager.snapshotPreview === null) {
             return;
           }
 
-          configDraft.replaceDraft(snapshotConfigDraft);
-          setSnapshotApplyNotice({
-            appliedAt: new Date().toISOString(),
-            impactWarningCount: snapshotPreview?.impactWarnings.length ?? 0,
-            mode: 'full',
-            sectionLabels: CUSTOMER_CONFIG_SNAPSHOT_DIFF_SECTIONS.map(
-              (section) => section.label,
-            ),
-            warningsAcknowledged: snapshotWarningsAcknowledged,
+          downloadTradeCrmCustomerConfigSnapshotPreviewReport({
+            applyNotice: snapshotManager.snapshotApplyNotice,
+            selectedSectionKeys: snapshotManager.selectedSnapshotSectionKeys,
+            snapshotPreview: snapshotManager.snapshotPreview,
+            warningsAcknowledged:
+              snapshotManager.snapshotWarningsAcknowledged,
           });
-          setSnapshotPreview(null);
-          setSnapshotWarningsAcknowledged(false);
-          setSelectedSnapshotSectionKeys([]);
-        },
-        onApplySelectedSnapshotSections: () => {
-          const snapshotConfigDraft =
-            snapshotPreview?.snapshotConfigDraft ?? null;
-
-          if (
-            !canApplyCustomerConfigSnapshotPreview({
-              snapshotPreview,
-              warningsAcknowledged: snapshotWarningsAcknowledged,
-            }) ||
-            snapshotConfigDraft === null ||
-            selectedSnapshotSectionKeys.length === 0
-          ) {
-            return;
-          }
-
-          configDraft.replaceDraft(
-            buildCustomerConfigDraftWithSnapshotSections({
-              currentConfig: configDraft.draft,
-              sectionKeys: selectedSnapshotSectionKeys,
-              snapshotConfig: snapshotConfigDraft,
-            }),
-          );
-          setSnapshotApplyNotice({
-            appliedAt: new Date().toISOString(),
-            impactWarningCount: snapshotPreview?.impactWarnings.length ?? 0,
-            mode: 'selected',
-            sectionLabels: selectedSnapshotSectionKeys.map(
-              getCustomerConfigSnapshotSectionLabel,
-            ),
-            warningsAcknowledged: snapshotWarningsAcknowledged,
-          });
-          setSnapshotPreview(null);
-          setSnapshotWarningsAcknowledged(false);
-          setSelectedSnapshotSectionKeys([]);
-        },
-        onApplySnapshotSection: (sectionKey) => {
-          const snapshotConfigDraft =
-            snapshotPreview?.snapshotConfigDraft ?? null;
-
-          if (
-            !canApplyCustomerConfigSnapshotPreview({
-              snapshotPreview,
-              warningsAcknowledged: snapshotWarningsAcknowledged,
-            }) ||
-            snapshotConfigDraft === null
-          ) {
-            return;
-          }
-
-          configDraft.replaceDraft(
-            buildCustomerConfigDraftWithSnapshotSections({
-              currentConfig: configDraft.draft,
-              sectionKeys: [sectionKey],
-              snapshotConfig: snapshotConfigDraft,
-            }),
-          );
-          setSnapshotApplyNotice({
-            appliedAt: new Date().toISOString(),
-            impactWarningCount: snapshotPreview?.impactWarnings.length ?? 0,
-            mode: 'single',
-            sectionLabels: [
-              getCustomerConfigSnapshotSectionLabel(sectionKey),
-            ],
-            warningsAcknowledged: snapshotWarningsAcknowledged,
-          });
-          setSnapshotPreview(null);
-          setSnapshotWarningsAcknowledged(false);
-          setSelectedSnapshotSectionKeys([]);
-        },
-        onClearSnapshotSectionSelection: () => {
-          setSelectedSnapshotSectionKeys([]);
-        },
-        onSelectAllSnapshotSections: () => {
-          if (snapshotPreview === null) {
-            return;
-          }
-
-          setSelectedSnapshotSectionKeys(
-              snapshotPreview.currentDraftDiffSections.map(
-                (section) => section.key,
-              ),
-          );
-        },
-        onSnapshotWarningsAcknowledgedChange: setSnapshotWarningsAcknowledged,
-        onToggleSnapshotSection: (sectionKey) => {
-          setSelectedSnapshotSectionKeys((currentSectionKeys) =>
-            currentSectionKeys.includes(sectionKey)
-              ? currentSectionKeys.filter(
-                  (currentSectionKey) => currentSectionKey !== sectionKey,
-                )
-              : [...currentSectionKeys, sectionKey],
-          );
-        },
-        importJobs,
-        publicPoolGroupLabels,
-      })}
+        }}
+        onGroupParentIdChange={editorState.setGroupParentId}
+        onImportFileNameChange={editorState.setImportFileName}
+        onNewGroupLabelChange={editorState.setNewGroupLabel}
+        onNewSourceLabelChange={editorState.setNewSourceLabel}
+        onNewTagLabelChange={editorState.onNewTagLabelChange}
+        onPreviewSnapshot={snapshotManager.onPreviewSnapshot}
+        onSelectAllSnapshotSections={snapshotManager.onSelectAllSnapshotSections}
+        onSnapshotJsonInputChange={snapshotManager.onSnapshotJsonInputChange}
+        onSnapshotWarningsAcknowledgedChange={
+          snapshotManager.setSnapshotWarningsAcknowledged
+        }
+        onSourceEditorValueChange={editorState.onSourceEditorValueChange}
+        onTagEditorValueChange={editorState.onTagEditorValueChange}
+        onToggleSnapshotSection={snapshotManager.onToggleSnapshotSection}
+        publicPoolGroupLabels={publicPoolGroupLabels}
+        selectedSnapshotSectionKeys={snapshotManager.selectedSnapshotSectionKeys}
+        snapshotJsonInput={snapshotManager.snapshotJsonInput}
+        snapshotPreview={snapshotManager.snapshotPreview}
+        snapshotWarningsAcknowledged={
+          snapshotManager.snapshotWarningsAcknowledged
+        }
+        sourceEditorValues={editorState.sourceEditorValues}
+        tagEditorValues={editorState.tagEditorValues}
+        workspaceData={workspaceData}
+      />
       <TradeCrmCustomerConfigHistoryPanel configDraft={configDraft} />
     </TradeCrmCustomerWorkspaceLayout>
   );
@@ -1669,6 +1005,17 @@ const TradeCrmCustomerDetailWorkspace = () => {
   const workspaceData = useTradeCrmCustomerWorkspaceData(customerId);
   const enterpriseCustomerFields =
     useTradeCrmEnterpriseCustomerFields(customerId);
+  const layoutData = getTradeCrmCustomerDetailLayoutData({
+    companyTotalCount: workspaceData.companyTotalCount,
+    countryLabel: workspaceData.customerDetail?.countryLabel,
+    customerId,
+    displayName: workspaceData.customerDetail?.displayName,
+    opportunityCount: workspaceData.customerDetailOpportunityRecords.length,
+    ownerLabel: workspaceData.customerDetail?.ownerLabel,
+    peopleCount: workspaceData.customerDetailPeopleRecords.length,
+    peopleTotalCount: workspaceData.peopleTotalCount,
+    taskCount: workspaceData.customerDetailTaskRecords.length,
+  });
 
   if (workspaceData.customerDetailRedirectPath) {
     return <Navigate replace to={workspaceData.customerDetailRedirectPath} />;
@@ -1677,48 +1024,14 @@ const TradeCrmCustomerDetailWorkspace = () => {
   return (
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
-      heroTitle={workspaceData.customerDetail?.displayName ?? 'Customer detail'}
-      heroDescription="This routed detail page is the stable customer-module handoff into company customer records. Customer timeline, public-pool state, import audit, and related commercial data surface together here."
-      heroPills={[
-        'Company customer',
-        workspaceData.customerDetail?.countryLabel ?? 'Country pending',
-        workspaceData.customerDetail?.ownerLabel ?? 'Owner pending',
-        `${workspaceData.customerDetailOpportunityRecords.length} related deals`,
-      ]}
+      heroTitle={layoutData.heroTitle}
+      heroDescription={layoutData.heroDescription}
+      heroPills={layoutData.heroPills}
       tabs={getTradeCrmCustomerPrimaryTabs('detail')}
-      sidebarTitle="Customer Module"
-      sidebarItems={getTradeCrmCustomerSidebarItems({
-        activePath: 'list',
-        companyTotalCount: workspaceData.companyTotalCount,
-        peopleTotalCount: workspaceData.peopleTotalCount,
-      })}
-      insights={[
-        {
-          label: 'Route payload',
-          value: customerId,
-          description:
-            'Person-prefixed legacy routes now resolve into the linked company customer detail or fall back to the customer list.',
-        },
-        {
-          label: 'Source record',
-          value: 'Company',
-          description:
-            'This detail shell stays anchored to live company records, with people rendered as contact coverage instead of parallel customer masters.',
-        },
-        {
-          label: 'Scoped records',
-          value: `${workspaceData.customerDetailPeopleRecords.length} contacts / ${workspaceData.customerDetailTaskRecords.length} tasks`,
-          description:
-            'Detail panels now prioritize records that match the current company, point of contact, and task targets.',
-        },
-      ]}
-      workspaceContext={{
-        workspace: 'Customers',
-        entityType: 'customer',
-        entityId: customerId,
-        channel: 'detail',
-        stage: workspaceData.customerDetail?.displayName ?? 'Customer detail',
-      }}
+      sidebarTitle={layoutData.sidebarTitle}
+      sidebarItems={layoutData.sidebarItems}
+      insights={layoutData.insights}
+      workspaceContext={layoutData.workspaceContext}
     >
       <TradeCrmCustomerDetailWorkbench
         customerDetail={workspaceData.customerDetail}
