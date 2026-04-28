@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 import {
   getTradeCrmScopedViewPath,
   tradeCrmRouteMap,
@@ -129,6 +130,20 @@ const getRecordRelationId = (value: unknown): string | null => {
   return relation.id ?? null;
 };
 
+const getRecordName = (value: unknown): string | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as {
+    name?: string | null;
+    leadName?: string | null;
+    companyName?: string | null;
+  };
+
+  return record.leadName ?? record.name ?? record.companyName ?? null;
+};
+
 const prospectingWorkspaceViews: ProspectingWorkspaceView[] = [
   {
     key: 'lead-pool',
@@ -137,12 +152,12 @@ const prospectingWorkspaceViews: ProspectingWorkspaceView[] = [
     heroTitle:
       'Stabilize inbound intake, ownership, and qualification before pushing records into customer or opportunity execution.',
     heroDescription:
-      'The prospecting workspace should answer three questions first: what entered the system, who owns the next move, and whether the lead is ready for follow-up, conversion, or review.',
+      'The leads workspace should answer three questions first: what entered the system, who owns the next move, and whether the lead is ready for follow-up, conversion, or review.',
   },
   {
     key: 'today-new-leads',
-    label: 'Today New Leads',
-    title: 'Today New Leads',
+    label: 'Untouched Leads',
+    title: 'Untouched Leads',
     heroTitle:
       'Pull today\'s inbound leads into one fast review surface so fresh demand does not disappear into a passive list.',
     heroDescription:
@@ -159,8 +174,8 @@ const prospectingWorkspaceViews: ProspectingWorkspaceView[] = [
   },
   {
     key: 'channel-intake',
-    label: 'Channel Intake',
-    title: 'Channel Intake',
+    label: 'Source View',
+    title: 'Source View',
     heroTitle:
       'Keep Alibaba, import, form, and webhook intake inside one acquisition surface instead of fragmenting lead handling.',
     heroDescription:
@@ -168,8 +183,8 @@ const prospectingWorkspaceViews: ProspectingWorkspaceView[] = [
   },
   {
     key: 'assignment-review',
-    label: 'Assignment Review',
-    title: 'Assignment Review',
+    label: 'Routing Review',
+    title: 'Routing Review',
     heroTitle:
       'Product-category routing is the default path. Manual reassignment is the exception path and should stay visible.',
     heroDescription:
@@ -198,7 +213,7 @@ export const TradeCrmProspectingPage = () => {
     error: leadRecordsError,
   } = useFindManyRecords({
     objectNameSingular: 'lead',
-    limit: 1,
+    limit: 3,
     skip: !hasLeadObject,
   });
 
@@ -232,7 +247,7 @@ export const TradeCrmProspectingPage = () => {
   const leadPoolSource = createTradeCrmRecordSource({
     href: leadPoolLink,
     workspaceKey: 'prospecting',
-    workspaceLabel: 'Prospecting',
+    workspaceLabel: 'Leads',
     viewKey: 'lead-pool',
     viewLabel: 'Lead Pool',
   });
@@ -244,6 +259,11 @@ export const TradeCrmProspectingPage = () => {
         source: leadPoolSource,
       })
     : undefined;
+  const convertLeadToCustomerPath = leadRecords?.[0]?.id
+    ? `${getTradeCrmCustomerPath('list')}?leadIdToConvert=${
+        leadRecords[0].id
+      }&autoConvertLead=1&afterConvert=create-opportunity`
+    : undefined;
   const firstLeadRecord = leadRecords?.[0] as Record<string, unknown> | undefined;
   const firstLeadStatus = getRecordSelectLabel(firstLeadRecord?.leadStatus);
   const firstLeadSource = getRecordSelectLabel(firstLeadRecord?.source);
@@ -251,10 +271,51 @@ export const TradeCrmProspectingPage = () => {
   const firstLeadCountry = getRecordTextValue(firstLeadRecord?.country);
   const firstLeadOwnerName = getRecordRelationName(firstLeadRecord?.accountOwner);
   const firstLeadOwnerId = getRecordRelationId(firstLeadRecord?.accountOwner);
+  const firstLeadName = getRecordName(firstLeadRecord);
   const firstLeadContactAnchor =
     getRecordTextValue(firstLeadRecord?.contactName) ??
     getRecordTextValue(firstLeadRecord?.email) ??
     getRecordTextValue(firstLeadRecord?.companyName);
+  const liveLeadActionCards =
+    (leadRecords ?? []).map((leadRecord, index) => {
+      const record = leadRecord as Record<string, unknown>;
+      const leadName = getRecordName(record) ?? `Live lead ${index + 1}`;
+      const leadOwnerName =
+        getRecordRelationName(record.accountOwner) ?? 'Unassigned';
+      const leadStatus = getRecordSelectLabel(record.leadStatus) ?? 'Unknown';
+      const leadSource = getRecordSelectLabel(record.source) ?? 'Unknown';
+      const leadContactAnchor =
+        getRecordTextValue(record.contactName) ??
+        getRecordTextValue(record.email) ??
+        getRecordTextValue(record.companyName) ??
+        'Missing';
+      const leadRecordLink = leadRecord.id
+        ? getTradeCrmRecordPathFromSource({
+            objectNameSingular: 'lead',
+            objectRecordId: leadRecord.id,
+            source: leadPoolSource,
+          })
+        : undefined;
+      const leadConvertPath = leadRecord.id
+        ? `${getTradeCrmCustomerPath('list')}?leadIdToConvert=${
+            leadRecord.id
+          }&autoConvertLead=1&afterConvert=create-opportunity`
+        : undefined;
+
+      return {
+        title: `Live lead ${index + 1}: ${leadName}`,
+        description: [
+          `Owner: ${leadOwnerName}`,
+          `Status: ${leadStatus}`,
+          `Source: ${leadSource}`,
+          `Contact anchor: ${leadContactAnchor}`,
+        ].join(' | '),
+        href: leadConvertPath,
+        actionLabel: 'Convert to customer',
+        secondaryHref: leadRecordLink,
+        secondaryActionLabel: 'Open lead record',
+      };
+    }) ?? [];
 
   const leadRecordDescription = !hasLeadObject
     ? 'Lead object metadata is not initialized yet. Complete the phase-one object setup before direct record handoff starts here.'
@@ -263,7 +324,7 @@ export const TradeCrmProspectingPage = () => {
       : leadRecordsError
         ? 'Lead record handoff is temporarily unavailable. Open the lead list to retry.'
         : firstLeadRecordLink
-          ? `Direct handoff is ready. ${leadTotalCount ?? 0} lead records currently exist in CRM core.`
+          ? `Direct handoff is ready. ${leadTotalCount ?? 0} lead records currently exist in AMAIN CRM core.`
           : 'No live lead record exists yet. Stay on the lead queue until the first record is available.';
 
   const todayLeadDescription = !hasLeadObject
@@ -271,8 +332,8 @@ export const TradeCrmProspectingPage = () => {
     : loading
       ? 'Loading today new lead count from CRM core.'
       : hasError
-        ? 'Today new lead queue is temporarily unavailable. Use the lead list to retry.'
-        : `${totalTodayNewLeadsCount} new leads were created today and should enter qualification quickly.`;
+        ? 'Untouched lead queue is temporarily unavailable. Use the lead list to retry.'
+        : `${totalTodayNewLeadsCount} new leads are waiting for first-touch qualification.`;
 
   const firstResponseDescription = !integrationHubApiBaseUrl
     ? 'integration-hub is not configured yet, so the first-response risk queue cannot be calculated.'
@@ -286,10 +347,10 @@ export const TradeCrmProspectingPage = () => {
     totalRiskCount > 0
       ? 'First response protection'
       : totalTodayNewLeadsCount > 0
-        ? 'Fresh lead qualification'
-        : 'Lead pool review';
+        ? 'Fresh lead triage'
+        : 'Lead queue review';
   const liveLeadContextLabel = firstLeadRecordLink
-    ? 'Live lead detail bridge'
+    ? `Live lead ${firstLeadName ?? 'detail bridge'}`
     : 'Queue-only lead review';
 
   const tabs = getTradeCrmPageTabs({
@@ -307,7 +368,7 @@ export const TradeCrmProspectingPage = () => {
       countLabel: hasLeadObject ? 'Ready' : 'N/A',
     },
     {
-      label: 'Today New Leads',
+      label: 'Untouched Leads',
       hint: 'Review fresh inbound leads before they drift into delayed follow-up.',
       isActive: currentViewKey === 'today-new-leads',
       to: getTradeCrmScopedViewPath(
@@ -324,14 +385,14 @@ export const TradeCrmProspectingPage = () => {
       countLabel: `${totalRiskCount}`,
     },
     {
-      label: 'Channel Intake',
+      label: 'Source View',
       hint: 'Keep source intake, channel traceability, and human confirmation in one path.',
       isActive: currentViewKey === 'channel-intake',
       to: channelIntakeWorkspaceLink,
       countLabel: 'Multi',
     },
     {
-      label: 'Assignment Review',
+      label: 'Routing Review',
       hint: 'Use product-category routing by default and review exceptions explicitly.',
       isActive: currentViewKey === 'assignment-review',
       to: assignmentReviewWorkspaceLink,
@@ -340,7 +401,7 @@ export const TradeCrmProspectingPage = () => {
   ];
 
   const leadRecordShellCard = {
-    title: 'Open Lead Record',
+    title: 'Open Live Lead',
     description: leadRecordDescription,
     href: firstLeadRecordLink ?? (hasLeadObject ? leadPoolLink : undefined),
     actionLabel: firstLeadRecordLink ? 'Open lead record' : 'Open lead queue',
@@ -351,10 +412,10 @@ export const TradeCrmProspectingPage = () => {
       ? [
           leadRecordShellCard,
           {
-            title: 'Today New Leads',
+            title: 'Untouched Leads',
             description: todayLeadDescription,
             href: hasLeadObject ? todayNewLeadsLink : undefined,
-            actionLabel: 'Open today new leads',
+            actionLabel: 'Open untouched leads',
             secondaryHref: firstLeadRecordLink,
             secondaryActionLabel: 'Open first lead record',
           },
@@ -364,6 +425,8 @@ export const TradeCrmProspectingPage = () => {
               'Fresh inbound leads should be qualified and assigned before the team spends time polishing lower-priority details.',
             href: hasLeadObject ? leadPoolLink : undefined,
             actionLabel: 'Open lead pool',
+            secondaryHref: convertLeadToCustomerPath,
+            secondaryActionLabel: 'Convert first lead',
           },
           {
             title: 'First-response Linkage',
@@ -414,7 +477,7 @@ export const TradeCrmProspectingPage = () => {
           ? [
               leadRecordShellCard,
               {
-                title: 'Channel Intake',
+                title: 'Source View',
                 description:
                   'Alibaba, forms, manual import, and webhook intake should all converge into the same lead execution path instead of creating isolated acquisition states.',
                 href: hasLeadObject ? leadPoolLink : undefined,
@@ -485,10 +548,43 @@ export const TradeCrmProspectingPage = () => {
                   secondaryActionLabel: 'Open first lead record',
                 },
                 {
-                  title: 'Today New Leads',
+                  title: firstLeadRecordLink
+                    ? `Convert ${firstLeadName ?? 'live lead'}`
+                    : 'Lead Conversion',
+                  description: firstLeadRecordLink
+                    ? `${firstLeadName ?? 'This live lead'} is ready for the main prospecting handoff: convert the lead, land on customer detail, then create an opportunity with owner and contact anchors attached.`
+                    : 'Create or import one lead record first, then convert it into a customer from this workspace.',
+                  href: convertLeadToCustomerPath,
+                  actionLabel: firstLeadRecordLink
+                    ? 'Convert live lead'
+                    : 'Create live lead first',
+                  secondaryHref: hasLeadObject ? leadPoolLink : undefined,
+                  secondaryActionLabel: 'Open lead pool',
+                },
+                {
+                  title: 'Live lead operating context',
+                  description: firstLeadRecordLink
+                    ? [
+                        `Lead: ${firstLeadName ?? 'unknown'}`,
+                        `Owner: ${firstLeadOwnerName ?? 'unassigned'}`,
+                        `Status: ${firstLeadStatus ?? 'unknown'}`,
+                        `Source: ${firstLeadSource ?? 'unknown'}`,
+                        `Contact anchor: ${firstLeadContactAnchor ?? 'missing'}`,
+                      ].join(' | ')
+                    : 'Prospecting should expose one actionable live lead with visible owner, source, status, and contact anchor before conversion starts.',
+                  href: firstLeadRecordLink,
+                  actionLabel: firstLeadRecordLink ? 'Open live lead' : undefined,
+                  secondaryHref: convertLeadToCustomerPath,
+                  secondaryActionLabel: firstLeadRecordLink
+                    ? 'Convert this lead'
+                    : undefined,
+                },
+                ...liveLeadActionCards,
+                {
+                title: 'Untouched Leads',
                   description: todayLeadDescription,
                   href: hasLeadObject ? todayNewLeadsLink : undefined,
-                  actionLabel: 'Open today new leads',
+                  actionLabel: 'Open untouched leads',
                   secondaryHref: firstLeadRecordLink,
                   secondaryActionLabel: 'Open first lead record',
                 },
@@ -501,18 +597,18 @@ export const TradeCrmProspectingPage = () => {
                   secondaryActionLabel: 'Open first lead record',
                 },
                 {
-                  title: 'Channel Intake',
+                title: 'Source View',
                   description:
                     'Alibaba, forms, manual import, and webhook intake should converge into the same lead pool instead of creating isolated acquisition pages or duplicate lead states.',
                   href: channelIntakeWorkspaceLink,
-                  actionLabel: 'Open channel intake',
+                  actionLabel: 'Open source view',
                 },
                 {
-                  title: 'Assignment Review',
+                title: 'Routing Review',
                   description:
                     'Lead ownership should follow product-category routing first. Manual reassignment is an exception path, not the default distribution mechanism.',
                   href: assignmentReviewWorkspaceLink,
-                  actionLabel: 'Open assignment review',
+                  actionLabel: 'Open routing review',
                 },
               ];
 
@@ -627,7 +723,7 @@ export const TradeCrmProspectingPage = () => {
 
   return (
     <QueueWorkspaceLayout
-      title="Prospecting"
+      title="Leads"
       heroTitle={currentView.heroTitle}
       heroDescription={currentView.heroDescription}
       heroPills={[
@@ -639,21 +735,21 @@ export const TradeCrmProspectingPage = () => {
         liveLeadContextLabel,
       ]}
       tabs={tabs}
-      sidebarTitle="Prospecting workspace"
+      sidebarTitle="Lead queues"
       sidebarItems={sidebarItems}
       cards={cards}
       insightTitle="Lead execution rules"
       insightDescription="This workspace should answer what came in, who owns it, which leads are at response risk, and where supervisors need to intervene."
       insights={insights}
       workspaceContext={{
-        workspace: 'Lead Center',
+        workspace: 'Leads',
         entityType: 'lead',
         entityId: firstLeadRecord?.id as string | undefined,
         ownerId: firstLeadOwnerId ?? undefined,
         channel: 'lead-intake-and-qualification',
         stage: firstLeadStatus ?? currentView.title,
         summaryText: [
-          'Workspace: Lead Center',
+          'Workspace: Leads',
           `Current view: ${currentView.title}`,
           `Today New Leads: ${totalTodayNewLeadsCount}`,
           `First-response risk: ${totalRiskCount}`,

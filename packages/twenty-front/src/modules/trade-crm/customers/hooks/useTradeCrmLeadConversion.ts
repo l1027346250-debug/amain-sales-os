@@ -9,6 +9,7 @@ type ConvertLeadToCustomerMutation = {
     leadId: string;
     customerId: string;
     contactId: string | null;
+    ownerId: string | null;
   };
 };
 
@@ -24,6 +25,7 @@ const CONVERT_LEAD_TO_CUSTOMER = gql`
       leadId
       customerId
       contactId
+      ownerId
     }
   }
 `;

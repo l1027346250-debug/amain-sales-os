@@ -26,7 +26,7 @@ export class CustomerImportJobResolver {
   ) {}
 
   @Query(() => CustomerImportJobsDTO)
-  async customerImportJobs(
+  async customerImportJobsOverview(
     @Args() args: CustomerImportJobsArgs,
     @AuthWorkspace() workspace: WorkspaceEntity,
   ) {

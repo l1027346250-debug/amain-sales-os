@@ -76,12 +76,12 @@ export const getTradeCrmCustomerListLayoutData = ({
     companyTotalCount,
     peopleTotalCount,
   }),
-  sidebarTitle: 'Customer Module',
+  sidebarTitle: 'Customer Queues',
   workspaceContext: {
     channel: 'ownership-and-follow-up',
     entityType: 'customer',
     pathname: tradeCrmRouteMap.customers,
-    stage: 'Customer list',
+    stage: 'Active Customers',
     workspace: 'Customers',
   },
 });

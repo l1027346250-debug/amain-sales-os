@@ -38,15 +38,72 @@ type OpportunityWorkspaceView = {
   heroSummaryText: string;
 };
 
+const getRecordTextValue = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === 'number') {
+    return String(value);
+  }
+
+  return null;
+};
+
+const getOpportunityOwnerName = (value: unknown): string | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const relation = value as {
+    name?:
+      | string
+      | {
+          firstName?: string | null;
+          lastName?: string | null;
+        }
+      | null;
+  };
+
+  if (typeof relation.name === 'string' && relation.name.trim().length > 0) {
+    return relation.name;
+  }
+
+  if (relation.name && typeof relation.name === 'object') {
+    const fullName = [relation.name.firstName, relation.name.lastName]
+      .filter((part): part is string => Boolean(part?.trim()))
+      .join(' ')
+      .trim();
+
+    return fullName.length > 0 ? fullName : null;
+  }
+
+  return null;
+};
+
+const getRelationLabel = (value: unknown): string | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const relation = value as {
+    name?: string | null;
+  };
+
+  return relation.name ?? null;
+};
+
 const opportunityWorkspaceViews: OpportunityWorkspaceView[] = [
   {
     key: 'pipeline-board',
-    label: 'Pipeline Board',
-    title: 'Pipeline Overview',
+    label: 'Pipeline',
+    title: 'Pipeline',
     heroTitle:
       'Review stage movement, quote follow-up, and next-action hygiene before drilling into a single opportunity.',
     heroDescription:
-      'The opportunity workspace should expose what is moving, what is slowing down, and which deals need immediate action. It is an execution surface, not a passive archive.',
+      'The pipeline workspace should expose what is moving, what is slowing down, and which deals need immediate action. It is an execution surface, not a passive archive.',
     heroSummaryTitle: 'Pipeline control',
     heroSummaryText:
       'Use this view to judge movement, delay, and seller pressure first, then open a live deal only when the queue signal is clear.',
@@ -65,8 +122,8 @@ const opportunityWorkspaceViews: OpportunityWorkspaceView[] = [
   },
   {
     key: 'quotation-follow-up',
-    label: 'Quotation Follow-up',
-    title: 'Quotation Follow-up',
+    label: 'Quote Follow-up',
+    title: 'Quote Follow-up',
     heroTitle:
       'Keep quote-stage progress visible inside the opportunity workspace instead of losing it in mailbox-only workflows.',
     heroDescription:
@@ -78,7 +135,7 @@ const opportunityWorkspaceViews: OpportunityWorkspaceView[] = [
   {
     key: 'stalled',
     label: 'Stalled',
-    title: 'Stalled Opportunities',
+    title: 'Stalled Deals',
     heroTitle:
       'Expose slow-moving opportunities through missing updates and missing next steps before adding heavier scoring logic.',
     heroDescription:
@@ -89,8 +146,8 @@ const opportunityWorkspaceViews: OpportunityWorkspaceView[] = [
   },
   {
     key: 'lost-analysis',
-    label: 'Lost Analysis',
-    title: 'Lost Analysis',
+    label: 'Loss Review',
+    title: 'Loss Review',
     heroTitle:
       'Keep lost reasons and breakpoints reviewable from the pipeline surface instead of waiting for a separate BI build.',
     heroDescription:
@@ -152,9 +209,9 @@ export const TradeCrmOpportunitiesPage = () => {
   const pipelineBoardSource = createTradeCrmRecordSource({
     href: opportunityListLink,
     workspaceKey: 'opportunities',
-    workspaceLabel: 'Opportunities',
+    workspaceLabel: 'Pipeline',
     viewKey: 'pipeline-board',
-    viewLabel: 'Pipeline Board',
+    viewLabel: 'Pipeline',
   });
   const firstOpportunityRecordLink = opportunityRecords?.[0]?.id
     ? getTradeCrmRecordPathFromSource({
@@ -163,6 +220,19 @@ export const TradeCrmOpportunitiesPage = () => {
         source: pipelineBoardSource,
       })
     : undefined;
+  const firstOpportunityRecord = opportunityRecords?.[0] as
+    | Record<string, unknown>
+    | undefined;
+  const firstOpportunityName =
+    getRecordTextValue(firstOpportunityRecord?.name) ?? 'Live opportunity';
+  const firstOpportunityStage =
+    getRecordTextValue(firstOpportunityRecord?.stage) ?? 'Unknown stage';
+  const firstOpportunityOwnerName =
+    getOpportunityOwnerName(firstOpportunityRecord?.owner) ?? 'Unassigned';
+  const firstOpportunityCompanyName =
+    getRelationLabel(firstOpportunityRecord?.company) ??
+    getRecordTextValue(firstOpportunityRecord?.companyName) ??
+    'No account anchor';
   const pipelineNeedsNextActionLink = useTradeCrmObjectViewLink({
     objectNameSingular: 'opportunity',
     preferredViewName: 'Pipeline Needs Next Action',
@@ -182,21 +252,21 @@ export const TradeCrmOpportunitiesPage = () => {
   const nextActionSource = createTradeCrmRecordSource({
     href: pipelineNeedsNextActionLink,
     workspaceKey: 'opportunities',
-    workspaceLabel: 'Opportunities',
+    workspaceLabel: 'Pipeline',
     viewKey: 'my-opportunities',
     viewLabel: 'Next Action Queue',
   });
   const quotationFollowUpSource = createTradeCrmRecordSource({
     href: quotationFollowUpWorkspaceLink,
     workspaceKey: 'opportunities',
-    workspaceLabel: 'Opportunities',
+    workspaceLabel: 'Pipeline',
     viewKey: 'quotation-follow-up',
-    viewLabel: 'Quotation Follow-up',
+    viewLabel: 'Quote Follow-up',
   });
   const stalledSource = createTradeCrmRecordSource({
     href: stalledWorkspaceLink,
     workspaceKey: 'opportunities',
-    workspaceLabel: 'Opportunities',
+    workspaceLabel: 'Pipeline',
     viewKey: 'stalled',
     viewLabel: 'Stalled',
   });
@@ -242,14 +312,14 @@ export const TradeCrmOpportunitiesPage = () => {
     : quoteFollowUpLoading
       ? 'Loading quotation follow-up reminders from integration-hub.'
       : quoteFollowUpErrorMessage
-        ? 'Quotation follow-up reminder queue is temporarily unavailable. Open the opportunity workspace to retry.'
+        ? 'Quote follow-up reminder queue is temporarily unavailable. Open the pipeline workspace to retry.'
         : `${totalQuoteFollowUpReminderCount} opportunities are currently overdue for quotation follow-up.`;
   const stalledDescription = !integrationHubApiBaseUrl
     ? 'integration-hub is not configured yet, so stalled opportunity reminders cannot be loaded.'
     : stalledLoading
       ? 'Loading stalled reminder queue from integration-hub.'
       : stalledErrorMessage
-        ? 'Stalled reminder queue is temporarily unavailable. Open the opportunity workspace to retry.'
+        ? 'Stalled reminder queue is temporarily unavailable. Open the pipeline workspace to retry.'
         : `${totalStalledOpportunityReminderCount} opportunities are currently flagged as stalled and need re-engagement.`;
 
   const pipelinePriorityLabel =
@@ -274,10 +344,13 @@ export const TradeCrmOpportunitiesPage = () => {
         : 'Opportunity object setup exists before live commercial records accumulate.';
 
   const recordShellCard = {
-    title: 'Open Record Shell',
+    title:
+      firstOpportunityRecordLink != null
+        ? 'Latest live opportunity'
+        : 'Open Live Deal',
     description:
       firstOpportunityRecordLink != null
-        ? 'Jump directly into one live opportunity record so the workspace can hand off to the actual detail shell.'
+        ? `${firstOpportunityName} | Stage: ${firstOpportunityStage} | Owner: ${firstOpportunityOwnerName} | Account: ${firstOpportunityCompanyName}`
         : 'No opportunity record is available yet. Stay on the opportunity base until the first live record exists.',
     href:
       firstOpportunityRecordLink ??
@@ -606,7 +679,7 @@ export const TradeCrmOpportunitiesPage = () => {
                   label: 'Risk and review',
                   cards: [
                     {
-                      title: 'Stalled opportunities',
+                      title: 'Stalled deals',
                       description: stalledDescription,
                       href: stalledWorkspaceLink,
                       actionLabel: 'Switch to stalled workspace',
@@ -614,11 +687,11 @@ export const TradeCrmOpportunitiesPage = () => {
                       secondaryActionLabel: 'Open first opportunity',
                     },
                     {
-                      title: 'Lost analysis',
+                      title: 'Loss review',
                       description:
                         'Lost reasons should stay standardized and reviewable from the pipeline base so the team can learn without a separate BI layer.',
                       href: lostAnalysisWorkspaceLink,
-                      actionLabel: 'Switch to lost-analysis workspace',
+                      actionLabel: 'Switch to loss review',
                     },
                     {
                       title: 'Pipeline queue link',
@@ -652,12 +725,12 @@ export const TradeCrmOpportunitiesPage = () => {
       tabs={tabs}
       columns={columns}
       workspaceContext={{
-        workspace: 'Opportunities',
+        workspace: 'Pipeline',
         entityType: 'opportunity',
         stage: currentView.title,
         channel: 'pipeline-and-quote-follow-up',
         summaryText: [
-          'Workspace: Opportunities',
+          'Workspace: Pipeline',
           `Current view: ${currentView.title}`,
           `Opportunities: ${opportunityTotalCount ?? 0}`,
           `Needs next action: ${totalMyPipelineNeedingNextActionCount}`,

@@ -63,17 +63,17 @@ type WorkbenchWorkspaceView = {
 const workbenchWorkspaceViews: WorkbenchWorkspaceView[] = [
   {
     key: 'my-tasks',
-    label: 'My Tasks',
-    title: 'My Tasks',
+    label: 'My Queue',
+    title: 'My Queue',
     heroTitle:
       'Start with the tasks, follow-up moves, and queue pressure that must move today.',
     heroDescription:
-      'The workbench is not a reporting page. It is the seller\'s daily action surface for clearing due work, protecting first response, and keeping deals moving.',
+      'Sales Desk is not a reporting page. It is the seller\'s daily action surface for clearing due work, protecting first response, and keeping deals moving.',
   },
   {
     key: 'first-response',
-    label: 'First Response',
-    title: 'First Response',
+    label: 'First Response Risk',
+    title: 'First Response Risk',
     heroTitle:
       'Protect first response before slower customer or opportunity work takes over the day.',
     heroDescription:
@@ -81,8 +81,8 @@ const workbenchWorkspaceViews: WorkbenchWorkspaceView[] = [
   },
   {
     key: 'follow-up',
-    label: 'Follow-up',
-    title: 'Follow-up',
+    label: 'Follow-up Due',
+    title: 'Follow-up Due',
     heroTitle:
       'Keep tasks, customer follow-up, and opportunity next steps inside one daily execution surface.',
     heroDescription:
@@ -99,8 +99,8 @@ const workbenchWorkspaceViews: WorkbenchWorkspaceView[] = [
   },
   {
     key: 'manager-board',
-    label: 'Manager Board',
-    title: 'Manager Board',
+    label: 'Manager Review',
+    title: 'Manager Review',
     heroTitle:
       'Let managers start from queue pressure and exception signals, not detached scoreboard numbers.',
     heroDescription:
@@ -164,28 +164,28 @@ export const TradeCrmWorkbenchPage = () => {
   const firstResponseSource = createTradeCrmRecordSource({
     href: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'first-response'),
     workspaceKey: 'workbench',
-    workspaceLabel: 'Workbench',
+    workspaceLabel: 'Sales Desk',
     viewKey: 'first-response',
-    viewLabel: 'First Response',
+    viewLabel: 'First Response Risk',
   });
   const todayNewLeadsSource = createTradeCrmRecordSource({
     href: todayNewLeadsLink,
     workspaceKey: 'workbench',
-    workspaceLabel: 'Workbench',
+    workspaceLabel: 'Sales Desk',
     viewKey: 'first-response',
     viewLabel: 'Today New Leads',
   });
   const followUpTaskSource = createTradeCrmRecordSource({
     href: tasksDueTodayLink,
     workspaceKey: 'workbench',
-    workspaceLabel: 'Workbench',
+    workspaceLabel: 'Sales Desk',
     viewKey: 'follow-up',
-    viewLabel: 'Follow-up',
+    viewLabel: 'Follow-up Due',
   });
   const pipelineHygieneSource = createTradeCrmRecordSource({
     href: pipelineNeedsNextActionLink,
     workspaceKey: 'workbench',
-    workspaceLabel: 'Workbench',
+    workspaceLabel: 'Sales Desk',
     viewKey: 'follow-up',
     viewLabel: 'Pipeline Hygiene',
   });
@@ -258,7 +258,7 @@ export const TradeCrmWorkbenchPage = () => {
     currentViewKey === 'first-response'
       ? [
           {
-            label: 'First Response',
+            label: 'First Response Risk',
             hint: 'Protect response SLA before new leads turn into aged missed demand.',
             isActive: true,
             to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'first-response'),
@@ -284,7 +284,7 @@ export const TradeCrmWorkbenchPage = () => {
       : currentViewKey === 'follow-up'
         ? [
             {
-              label: 'Follow-up',
+              label: 'Follow-up Due',
               hint: 'Clear due actions across tasks and opportunities from one surface.',
               isActive: true,
               to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'follow-up'),
@@ -339,7 +339,7 @@ export const TradeCrmWorkbenchPage = () => {
           : currentViewKey === 'manager-board'
             ? [
                 {
-                  label: 'Manager Board',
+                  label: 'Manager Review',
                   hint: 'Start from real queue pressure, then drill into records only where needed.',
                   isActive: true,
                   to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'manager-board'),
@@ -365,20 +365,20 @@ export const TradeCrmWorkbenchPage = () => {
               ]
             : [
                 {
-                  label: 'My Tasks',
+                  label: 'My Queue',
                   hint: 'Clear the work that must move today before lower-priority review.',
                   isActive: true,
                   to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'my-tasks'),
                   countLabel: `${totalTasksDueTodayCount}`,
                 },
                 {
-                  label: 'First Response',
+                  label: 'First Response Risk',
                   hint: 'Protect fresh inbound demand before it falls out of cadence.',
                   to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'first-response'),
                   countLabel: `${totalRiskCount}`,
                 },
                 {
-                  label: 'Follow-up',
+                  label: 'Follow-up Due',
                   hint: 'Keep customer, task, and deal follow-up in one visible loop.',
                   to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'follow-up'),
                   countLabel: `${totalTasksDueTodayCount + totalMyPipelineNeedingNextActionCount}`,
@@ -402,7 +402,7 @@ export const TradeCrmWorkbenchPage = () => {
                   loading: riskLoading,
                   hasError: Boolean(riskErrorMessage),
                   fallback:
-                    'First-response risk is temporarily unavailable. Open the lead pool and retry.',
+                    'First-response risk is temporarily unavailable. Open the leads workspace and retry.',
                   success: `${totalRiskCount} leads need first-response protection or review right now.`,
                 }),
             href: leadPoolLink,
@@ -416,7 +416,7 @@ export const TradeCrmWorkbenchPage = () => {
               loading: newLeadsLoading,
               hasError: newLeadsHasError,
               fallback:
-                'Today new lead queue is temporarily unavailable. Open the lead pool to retry.',
+                'Today new lead queue is temporarily unavailable. Open the leads workspace to retry.',
               success: `${totalTodayNewLeadsCount} leads were created today and should be qualified quickly.`,
             }),
             href: todayNewLeadsLink,
@@ -563,7 +563,7 @@ export const TradeCrmWorkbenchPage = () => {
                         loading: riskLoading,
                         hasError: Boolean(riskErrorMessage),
                         fallback:
-                          'First-response risk is temporarily unavailable. Open the lead pool and retry.',
+                          'First-response risk is temporarily unavailable. Open the leads workspace and retry.',
                         success: `${totalRiskCount} leads need first-response protection or review right now.`,
                       }),
                   href: leadPoolLink,
@@ -577,7 +577,7 @@ export const TradeCrmWorkbenchPage = () => {
                     loading: newLeadsLoading,
                     hasError: newLeadsHasError,
                     fallback:
-                      'Today new lead queue is temporarily unavailable. Open the lead pool to retry.',
+                      'Today new lead queue is temporarily unavailable. Open the leads workspace to retry.',
                     success: `${totalTodayNewLeadsCount} leads were created today and should be qualified quickly.`,
                   }),
                   href: todayNewLeadsLink,
@@ -681,7 +681,7 @@ export const TradeCrmWorkbenchPage = () => {
 
   return (
     <QueueWorkspaceLayout
-      title={t`Workbench`}
+      title={t`Sales Desk`}
       heroTitle={
         currentView.heroTitle || `Hi ${sellerName}, move the highest-risk queue first.`
       }
@@ -695,18 +695,18 @@ export const TradeCrmWorkbenchPage = () => {
           : 'integration-hub not configured',
       ]}
       tabs={tabs}
-      sidebarTitle="Workbench views"
+      sidebarTitle="Sales Desk queues"
       sidebarItems={sidebarItems}
       cards={cards}
       insightTitle="Daily operating intent"
-      insightDescription="The workbench should reduce decision overhead and tell sellers or managers which queue needs movement first."
+      insightDescription="Sales Desk should reduce decision overhead and tell sellers or managers which queue needs movement first."
       insights={insights}
       workspaceContext={{
-        workspace: 'Workbench',
+        workspace: 'Sales Desk',
         channel: 'daily-operating-view',
         stage: currentView.title,
         summaryText: [
-          'Workspace: Workbench',
+          'Workspace: Sales Desk',
           `Current view: ${currentView.title}`,
           `Open attention: ${totalAttentionCount}`,
           `Top priority: ${topPriorityLabel}`,

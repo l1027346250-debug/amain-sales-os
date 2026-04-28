@@ -112,6 +112,11 @@ export class ApolloFactory implements ApolloManager {
         const tokenPair = getTokenPair();
 
         const locale = this.currentWorkspaceMember?.locale ?? i18n.locale;
+        const hostname = window.location.hostname;
+        const isLocalDevelopmentAuthBypass =
+          hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          hostname === '::1';
 
         if (isUndefinedOrNull(tokenPair)) {
           return {
@@ -119,6 +124,9 @@ export class ApolloFactory implements ApolloManager {
               ...headers,
               ...optionHeaders,
               'x-locale': locale,
+              ...(isLocalDevelopmentAuthBypass && {
+                'x-dev-bypass-auth': 'true',
+              }),
             },
           };
         }

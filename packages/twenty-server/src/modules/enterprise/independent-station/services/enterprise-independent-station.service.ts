@@ -19,6 +19,7 @@ import { ILike, In, Repository } from 'typeorm';
 import { v4 } from 'uuid';
 
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
+import { type WorkspaceRepository } from 'src/engine/twenty-orm/repository/workspace.repository';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { CompanyWorkspaceEntity } from 'src/modules/company/standard-objects/company.workspace-entity';
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
@@ -67,6 +68,17 @@ const DEFAULT_REPROCESS_INQUIRY_STATUSES: EnterpriseWebsiteInquiryStatus[] = [
   'blocked',
   'pending_assignment',
 ];
+
+type EnterpriseWebsiteInquiryBeforeJson = {
+  assignedTo: string | null;
+  decisionJson: Record<string, unknown>;
+  inquiryStatus: EnterpriseWebsiteInquiryStatus;
+};
+
+type ChangedEnterpriseWebsiteInquiry = {
+  beforeJson: EnterpriseWebsiteInquiryBeforeJson;
+  inquiry: EnterpriseWebsiteInquiryEntity;
+};
 
 const PERSONAL_EMAIL_DOMAINS = new Set([
   '126.com',
@@ -489,7 +501,7 @@ export class EnterpriseIndependentStationService {
     }
 
     const changedInquiries = inquiries
-      .map((inquiry) => {
+      .map((inquiry): ChangedEnterpriseWebsiteInquiry | null => {
         const beforeJson = {
           assignedTo: inquiry.assignedTo,
           decisionJson: inquiry.decisionJson,
@@ -514,10 +526,7 @@ export class EnterpriseIndependentStationService {
       .filter(
         (
           value,
-        ): value is {
-          beforeJson: Record<string, unknown>;
-          inquiry: EnterpriseWebsiteInquiryEntity;
-        } => value !== null,
+        ): value is ChangedEnterpriseWebsiteInquiry => value !== null,
       );
 
     if (changedInquiries.length === 0) {
@@ -1125,7 +1134,7 @@ export class EnterpriseIndependentStationService {
   }: {
     companyId: string | null;
     noteId: string;
-    noteTargetRepository: Repository<NoteTargetWorkspaceEntity>;
+    noteTargetRepository: WorkspaceRepository<NoteTargetWorkspaceEntity>;
     personId: string | null;
   }) {
     const targets = [];

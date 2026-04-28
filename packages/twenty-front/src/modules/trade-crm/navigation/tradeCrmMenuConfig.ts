@@ -1,4 +1,4 @@
-﻿import { type IconComponent } from 'twenty-ui/display';
+import { type IconComponent } from 'twenty-ui/display';
 import {
   IconCalendarEvent,
   IconChartBar,
@@ -11,20 +11,20 @@ import {
 } from 'twenty-ui/display';
 
 import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
+import { getTradeCrmMailPath } from '@/trade-crm/mail/navigation/trade-crm-mail-navigation';
 import {
   getTradeCrmScopedViewPath,
   tradeCrmRouteMap,
 } from '@/trade-crm/navigation/tradeCrmRouteMap';
-import { getTradeCrmMailPath } from '@/trade-crm/mail/navigation/trade-crm-mail-navigation';
 
 export type TradeCrmMenuKey =
-  | 'workbench'
-  | 'prospecting'
-  | 'mail'
+  | 'sales-desk'
+  | 'leads'
   | 'customers'
   | 'opportunities'
-  | 'collaboration'
-  | 'analytics'
+  | 'mail'
+  | 'team'
+  | 'automation'
   | 'settings';
 
 export type TradeCrmMenuItemConfig = {
@@ -46,38 +46,54 @@ export type TradeCrmMenuSubItemConfig = {
 
 export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
   {
-    key: 'workbench',
-    label: 'Workbench',
-    description: 'Daily seller entry point and priority execution queues.',
+    key: 'sales-desk',
+    label: 'Sales Desk',
+    description: 'Daily seller workspace and action-first execution queues.',
     to: tradeCrmRouteMap.workbench,
     Icon: IconLayoutDashboard,
     children: [
       {
-        key: 'workbench.my-tasks',
-        label: 'My Tasks',
+        key: 'sales-desk.my-queue',
+        label: 'My Queue',
         to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'my-tasks'),
       },
       {
-        key: 'workbench.first-response',
-        label: 'First Response',
+        key: 'sales-desk.first-response-risk',
+        label: 'First Response Risk',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.workbench,
           'first-response',
         ),
       },
       {
-        key: 'workbench.follow-up',
-        label: 'Follow-up',
+        key: 'sales-desk.follow-up-due',
+        label: 'Follow-up Due',
         to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'follow-up'),
       },
       {
-        key: 'workbench.overdue',
+        key: 'sales-desk.overdue',
         label: 'Overdue',
         to: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'overdue'),
       },
       {
-        key: 'workbench.manager-board',
-        label: 'Manager Board',
+        key: 'sales-desk.quote-follow-up',
+        label: 'Quote Follow-up',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.opportunities,
+          'quotation-follow-up',
+        ),
+      },
+      {
+        key: 'sales-desk.stalled-deals',
+        label: 'Stalled Deals',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.opportunities,
+          'stalled',
+        ),
+      },
+      {
+        key: 'sales-desk.manager-review',
+        label: 'Manager Review',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.workbench,
           'manager-board',
@@ -87,14 +103,14 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
     ],
   },
   {
-    key: 'prospecting',
-    label: 'Prospecting',
-    description: 'Lead pool, intake channels, and AI-sourced lead workspace.',
+    key: 'leads',
+    label: 'Leads',
+    description: 'Acquisition intake, lead queues, and routing work surfaces.',
     to: tradeCrmRouteMap.prospecting,
     Icon: IconTargetArrow,
     children: [
       {
-        key: 'prospecting.lead-pool',
+        key: 'leads.lead-pool',
         label: 'Lead Pool',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.prospecting,
@@ -102,7 +118,7 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         ),
       },
       {
-        key: 'prospecting.channel-leads',
+        key: 'leads.channel-leads',
         label: 'Channel Leads',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.prospecting,
@@ -110,98 +126,76 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         ),
       },
       {
-        key: 'prospecting.ai-sourced',
-        label: 'AI-Sourced Leads',
+        key: 'leads.untouched',
+        label: 'Untouched Leads',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.prospecting,
           'ai-sourced',
         ),
       },
       {
-        key: 'prospecting.communication-feed',
-        label: 'Communication Feed',
+        key: 'leads.due-follow-up',
+        label: 'Due Follow-up',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.prospecting,
           'communication-feed',
         ),
       },
       {
-        key: 'prospecting.assignment-routing',
-        label: 'Assignment Routing',
+        key: 'leads.routing-review',
+        label: 'Routing Review',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.prospecting,
           'assignment-routing',
         ),
         requiresManager: true,
       },
-    ],
-  },
-  {
-    key: 'mail',
-    label: 'Mail',
-    description:
-      'Mailbox workspace, customer communication center, and outbound campaign system.',
-    to: tradeCrmRouteMap.mail,
-    Icon: IconMail,
-    children: [
       {
-        key: 'mail.inbox',
-        label: '收件箱',
-        to: getTradeCrmMailPath({ scope: 'mail', view: 'inbox' }),
-      },
-      {
-        key: 'mail.pending',
-        label: '待处理邮件',
-        to: getTradeCrmMailPath({ scope: 'mail', view: 'pending' }),
-      },
-      {
-        key: 'mail.customer',
-        label: '客户视角',
-        to: getTradeCrmMailPath({ scope: 'customer', view: 'recent' }),
-      },
-      {
-        key: 'mail.campaign',
-        label: '开发信',
-        to: getTradeCrmMailPath({ scope: 'campaign', view: 'overview' }),
-      },
-      {
-        key: 'mail.tracking',
-        label: '追踪信息',
-        to: getTradeCrmMailPath({ scope: 'mail', view: 'tracking' }),
+        key: 'leads.communication-feed',
+        label: 'Communication Feed',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.prospecting,
+          'communication-feed',
+        ),
       },
     ],
   },
   {
     key: 'customers',
     label: 'Customers',
-    description: 'Customer operations center, public pool, dedup, and settings.',
+    description: 'Customer operating center, public pool, dedup, and import.',
     to: getTradeCrmCustomerPath('list'),
     Icon: IconUsers,
     children: [
       {
-        key: 'customers.list',
-        label: 'Customer List',
+        key: 'customers.active-customers',
+        label: 'Active Customers',
         to: getTradeCrmCustomerPath('list'),
       },
       {
-        key: 'customers.public',
+        key: 'customers.public-pool',
         label: 'Public Pool',
         to: getTradeCrmCustomerPath('public'),
       },
       {
-        key: 'customers.dedup',
-        label: 'Customer Dedup',
+        key: 'customers.dedup-center',
+        label: 'Dedup Center',
         to: getTradeCrmCustomerPath('dedup'),
       },
       {
-        key: 'customers.tags',
-        label: 'Tag Settings',
-        to: getTradeCrmCustomerPath('config-tags'),
+        key: 'customers.key-accounts-groups',
+        label: 'Key Accounts and Groups',
+        to: getTradeCrmCustomerPath('config-groups'),
       },
       {
-        key: 'customers.import',
+        key: 'customers.import-center',
         label: 'Import Center',
         to: getTradeCrmCustomerPath('config-import'),
+      },
+      {
+        key: 'customers.customer-settings',
+        label: 'Customer Settings',
+        to: getTradeCrmCustomerPath('config-tags'),
       },
     ],
   },
@@ -214,8 +208,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
     Icon: IconTarget,
     children: [
       {
-        key: 'opportunities.pipeline-board',
-        label: 'Pipeline Board',
+        key: 'opportunities.pipeline',
+        label: 'Pipeline',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.opportunities,
           'pipeline-board',
@@ -230,8 +224,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         ),
       },
       {
-        key: 'opportunities.quotation-follow-up',
-        label: 'Quotation Follow-up',
+        key: 'opportunities.quote-follow-up',
+        label: 'Quote Follow-up',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.opportunities,
           'quotation-follow-up',
@@ -246,8 +240,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         ),
       },
       {
-        key: 'opportunities.lost-analysis',
-        label: 'Lost Analysis',
+        key: 'opportunities.loss-review',
+        label: 'Loss Review',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.opportunities,
           'lost-analysis',
@@ -256,19 +250,53 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
     ],
   },
   {
-    key: 'collaboration',
-    label: 'Collaboration',
-    description: 'Tasks, calendar rhythm, and cross-team execution support.',
+    key: 'mail',
+    label: 'Mail',
+    description: 'Business communication workspace tied to live accounts.',
+    to: tradeCrmRouteMap.mail,
+    Icon: IconMail,
+    children: [
+      {
+        key: 'mail.inbox',
+        label: 'Inbox',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'inbox' }),
+      },
+      {
+        key: 'mail.pending-replies',
+        label: 'Pending Replies',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'pending' }),
+      },
+      {
+        key: 'mail.customer-conversations',
+        label: 'Customer Conversations',
+        to: getTradeCrmMailPath({ scope: 'customer', view: 'recent' }),
+      },
+      {
+        key: 'mail.development-mail',
+        label: 'Development Mail',
+        to: getTradeCrmMailPath({ scope: 'campaign', view: 'overview' }),
+      },
+      {
+        key: 'mail.tracking',
+        label: 'Tracking',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'tracking' }),
+      },
+    ],
+  },
+  {
+    key: 'team',
+    label: 'Team',
+    description: 'Execution collaboration, review, and team visibility.',
     to: tradeCrmRouteMap.collaboration,
     Icon: IconCalendarEvent,
     children: [
       {
-        key: 'collaboration.tasks',
+        key: 'team.tasks',
         label: 'Tasks',
         to: getTradeCrmScopedViewPath(tradeCrmRouteMap.collaboration, 'tasks'),
       },
       {
-        key: 'collaboration.calendar',
+        key: 'team.calendar',
         label: 'Calendar',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.collaboration,
@@ -276,64 +304,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         ),
       },
       {
-        key: 'collaboration.approvals',
-        label: 'Approvals',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.collaboration,
-          'approvals',
-        ),
-        requiresManager: true,
-      },
-    ],
-  },
-  {
-    key: 'analytics',
-    label: 'Team Data',
-    description:
-      'Manager views for conversion, execution, and team operations.',
-    to: tradeCrmRouteMap.analytics,
-    Icon: IconChartBar,
-    requiresManager: true,
-    children: [
-      {
-        key: 'analytics.goal-progress',
-        label: 'Goal Progress',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.analytics,
-          'goal-progress',
-        ),
-        requiresManager: true,
-      },
-      {
-        key: 'analytics.lead-conversion',
-        label: 'Lead Conversion',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.analytics,
-          'lead-conversion',
-        ),
-        requiresManager: true,
-      },
-      {
-        key: 'analytics.mail-efficiency',
-        label: 'Mail Efficiency',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.analytics,
-          'mail-efficiency',
-        ),
-        requiresManager: true,
-      },
-      {
-        key: 'analytics.pipeline-funnel',
-        label: 'Pipeline Funnel',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.analytics,
-          'pipeline-funnel',
-        ),
-        requiresManager: true,
-      },
-      {
-        key: 'analytics.team-performance',
-        label: 'Team Performance',
+        key: 'team.team-review',
+        label: 'Team Review',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.analytics,
           'team-performance',
@@ -341,11 +313,73 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         requiresManager: true,
       },
       {
-        key: 'analytics.source-impact',
-        label: 'Source Impact',
+        key: 'team.performance-snapshot',
+        label: 'Performance Snapshot',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.analytics,
-          'source-impact',
+          'goal-progress',
+        ),
+        requiresManager: true,
+      },
+      {
+        key: 'team.mail-efficiency',
+        label: 'Mail Efficiency',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.analytics,
+          'mail-efficiency',
+        ),
+        requiresManager: true,
+      },
+    ],
+  },
+  {
+    key: 'automation',
+    label: 'Automation',
+    description:
+      'Routing, reminder, and follow-up rule surfaces for foreign-trade execution.',
+    to: tradeCrmRouteMap.settings,
+    Icon: IconSettings,
+    requiresManager: true,
+    children: [
+      {
+        key: 'automation.lead-routing-rules',
+        label: 'Lead Routing Rules',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.settings,
+          'assignment-rules',
+        ),
+        requiresManager: true,
+      },
+      {
+        key: 'automation.follow-up-rules',
+        label: 'Follow-up Rules',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.settings,
+          'automation-rules',
+        ),
+        requiresManager: true,
+      },
+      {
+        key: 'automation.public-pool-rules',
+        label: 'Public Pool Rules',
+        to: getTradeCrmCustomerPath('config-public-pool-rules'),
+        requiresManager: true,
+      },
+      {
+        key: 'automation.quote-reminder-rules',
+        label: 'Quote Reminder Rules',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.opportunities,
+          'quotation-follow-up',
+        ),
+        requiresManager: true,
+      },
+      {
+        key: 'automation.stalled-deal-rules',
+        label: 'Stalled Deal Rules',
+        to: getTradeCrmScopedViewPath(
+          tradeCrmRouteMap.opportunities,
+          'stalled',
         ),
         requiresManager: true,
       },
@@ -355,14 +389,14 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
     key: 'settings',
     label: 'Settings',
     description:
-      'Fields, stages, routing rules, AI, and integration configuration.',
+      'Dictionaries, stages, templates, AI, and integration setup.',
     to: tradeCrmRouteMap.settings,
-    Icon: IconSettings,
+    Icon: IconChartBar,
     requiresManager: true,
     children: [
       {
-        key: 'settings.fields-dictionaries',
-        label: 'Fields and Dictionaries',
+        key: 'settings.lead-dictionaries',
+        label: 'Lead Dictionaries',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.settings,
           'fields-dictionaries',
@@ -370,8 +404,8 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         requiresManager: true,
       },
       {
-        key: 'settings.stages-status',
-        label: 'Stages and Status',
+        key: 'settings.opportunity-stages',
+        label: 'Opportunity Stages',
         to: getTradeCrmScopedViewPath(
           tradeCrmRouteMap.settings,
           'stages-status',
@@ -379,12 +413,9 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         requiresManager: true,
       },
       {
-        key: 'settings.assignment-rules',
-        label: 'Assignment Rules',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.settings,
-          'assignment-rules',
-        ),
+        key: 'settings.tags-groups',
+        label: 'Tags and Groups',
+        to: getTradeCrmCustomerPath('config-tags'),
         requiresManager: true,
       },
       {
@@ -397,17 +428,14 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         requiresManager: true,
       },
       {
-        key: 'settings.automation-rules',
-        label: 'Automation Rules',
-        to: getTradeCrmScopedViewPath(
-          tradeCrmRouteMap.settings,
-          'automation-rules',
-        ),
+        key: 'settings.email-templates',
+        label: 'Email Templates',
+        to: getTradeCrmMailPath({ scope: 'campaign', view: 'overview' }),
         requiresManager: true,
       },
       {
-        key: 'settings.ai-config',
-        label: 'AI Config',
+        key: 'settings.ai-assistants',
+        label: 'AI Assistants',
         to: getTradeCrmScopedViewPath(tradeCrmRouteMap.settings, 'ai-config'),
         requiresManager: true,
       },

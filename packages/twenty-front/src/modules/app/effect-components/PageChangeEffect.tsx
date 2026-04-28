@@ -159,6 +159,19 @@ export const PageChangeEffect = () => {
       isAppEffectRedirectEnabled
     ) {
       if (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '::1'
+      ) {
+        // eslint-disable-next-line no-console
+        console.log('page-change-redirect', {
+          from: location.pathname,
+          search: location.search,
+          to: pageChangeEffectNavigateLocation,
+        });
+      }
+
+      if (
         pageChangeEffectNavigateLocation === AppPath.SignInUp &&
         !isOnAuthOrOnboardingPage
       ) {

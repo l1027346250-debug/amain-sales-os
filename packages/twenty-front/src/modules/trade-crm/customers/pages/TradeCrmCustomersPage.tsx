@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { styled } from '@linaria/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterpriseApiRequest';
+import { useCreateOneRecord } from '@/object-record/hooks/useCreateOneRecord';
+import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { TradeCrmCustomerConfigContent } from '@/trade-crm/customers/components/TradeCrmCustomerConfigContent';
 import { TradeCrmCustomerConfigHistoryPanel } from '@/trade-crm/customers/components/TradeCrmCustomerConfigHistoryPanel';
 import { TradeCrmCustomerConfigStatusPanels } from '@/trade-crm/customers/components/TradeCrmCustomerConfigStatusPanels';
@@ -74,6 +77,7 @@ import { getTradeCrmCustomerDedupLayoutData } from '@/trade-crm/customers/utils/
 import { getTradeCrmCustomerDetailLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerDetailLayout';
 import { getTradeCrmCustomerListLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerListLayout';
 import { getTradeCrmCustomerPublicPoolLayoutData } from '@/trade-crm/customers/utils/tradeCrmCustomerPublicPoolLayout';
+import { getTradeCrmRecordShowPath } from '@/trade-crm/shared/getTradeCrmRecordShowPath';
 import {
   CUSTOMER_CONFIG_UNSAVED_CHANGES_MESSAGE,
   getCustomerConfigSectionLabel,
@@ -94,10 +98,58 @@ import {
   getTradeCrmRecordName,
 } from '@/trade-crm/customers/utils/tradeCrmCustomerPresentation';
 import { tradeCrmRouteMap } from '@/trade-crm/navigation/tradeCrmRouteMap';
+import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+
+const StyledActionStrip = styled.div`
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.xl};
+  display: flex;
+  gap: ${themeCssVariables.spacing[3]};
+  justify-content: space-between;
+  padding: ${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]};
+`;
+
+const StyledActionStripCopy = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[1]};
+`;
+
+const StyledActionStripTitle = styled.div`
+  font-size: ${themeCssVariables.font.size.md};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+`;
+
+const StyledActionStripDescription = styled.div`
+  color: ${themeCssVariables.font.color.secondary};
+  font-size: ${themeCssVariables.font.size.sm};
+`;
+
+const StyledActionStripButton = styled.button`
+  background: ${themeCssVariables.color.blue};
+  border: none;
+  border-radius: ${themeCssVariables.border.radius.rounded};
+  color: #fff;
+  cursor: pointer;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  min-height: 36px;
+  padding: 0 ${themeCssVariables.spacing[3]};
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+`;
 
 type ConfigSection = TradeCrmCustomerConfigSection;
 
 const TradeCrmCustomerListWorkspace = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const enterpriseApiRequest = useEnterpriseApiRequest();
   const customerRecordMutations = useTradeCrmCustomerRecordMutations();
@@ -224,6 +276,75 @@ const TradeCrmCustomerListWorkspace = () => {
   const canConvertLead =
     leadIdToConvert.trim().length > 0 &&
     !leadConversion.convertLeadToCustomerLoading;
+  const leadIdToConvertFromQuery = searchParams.get('leadIdToConvert') ?? '';
+  const shouldAutoConvertLead = searchParams.get('autoConvertLead') === '1';
+  const afterConvertAction = searchParams.get('afterConvert');
+
+  useEffect(() => {
+    if (leadIdToConvertFromQuery.trim().length === 0) {
+      return;
+    }
+
+    setLeadIdToConvert((currentLeadId) =>
+      currentLeadId.trim().length > 0 ? currentLeadId : leadIdToConvertFromQuery,
+    );
+  }, [leadIdToConvertFromQuery]);
+
+  useEffect(() => {
+    if (
+      !shouldAutoConvertLead ||
+      leadIdToConvertFromQuery.trim().length === 0 ||
+      leadConversion.convertLeadToCustomerLoading
+    ) {
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.delete('autoConvertLead');
+    setSearchParams(nextSearchParams, { replace: true });
+
+    void leadConversion
+      .convertLeadToCustomer(leadIdToConvertFromQuery.trim())
+      .then((result) => {
+        setLeadIdToConvert('');
+
+        if (!result?.customerId) {
+          return;
+        }
+
+        if (afterConvertAction === 'create-opportunity') {
+          const nextCustomerSearchParams = new URLSearchParams({
+            autoCreateOpportunity: '1',
+            sourceLeadId: result.leadId,
+          });
+
+          if (result.contactId) {
+            nextCustomerSearchParams.set('sourceContactId', result.contactId);
+          }
+
+          if (result.ownerId) {
+            nextCustomerSearchParams.set('sourceOwnerId', result.ownerId);
+          }
+
+          window.location.assign(
+            `${getTradeCrmCustomerDetailPath(result.customerId)}?${nextCustomerSearchParams.toString()}`,
+          );
+
+          return;
+        }
+
+        window.location.assign(getTradeCrmCustomerDetailPath(result.customerId));
+      })
+      .catch(() => undefined);
+  }, [
+    afterConvertAction,
+    leadConversion,
+    leadIdToConvertFromQuery,
+    searchParams,
+    setSearchParams,
+    shouldAutoConvertLead,
+  ]);
 
   const updateNewCustomerEnterpriseFieldValue = (
     fieldDefinitionId: string,
@@ -390,8 +511,8 @@ const TradeCrmCustomerListWorkspace = () => {
           valuesByRecordId: enterpriseListFields.valuesByRecordId,
         })}
         quickFilterTokens={[
-          'My Customers',
-          'Team Customers',
+          'Active Customers',
+          'Team Accounts',
           'Department',
           'Country',
           ...configDraft.draft.sources.slice(0, 2),
@@ -420,15 +541,15 @@ const TradeCrmCustomerListWorkspace = () => {
         ]}
         workspaceViewLinks={[
           {
-            label: 'Customers (Trade CRM)',
+            label: 'Active Customers',
             to: workspaceData.customerWorkspaceViewLink,
           },
           {
-            label: 'Public Pool Customers',
+            label: 'Public Pool',
             to: workspaceData.publicPoolWorkspaceViewLink,
           },
           {
-            label: 'Customers Need Follow-up',
+            label: 'Follow-up Queue',
             to: workspaceData.followUpWorkspaceViewLink,
           },
         ]}
@@ -600,8 +721,8 @@ const TradeCrmCustomerPublicPoolWorkspace = () => {
         }
       >
         <TradeCrmCustomerTable
-          title="Public Pool Customers"
-          description="Expose original owner, latest touch, region, and reclaim readiness on a high-density list similar to the OKKI public pool page."
+          title="Public Pool"
+          description="Expose original owner, latest touch, region, and reclaim readiness on a high-density public-pool list."
           columns={[
             'Company',
             'Original Owner',
@@ -763,8 +884,8 @@ const TradeCrmCustomerDedupWorkspace = () => {
         appliedMatchingRules={appliedMatchingRules}
       />
       <TradeCrmCustomerTable
-        title="Dedup Hits"
-        description="Show likely existing customers before creating, claiming, or importing a new one."
+        title="Dedup Candidates"
+        description="Show likely existing customers before creating, claiming, importing, or reclaiming a new one."
         columns={[
           'Candidate',
           'Matched Contact',
@@ -905,9 +1026,21 @@ const TradeCrmCustomerConfigWorkspace = ({
 
 const TradeCrmCustomerDetailWorkspace = () => {
   const { customerId = '' } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentWorkspaceMember = useAtomStateValue(currentWorkspaceMemberState);
   const workspaceData = useTradeCrmCustomerWorkspaceData(customerId);
+  const { createOneRecord: createOpportunity, loading: createOpportunityLoading } =
+    useCreateOneRecord({
+      objectNameSingular: CoreObjectNameSingular.Opportunity,
+    });
   const enterpriseCustomerFields =
     useTradeCrmEnterpriseCustomerFields(customerId);
+  const sourceLeadId = searchParams.get('sourceLeadId');
+  const sourceContactId = searchParams.get('sourceContactId');
+  const sourceOwnerId = searchParams.get('sourceOwnerId');
+  const shouldAutoCreateOpportunity =
+    searchParams.get('autoCreateOpportunity') === '1';
   const layoutData = getTradeCrmCustomerDetailLayoutData({
     companyTotalCount: workspaceData.companyTotalCount,
     countryLabel: workspaceData.customerDetail?.countryLabel,
@@ -924,6 +1057,64 @@ const TradeCrmCustomerDetailWorkspace = () => {
     return <Navigate replace to={workspaceData.customerDetailRedirectPath} />;
   }
 
+  const createOpportunityFromCustomer = async () => {
+    const nextActionDate = new Date();
+
+    nextActionDate.setDate(nextActionDate.getDate() + 3);
+
+    const createdOpportunity = await createOpportunity({
+      companyId: customerId,
+      name: `${workspaceData.customerDetail?.displayName ?? 'Customer'} Opportunity`,
+      nextAction: sourceLeadId
+        ? 'Follow up converted lead and confirm qualification details'
+        : 'Review commercial context and define next seller action',
+      nextActionDate: nextActionDate.toISOString().slice(0, 10),
+      ownerId: sourceOwnerId ?? currentWorkspaceMember?.id ?? undefined,
+      pointOfContactId:
+        sourceContactId ??
+        workspaceData.customerDetailPeopleRecords[0]?.id ??
+        undefined,
+      stage: 'NEW',
+    });
+
+    navigate(
+      getTradeCrmRecordShowPath({
+        objectNameSingular: CoreObjectNameSingular.Opportunity,
+        objectRecordId: createdOpportunity.id,
+        sourceHref: getTradeCrmCustomerDetailPath(customerId),
+        sourceLabel: sourceLeadId ? 'lead-conversion/customer-detail' : 'customers/detail',
+        sourceTrail: sourceLeadId ? `lead:${sourceLeadId}` : 'customer-detail',
+        sourceView: 'detail',
+        sourceWorkspace: 'customers',
+      }),
+    );
+  };
+
+  useEffect(() => {
+    if (
+      !shouldAutoCreateOpportunity ||
+      customerId.trim().length === 0 ||
+      workspaceData.customerDetailLoading ||
+      createOpportunityLoading
+    ) {
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.delete('autoCreateOpportunity');
+    setSearchParams(nextSearchParams, { replace: true });
+
+    void createOpportunityFromCustomer().catch(() => undefined);
+  }, [
+    createOpportunityLoading,
+    customerId,
+    searchParams,
+    setSearchParams,
+    shouldAutoCreateOpportunity,
+    workspaceData.customerDetailLoading,
+  ]);
+
   return (
     <TradeCrmCustomerWorkspaceLayout
       title="Customers"
@@ -936,6 +1127,23 @@ const TradeCrmCustomerDetailWorkspace = () => {
       insights={layoutData.insights}
       workspaceContext={layoutData.workspaceContext}
     >
+      <StyledActionStrip>
+        <StyledActionStripCopy>
+          <StyledActionStripTitle>Create opportunity from customer</StyledActionStripTitle>
+          <StyledActionStripDescription>
+            Use the current customer as the account anchor, create a fresh opportunity in stage NEW, then jump directly into the live opportunity record.
+          </StyledActionStripDescription>
+        </StyledActionStripCopy>
+        <StyledActionStripButton
+          disabled={createOpportunityLoading || workspaceData.customerDetailLoading}
+          type="button"
+          onClick={() => {
+            void createOpportunityFromCustomer().catch(() => undefined);
+          }}
+        >
+          {createOpportunityLoading ? 'Creating...' : 'Create Opportunity'}
+        </StyledActionStripButton>
+      </StyledActionStrip>
       <TradeCrmCustomerDetailWorkbench
         customerDetail={workspaceData.customerDetail}
         customerDetailLoading={workspaceData.customerDetailLoading}

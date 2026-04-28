@@ -42,7 +42,7 @@ export const EnterpriseNavigationSection = () => {
 
   return (
     <NavigationDrawerSection>
-      <NavigationDrawerSectionTitle label="企业管理" />
+      <NavigationDrawerSectionTitle label="Admin" />
       {enterpriseMenuConfig.map((item) => {
         if (!hasEnterprisePermission(item.requiredPermission)) {
           return null;

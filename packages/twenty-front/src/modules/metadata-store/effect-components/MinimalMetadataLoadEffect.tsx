@@ -15,6 +15,16 @@ const computeDesiredLoadState = (
   hasAccessTokenPair: boolean,
   isActiveWorkspace: boolean,
 ): LoadedState => {
+  const hostname = window.location.hostname;
+  const isLocalDevelopmentAuthBypass =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1';
+
+  if (isLocalDevelopmentAuthBypass) {
+    return 'real';
+  }
+
   if (hasAccessTokenPair && isActiveWorkspace) {
     return 'real';
   }

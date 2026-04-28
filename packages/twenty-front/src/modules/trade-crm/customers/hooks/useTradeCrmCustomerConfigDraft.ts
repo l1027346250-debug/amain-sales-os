@@ -151,7 +151,7 @@ type CustomerConfigAggregateQuery = {
       ruleName: string;
       inactivityDays: number | null;
       notifyOwnersFirst: boolean;
-      scopeStageValues: string[];
+      scopeStageValues: string[] | null;
       publicPoolGroupValue: string | null;
       isEnabled: boolean;
     }>;
@@ -638,19 +638,31 @@ const buildDraftFromAggregate = ({
   aggregate: CustomerConfigAggregateQuery['customerConfig'];
   fallbackDraft: TradeCrmCustomerConfigDraft;
 }): TradeCrmCustomerConfigDraft => {
+  const aggregateGroups = aggregate.groups ?? [];
+  const aggregateTags = aggregate.tags ?? [];
+  const aggregateSources = aggregate.sources ?? [];
+  const aggregatePublicPoolRules = aggregate.publicPoolRules ?? [];
+  const aggregateMatchingRules = aggregate.matchingRules ?? [];
+  const aggregateImportDefaults = aggregate.importDefaults ?? {
+    destinationValue: null,
+    id: null,
+    selectedFields: [],
+    status: null,
+    updateExistingContacts: false,
+  };
   const hasPersistedConfig =
-    aggregate.groups.length > 0 ||
-    aggregate.tags.length > 0 ||
-    aggregate.sources.length > 0 ||
-    aggregate.publicPoolRules.length > 0 ||
-    aggregate.matchingRules.length > 0 ||
-    aggregate.importDefaults.id !== null;
+    aggregateGroups.length > 0 ||
+    aggregateTags.length > 0 ||
+    aggregateSources.length > 0 ||
+    aggregatePublicPoolRules.length > 0 ||
+    aggregateMatchingRules.length > 0 ||
+    aggregateImportDefaults.id !== null;
 
   if (!hasPersistedConfig) {
     return fallbackDraft;
   }
 
-  const groups = [...aggregate.groups]
+  const groups = [...aggregateGroups]
     .sort((left, right) => {
       const leftOrder =
         normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
@@ -673,7 +685,7 @@ const buildDraftFromAggregate = ({
       parentId: normalizeString(group.parentId),
     }));
 
-  const tags = aggregate.tags.reduce<
+  const tags = aggregateTags.reduce<
     Record<TradeCrmCustomerConfigTagScope, string[]>
   >(
     (accumulator, tag) => {
@@ -696,7 +708,7 @@ const buildDraftFromAggregate = ({
     },
   );
 
-  const sources = [...aggregate.sources]
+  const sources = [...aggregateSources]
     .sort((left, right) => {
       const leftOrder =
         normalizeNumber(left.sortOrder) ?? Number.MAX_SAFE_INTEGER;
@@ -712,7 +724,10 @@ const buildDraftFromAggregate = ({
     .map((source) => normalizeString(source.label))
     .filter((source): source is string => source !== null);
 
-  const latestPublicPoolRule = aggregate.publicPoolRules[0] ?? null;
+  const latestPublicPoolRule = aggregatePublicPoolRules[0] ?? null;
+  const latestPublicPoolRuleScopeStageValues = normalizeStringArray(
+    latestPublicPoolRule?.scopeStageValues,
+  );
   const publicPoolRule =
     latestPublicPoolRule !== null
       ? {
@@ -726,8 +741,8 @@ const buildDraftFromAggregate = ({
             latestPublicPoolRule.notifyOwnersFirst ??
             fallbackDraft.publicPoolRule.notifyOwnersFirst,
           scopeStages:
-            latestPublicPoolRule.scopeStageValues.length > 0
-              ? latestPublicPoolRule.scopeStageValues.map(
+            latestPublicPoolRuleScopeStageValues.length > 0
+              ? latestPublicPoolRuleScopeStageValues.map(
                   (stageValue) =>
                     getTradeCrmCustomerStageLabelForValue(stageValue) ??
                     stageValue,
@@ -740,7 +755,7 @@ const buildDraftFromAggregate = ({
         }
       : fallbackDraft.publicPoolRule;
 
-  const matchingRules = [...aggregate.matchingRules]
+  const matchingRules = [...aggregateMatchingRules]
     .sort((left, right) => {
       const leftOrder =
         normalizeNumber(left.priority) ?? Number.MAX_SAFE_INTEGER;
@@ -761,14 +776,14 @@ const buildDraftFromAggregate = ({
   const importConfig = {
     destination:
       CUSTOMER_IMPORT_DESTINATION_BY_VALUE[
-        normalizeString(aggregate.importDefaults.destinationValue) ?? ''
+        normalizeString(aggregateImportDefaults.destinationValue) ?? ''
       ] ?? fallbackDraft.importConfig.destination,
     updateExistingContacts:
-      aggregate.importDefaults.updateExistingContacts ??
+      aggregateImportDefaults.updateExistingContacts ??
       fallbackDraft.importConfig.updateExistingContacts,
     selectedFields:
-      aggregate.importDefaults.selectedFields.length > 0
-        ? aggregate.importDefaults.selectedFields
+      normalizeStringArray(aggregateImportDefaults.selectedFields).length > 0
+        ? normalizeStringArray(aggregateImportDefaults.selectedFields)
         : fallbackDraft.importConfig.selectedFields,
   };
 

@@ -18,4 +18,7 @@ export class ConvertLeadToCustomerResultDTO {
 
   @Field(() => UUIDScalarType, { nullable: true })
   contactId: string | null;
+
+  @Field(() => UUIDScalarType, { nullable: true })
+  ownerId: string | null;
 }

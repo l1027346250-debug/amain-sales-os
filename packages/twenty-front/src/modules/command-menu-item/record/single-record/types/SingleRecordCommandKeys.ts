@@ -1,4 +1,5 @@
 export enum SingleRecordCommandKeys {
+  CONVERT_LEAD_TO_CUSTOMER = 'convert-lead-to-customer-single-record',
   DELETE = 'delete-single-record',
   DESTROY = 'destroy-single-record',
   ADD_TO_FAVORITES = 'add-to-favorites-single-record',

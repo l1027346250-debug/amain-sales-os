@@ -19,6 +19,16 @@ import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 import { OnboardingStatus } from '~/generated-metadata/graphql';
 import { isMatchingLocation } from '~/utils/isMatchingLocation';
 
+const isLocalDevelopmentAuthBypassEnabled = () => {
+  const hostname = window.location.hostname;
+
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1'
+  );
+};
+
 const readReturnToPathFromUrlSearchParams = (): string | null => {
   const value = new URLSearchParams(window.location.search).get('returnToPath');
 
@@ -52,6 +62,15 @@ export const usePageChangeEffectNavigateLocation = () => {
   const resolvedReturnToPath = isNonEmptyString(returnToPath)
     ? returnToPath
     : readReturnToPathFromUrlSearchParams();
+  const isLocalDevelopmentAuthBypass = isLocalDevelopmentAuthBypassEnabled();
+
+  if (isLocalDevelopmentAuthBypass) {
+    if (isMatchingLocation(location, AppPath.SignInUp)) {
+      return resolvedReturnToPath ?? defaultHomePagePath;
+    }
+
+    return;
+  }
 
   if (
     (!hasAccessTokenPair || (hasAccessTokenPair && !isOnAWorkspace)) &&

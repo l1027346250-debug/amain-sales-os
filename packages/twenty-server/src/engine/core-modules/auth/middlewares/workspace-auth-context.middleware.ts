@@ -1,4 +1,4 @@
-import { Injectable, type NestMiddleware } from '@nestjs/common';
+import { Injectable, Logger, type NestMiddleware } from '@nestjs/common';
 
 import { type NextFunction, type Request, type Response } from 'express';
 import { isDefined } from 'twenty-shared/utils';
@@ -16,6 +16,8 @@ import { buildUserAuthContext } from 'src/engine/core-modules/auth/utils/build-u
 
 @Injectable()
 export class WorkspaceAuthContextMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(WorkspaceAuthContextMiddleware.name);
+
   use(req: Request, _res: Response, next: NextFunction) {
     if (!isDefined(req.workspace)) {
       next();
@@ -23,7 +25,27 @@ export class WorkspaceAuthContextMiddleware implements NestMiddleware {
       return;
     }
 
+    if (
+      req.headers['x-dev-bypass-auth'] === 'true' ||
+      (Array.isArray(req.headers['x-dev-bypass-auth']) &&
+        req.headers['x-dev-bypass-auth'].includes('true'))
+    ) {
+      this.logger.log(
+        `Building workspace auth context for ${req.method} ${req.path} (hasUser=${isDefined(req.user)}, hasUserWorkspaceId=${isDefined(req.userWorkspaceId)}, hasApplication=${isDefined(req.application)}, hasApiKey=${isDefined(req.apiKey)})`,
+      );
+    }
+
     const authContext = this.buildAuthContext(req);
+
+    if (
+      req.headers['x-dev-bypass-auth'] === 'true' ||
+      (Array.isArray(req.headers['x-dev-bypass-auth']) &&
+        req.headers['x-dev-bypass-auth'].includes('true'))
+    ) {
+      this.logger.log(
+        `Workspace auth context ready for ${req.method} ${req.path} as ${authContext.type}`,
+      );
+    }
 
     withWorkspaceAuthContext(authContext, () => {
       next();

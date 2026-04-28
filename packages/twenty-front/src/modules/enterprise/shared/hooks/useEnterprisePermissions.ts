@@ -7,9 +7,15 @@ import { PermissionFlagType } from '~/generated-metadata/graphql';
 
 export const useEnterprisePermissions = () => {
   const permissionMap = usePermissionFlagMap();
+  const hostname = window.location.hostname;
+  const isLocalDevelopmentAuthBypass =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1';
 
   const canAccessEnterprise =
     import.meta.env.DEV ||
+    isLocalDevelopmentAuthBypass ||
     permissionMap[PermissionFlagType.WORKSPACE] ||
     permissionMap[PermissionFlagType.ENTERPRISE];
 
@@ -20,7 +26,11 @@ export const useEnterprisePermissions = () => {
       return canAccessEnterprise;
     }
 
-    if (import.meta.env.DEV || permissionMap[PermissionFlagType.WORKSPACE]) {
+    if (
+      import.meta.env.DEV ||
+      isLocalDevelopmentAuthBypass ||
+      permissionMap[PermissionFlagType.WORKSPACE]
+    ) {
       return true;
     }
 

@@ -2,17 +2,16 @@ import { EnterpriseCustomerExportService } from 'src/modules/enterprise/customer
 import { EnterpriseFieldDefinitionEntity } from 'src/modules/enterprise/field-definition/enterprise-field-definition.entity';
 import { EnterpriseFieldType } from 'src/modules/enterprise/shared/types/enterprise-field-type';
 
-type EnterpriseCustomerExportServiceAccessor =
-  EnterpriseCustomerExportService & {
-    findCustomerIdsByEnterpriseFieldFilters: (
-      workspaceId: string,
-      filters: Array<{
-        fieldDefinitionId: string;
-        operator: 'contains' | 'equals' | 'isEmpty' | 'isNotEmpty';
-        value?: unknown;
-      }>,
-    ) => Promise<string[] | null>;
-  };
+type EnterpriseCustomerExportServiceAccessor = {
+  findCustomerIdsByEnterpriseFieldFilters: (
+    workspaceId: string,
+    filters: Array<{
+      fieldDefinitionId: string;
+      operator: 'contains' | 'equals' | 'isEmpty' | 'isNotEmpty';
+      value?: unknown;
+    }>,
+  ) => Promise<string[] | null>;
+};
 
 const workspaceId = '20202020-0000-4000-8000-000000000000';
 const entityBindingId = '30303030-0000-4000-8000-000000000000';
@@ -77,7 +76,7 @@ const createService = ({
     {} as never,
     {} as never,
     {} as never,
-  ) as EnterpriseCustomerExportServiceAccessor;
+  ) as unknown as EnterpriseCustomerExportServiceAccessor;
 
   return {
     enterpriseEntityBindingService,

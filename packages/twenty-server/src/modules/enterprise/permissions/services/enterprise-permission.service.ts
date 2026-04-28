@@ -176,7 +176,6 @@ export class EnterprisePermissionService {
       PermissionsExceptionCode.PERMISSION_DENIED,
       {
         userFriendlyMessage: msg`You do not have permission to access this enterprise management action.`,
-        value: permissionCode,
       },
     );
   }

@@ -1,7 +1,7 @@
 ﻿import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { AppPath, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
@@ -1129,11 +1129,21 @@ const getInsightItems = (scope: TradeCrmMailScopeKey): RecordInsightItem[] => {
 };
 
 export const TradeCrmMailPage = () => {
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = searchParams.get('scope');
   const requestedView = searchParams.get('view');
+  const legacyMailPathView =
+    requestedScope === null && requestedView === null
+      ? location.pathname
+          .replace(`${tradeCrmRouteMap.mail}/`, '')
+          .trim()
+          .toLowerCase() || null
+      : null;
   const legacyMailRouteTarget =
-    requestedScope === null ? getLegacyMailRouteTarget(requestedView) : null;
+    requestedScope === null
+      ? getLegacyMailRouteTarget(requestedView ?? legacyMailPathView)
+      : null;
   const selectedSendJobId = searchParams.get('jobId') ?? undefined;
   const selectedSendTaskId = searchParams.get('taskId') ?? undefined;
   const selectedPreviewThreadId =

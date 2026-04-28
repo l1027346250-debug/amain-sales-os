@@ -1,4 +1,4 @@
-﻿import {
+import {
   enterprisePermissionCodes,
   type EnterprisePermissionCode,
 } from '@/enterprise/shared/constants/enterprisePermissions';
@@ -15,61 +15,61 @@ export type EnterpriseMenuItem = {
 export const enterpriseMenuConfig: EnterpriseMenuItem[] = [
   {
     key: 'enterprise-management',
-    label: '企业管理',
+    label: 'Admin',
     requiredPermission: enterprisePermissionCodes.fieldRead,
     to: AppPath.EnterpriseCustomFields,
     children: [
       {
         key: 'custom-fields',
-        label: '自定义字段',
+        label: 'Custom Fields',
         requiredPermission: enterprisePermissionCodes.fieldRead,
         to: AppPath.EnterpriseCustomFields,
       },
       {
         key: 'field-layouts',
-        label: '字段显示',
+        label: 'Field Layout',
         requiredPermission: enterprisePermissionCodes.fieldLayoutRead,
         to: AppPath.EnterpriseFieldDisplay.replace(':entityType', 'lead'),
       },
       {
         key: 'customer-export',
-        label: '客户导出',
+        label: 'Export Center',
         requiredPermission: enterprisePermissionCodes.customerExportRead,
         to: AppPath.EnterpriseCustomerExport,
       },
       {
         key: 'recycle',
-        label: '回收箱',
+        label: 'Recycle Bin',
         requiredPermission: enterprisePermissionCodes.recycleRead,
         to: AppPath.EnterpriseRecycle.replace(':resourceType', 'email'),
       },
       {
         key: 'report-templates',
-        label: '工作报告模板',
+        label: 'Report Templates',
         requiredPermission: enterprisePermissionCodes.reportTemplateRead,
         to: AppPath.EnterpriseReportTemplates,
       },
       {
         key: 'source-convert',
-        label: '获客来源流转',
+        label: 'Source Convert',
         requiredPermission: enterprisePermissionCodes.sourceConvertRead,
         to: AppPath.EnterpriseSourceConvert,
       },
       {
         key: 'independent-station',
-        label: '独立站管理',
+        label: 'Independent Station',
         requiredPermission: enterprisePermissionCodes.independentStationRead,
         to: AppPath.EnterpriseIndependentStation,
       },
       {
         key: 'sales-playbook',
-        label: '销售助手管理',
+        label: 'Sales Playbook',
         requiredPermission: enterprisePermissionCodes.salesPlaybookRead,
         to: AppPath.EnterpriseSalesPlaybook,
       },
       {
         key: 'enterprise-permissions',
-        label: '企业权限配置',
+        label: 'Permissions',
         requiredPermission: enterprisePermissionCodes.permissionsRead,
         to: AppPath.EnterprisePermissions,
       },

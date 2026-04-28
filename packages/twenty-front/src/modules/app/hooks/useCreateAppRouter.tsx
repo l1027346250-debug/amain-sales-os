@@ -347,7 +347,23 @@ export const useCreateAppRouter = (
             }
           />
           <Route
-            path={AppPath.TradeCrmMail}
+            path={`${AppPath.TradeCrmMail}/*`}
+            element={
+              <LazyRoute>
+                <TradeCrmMailPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={`${AppPath.TradeCrmMail}/:legacyView`}
+            element={
+              <LazyRoute>
+                <TradeCrmMailPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={`${AppPath.TradeCrmMail}/:legacyScope/:legacyView`}
             element={
               <LazyRoute>
                 <TradeCrmMailPage />

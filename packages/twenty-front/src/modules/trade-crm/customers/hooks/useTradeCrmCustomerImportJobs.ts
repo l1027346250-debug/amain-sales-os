@@ -33,7 +33,7 @@ export type TradeCrmCustomerImportJobResult = {
 };
 
 type CustomerImportJobsQuery = {
-  customerImportJobs: {
+  customerImportJobsOverview: {
     jobs: TradeCrmCustomerImportJobItem[];
     totalCount: number;
   };
@@ -98,7 +98,7 @@ type CommitCustomerImportJobMutationVariables = {
 
 const GET_CUSTOMER_IMPORT_JOBS = gql`
   query GetCustomerImportJobs($limit: Int) {
-    customerImportJobs(limit: $limit) {
+    customerImportJobsOverview(limit: $limit) {
       totalCount
       jobs {
         id
@@ -324,13 +324,13 @@ export const useTradeCrmCustomerImportJobs = () => {
     commitCustomerImportJob,
     commitLoading,
     getCustomerImportJobResult,
-    jobs: data?.customerImportJobs.jobs ?? [],
+    jobs: data?.customerImportJobsOverview.jobs ?? [],
     loading,
     resultLoading,
     saveCustomerImportMapping,
     saveMappingLoading,
     startCustomerImportJob,
     startLoading,
-    totalCount: data?.customerImportJobs.totalCount ?? 0,
+    totalCount: data?.customerImportJobsOverview.totalCount ?? 0,
   };
 };

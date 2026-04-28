@@ -656,40 +656,39 @@ export class EnterpriseCustomerExportService {
       return [];
     }
 
-    return filterJson.enterpriseFieldFilters
-      .map((filter) => {
-        if (!filter || typeof filter !== 'object') {
-          return null;
-        }
+    const parsedFilters: EnterpriseCustomerExportFieldFilterDto[] = [];
 
-        const filterRecord = filter as Record<string, unknown>;
+    for (const filter of filterJson.enterpriseFieldFilters) {
+      if (!filter || typeof filter !== 'object') {
+        continue;
+      }
 
-        if (
-          typeof filterRecord.fieldDefinitionId !== 'string' ||
-          typeof filterRecord.operator !== 'string'
-        ) {
-          return null;
-        }
+      const filterRecord = filter as Record<string, unknown>;
 
-        if (
-          !['contains', 'equals', 'isEmpty', 'isNotEmpty'].includes(
-            filterRecord.operator,
-          )
-        ) {
-          return null;
-        }
+      if (
+        typeof filterRecord.fieldDefinitionId !== 'string' ||
+        typeof filterRecord.operator !== 'string'
+      ) {
+        continue;
+      }
 
-        return {
-          fieldDefinitionId: filterRecord.fieldDefinitionId,
-          operator: filterRecord.operator as EnterpriseCustomerExportFieldFilterDto['operator'],
-          value: filterRecord.value,
-        };
-      })
-      .filter(
-        (
-          filter,
-        ): filter is EnterpriseCustomerExportFieldFilterDto => filter !== null,
-      );
+      if (
+        !['contains', 'equals', 'isEmpty', 'isNotEmpty'].includes(
+          filterRecord.operator,
+        )
+      ) {
+        continue;
+      }
+
+      parsedFilters.push({
+        fieldDefinitionId: filterRecord.fieldDefinitionId,
+        operator:
+          filterRecord.operator as EnterpriseCustomerExportFieldFilterDto['operator'],
+        value: filterRecord.value,
+      });
+    }
+
+    return parsedFilters;
   }
 
   private async findCustomerIdsByEnterpriseFieldFilters(

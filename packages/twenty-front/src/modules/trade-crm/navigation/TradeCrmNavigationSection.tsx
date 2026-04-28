@@ -1,15 +1,15 @@
-﻿import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { currentUserState } from '@/auth/states/currentUserState';
+import { useTradeCrmLocale } from '@/trade-crm/shared/hooks/useTradeCrmLocale';
 import { tradeCrmMenuConfig } from '@/trade-crm/navigation/tradeCrmMenuConfig';
 import { isTradeCrmManager } from '@/trade-crm/navigation/tradeCrmVisibility';
+import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
 import { NavigationDrawerItemGroup } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItemGroup';
 import { NavigationDrawerSection } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSection';
 import { NavigationDrawerSectionTitle } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSectionTitle';
-import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
 import { NavigationDrawerSubItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSubItem';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useTradeCrmLocale } from '@/trade-crm/shared/hooks/useTradeCrmLocale';
 
 const isTradeCrmMenuTargetActive = (
   target: string,
@@ -46,7 +46,7 @@ export const TradeCrmNavigationSection = () => {
 
   return (
     <NavigationDrawerSection>
-      <NavigationDrawerSectionTitle label={tr('Trade CRM')} />
+      <NavigationDrawerSectionTitle label={tr('AMAIN CRM')} />
       {visibleItems.map((item) => {
         const itemActive = isTradeCrmMenuTargetActive(
           item.to,

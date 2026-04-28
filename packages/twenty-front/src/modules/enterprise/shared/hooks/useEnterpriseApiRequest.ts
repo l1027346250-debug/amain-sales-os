@@ -7,6 +7,11 @@ import { getEnterpriseApiUrl } from '@/enterprise/shared/utils/getEnterpriseApiU
 export const useEnterpriseApiRequest = () => {
   const tokenPair = useAtomStateValue(tokenPairState);
   const accessToken = tokenPair?.accessOrWorkspaceAgnosticToken.token;
+  const hostname = window.location.hostname;
+  const isLocalDevelopmentAuthBypass =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1';
 
   return useCallback(
     (path: string, init?: RequestInit) => {
@@ -16,11 +21,15 @@ export const useEnterpriseApiRequest = () => {
         headers.set('Authorization', `Bearer ${accessToken}`);
       }
 
+      if (isLocalDevelopmentAuthBypass && !accessToken) {
+        headers.set('x-dev-bypass-auth', 'true');
+      }
+
       return fetch(getEnterpriseApiUrl(path), {
         ...init,
         headers,
       });
     },
-    [accessToken],
+    [accessToken, isLocalDevelopmentAuthBypass],
   );
 };

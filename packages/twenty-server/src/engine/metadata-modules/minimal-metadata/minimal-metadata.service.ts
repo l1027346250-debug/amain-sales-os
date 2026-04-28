@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 
 import {
   ALL_METADATA_NAME,
@@ -30,6 +31,8 @@ const flatMapsKeyToMetadataName = (
 
 @Injectable()
 export class MinimalMetadataService {
+  private readonly logger = new Logger(MinimalMetadataService.name);
+
   constructor(
     private readonly flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
     private readonly workspaceCacheService: WorkspaceCacheService,
@@ -39,72 +42,81 @@ export class MinimalMetadataService {
     workspaceId: string,
     userWorkspaceId?: string,
   ): Promise<MinimalMetadataDTO> {
-    const [{ flatObjectMetadataMaps, flatViewMaps }, cacheHashes] =
-      await Promise.all([
-        this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps({
-          workspaceId,
-          flatMapsKeys: ['flatObjectMetadataMaps', 'flatViewMaps'],
-        }),
-        this.workspaceCacheService.getCacheHashes(
-          workspaceId,
-          ALL_FLAT_ENTITY_MAPS_PROPERTIES as WorkspaceCacheKeyName[],
-        ),
-      ]);
+    try {
+      const [{ flatObjectMetadataMaps, flatViewMaps }, cacheHashes] =
+        await Promise.all([
+          this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps({
+            workspaceId,
+            flatMapsKeys: ['flatObjectMetadataMaps', 'flatViewMaps'],
+          }),
+          this.workspaceCacheService.getCacheHashes(
+            workspaceId,
+            ALL_FLAT_ENTITY_MAPS_PROPERTIES as WorkspaceCacheKeyName[],
+          ),
+        ]);
 
-    const collectionHashes: CollectionHashDTO[] = Object.entries(cacheHashes)
-      .map(([cacheKey, hash]) => {
-        const metadataName = flatMapsKeyToMetadataName(cacheKey);
+      const collectionHashes: CollectionHashDTO[] = Object.entries(cacheHashes)
+        .map(([cacheKey, hash]) => {
+          const metadataName = flatMapsKeyToMetadataName(cacheKey);
 
-        if (!isDefined(metadataName) || !isDefined(hash)) {
-          return undefined;
-        }
+          if (!isDefined(metadataName) || !isDefined(hash)) {
+            return undefined;
+          }
 
-        return { collectionName: metadataName, hash };
-      })
-      .filter(isDefined);
+          return { collectionName: metadataName, hash };
+        })
+        .filter(isDefined);
 
-    const objectMetadataItems: MinimalObjectMetadataDTO[] = Object.values(
-      flatObjectMetadataMaps.byUniversalIdentifier,
-    )
-      .filter(isDefined)
-      .filter((flatObjectMetadata) => flatObjectMetadata.isActive === true)
-      .map((flatObjectMetadata) => ({
-        id: flatObjectMetadata.id,
-        nameSingular: flatObjectMetadata.nameSingular,
-        namePlural: flatObjectMetadata.namePlural,
-        labelSingular: flatObjectMetadata.labelSingular,
-        labelPlural: flatObjectMetadata.labelPlural,
-        icon: flatObjectMetadata.icon ?? undefined,
-        isCustom: flatObjectMetadata.isCustom,
-        isActive: flatObjectMetadata.isActive,
-        isSystem: flatObjectMetadata.isSystem,
-        isRemote: flatObjectMetadata.isRemote,
-      }));
-
-    const views: MinimalViewDTO[] = Object.values(
-      flatViewMaps.byUniversalIdentifier,
-    )
-      .filter(isDefined)
-      .filter((flatView) => flatView.workspaceId === workspaceId)
-      .filter((flatView) => flatView.deletedAt === null)
-      .filter(
-        (flatView) =>
-          flatView.visibility === ViewVisibility.WORKSPACE ||
-          (flatView.visibility === ViewVisibility.UNLISTED &&
-            isDefined(userWorkspaceId) &&
-            flatView.createdByUserWorkspaceId === userWorkspaceId),
+      const objectMetadataItems: MinimalObjectMetadataDTO[] = Object.values(
+        flatObjectMetadataMaps.byUniversalIdentifier,
       )
-      .map((flatView) => ({
-        id: flatView.id,
-        type: flatView.type,
-        key: flatView.key,
-        objectMetadataId: flatView.objectMetadataId,
-      }));
+        .filter(isDefined)
+        .filter((flatObjectMetadata) => flatObjectMetadata.isActive === true)
+        .map((flatObjectMetadata) => ({
+          id: flatObjectMetadata.id,
+          nameSingular: flatObjectMetadata.nameSingular,
+          namePlural: flatObjectMetadata.namePlural,
+          labelSingular: flatObjectMetadata.labelSingular,
+          labelPlural: flatObjectMetadata.labelPlural,
+          icon: flatObjectMetadata.icon ?? undefined,
+          isCustom: flatObjectMetadata.isCustom,
+          isActive: flatObjectMetadata.isActive,
+          isSystem: flatObjectMetadata.isSystem,
+          isRemote: flatObjectMetadata.isRemote,
+        }));
 
-    return {
-      objectMetadataItems,
-      views,
-      collectionHashes,
-    };
+      const views: MinimalViewDTO[] = Object.values(
+        flatViewMaps.byUniversalIdentifier,
+      )
+        .filter(isDefined)
+        .filter((flatView) => flatView.workspaceId === workspaceId)
+        .filter((flatView) => flatView.deletedAt === null)
+        .filter(
+          (flatView) =>
+            flatView.visibility === ViewVisibility.WORKSPACE ||
+            (flatView.visibility === ViewVisibility.UNLISTED &&
+              isDefined(userWorkspaceId) &&
+              flatView.createdByUserWorkspaceId === userWorkspaceId),
+        )
+        .map((flatView) => ({
+          id: flatView.id,
+          type: flatView.type,
+          key: flatView.key,
+          objectMetadataId: flatView.objectMetadataId,
+        }));
+
+      return {
+        objectMetadataItems,
+        views,
+        collectionHashes,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to load minimal metadata for workspace ${workspaceId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+
+      throw error;
+    }
   }
 }

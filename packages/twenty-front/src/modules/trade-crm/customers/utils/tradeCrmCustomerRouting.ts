@@ -28,9 +28,9 @@ export const tradeCrmCustomerRouteLabels: Record<
   TradeCrmCustomerRouteKey,
   string
 > = {
-  list: 'Customer List',
+  list: 'Active Customers',
   public: 'Public Pool',
-  dedup: 'Customer Dedup',
+  dedup: 'Dedup Center',
   detail: 'Customer Detail',
   'config-public-pool-rules': 'Public Pool Rules',
   'config-groups': 'Groups',

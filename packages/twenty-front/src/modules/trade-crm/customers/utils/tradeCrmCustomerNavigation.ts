@@ -20,7 +20,7 @@ export const getTradeCrmCustomerPrimaryTabs = (
 ): PageHeaderTab[] => [
   {
     isActive: activeKey === 'list',
-    label: 'Customer List',
+    label: 'Active Customers',
     to: getTradeCrmCustomerPath('list'),
   },
   {
@@ -30,12 +30,12 @@ export const getTradeCrmCustomerPrimaryTabs = (
   },
   {
     isActive: activeKey === 'dedup',
-    label: 'Customer Dedup',
+    label: 'Dedup Center',
     to: getTradeCrmCustomerPath('dedup'),
   },
   {
     isActive: activeKey === 'settings',
-    label: 'Settings',
+    label: 'Customer Settings',
     to: getTradeCrmCustomerPath('config-public-pool-rules'),
   },
   {
@@ -59,7 +59,7 @@ export const getTradeCrmCustomerSidebarItems = ({
     countLabel: `${companyTotalCount}`,
     hint: 'Private customers, ownership, and follow-up queues.',
     isActive: activePath === 'list',
-    label: 'Customer List',
+    label: 'Active Customers',
     to: getTradeCrmCustomerPath('list'),
   },
   {
@@ -73,7 +73,7 @@ export const getTradeCrmCustomerSidebarItems = ({
     countLabel: `${Math.max(4, Math.floor(peopleTotalCount / 3))}`,
     hint: 'Pre-claim and pre-import collision checks.',
     isActive: activePath === 'dedup',
-    label: 'Customer Dedup',
+    label: 'Dedup Center',
     to: getTradeCrmCustomerPath('dedup'),
   },
   {

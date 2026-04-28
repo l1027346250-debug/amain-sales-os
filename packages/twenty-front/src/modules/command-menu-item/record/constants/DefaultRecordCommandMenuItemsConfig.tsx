@@ -1,6 +1,7 @@
 import { CommandLink } from '@/command-menu-item/display/components/CommandLink';
 import { DeleteMultipleRecordsCommand } from '@/command-menu-item/record/multiple-records/components/DeleteMultipleRecordsCommand';
 import { DestroyMultipleRecordsCommand } from '@/command-menu-item/record/multiple-records/components/DestroyMultipleRecordsCommand';
+import { ConvertLeadsToCustomersMultipleRecordsCommand } from '@/command-menu-item/record/multiple-records/components/ConvertLeadsToCustomersMultipleRecordsCommand';
 import { ExportMultipleRecordsCommand } from '@/command-menu-item/record/multiple-records/components/ExportMultipleRecordsCommand';
 import { MergeMultipleRecordsCommand } from '@/command-menu-item/record/multiple-records/components/MergeMultipleRecordsCommand';
 import { RestoreMultipleRecordsCommand } from '@/command-menu-item/record/multiple-records/components/RestoreMultipleRecordsCommand';
@@ -13,6 +14,7 @@ import { ImportRecordsNoSelectionRecordCommand } from '@/command-menu-item/recor
 import { SeeDeletedRecordsNoSelectionRecordCommand } from '@/command-menu-item/record/no-selection/components/SeeDeletedRecordsNoSelectionRecordCommand';
 import { NoSelectionRecordCommandKeys } from '@/command-menu-item/record/no-selection/types/NoSelectionRecordCommandKeys';
 import { AddToFavoritesSingleRecordCommand } from '@/command-menu-item/record/single-record/components/AddToFavoritesSingleRecordCommand';
+import { ConvertLeadToCustomerSingleRecordCommand } from '@/command-menu-item/record/single-record/components/ConvertLeadToCustomerSingleRecordCommand';
 import { DeleteSingleRecordCommand } from '@/command-menu-item/record/single-record/components/DeleteSingleRecordCommand';
 import { DestroySingleRecordCommand } from '@/command-menu-item/record/single-record/components/DestroySingleRecordCommand';
 import { ExportNoteSingleRecordCommand } from '@/command-menu-item/record/single-record/components/ExportNoteSingleRecordCommand';
@@ -102,6 +104,31 @@ export const DEFAULT_RECORD_COMMAND_MENU_ITEMS_CONFIG: Record<
     shouldBeRegistered: ({ isInSidePanel }) => !isInSidePanel,
     availableOn: [CommandMenuItemViewType.SHOW_PAGE],
     component: <NavigateToPreviousRecordSingleRecordCommand />,
+  },
+  [SingleRecordCommandKeys.CONVERT_LEAD_TO_CUSTOMER]: {
+    type: CommandMenuItemType.Standard,
+    scope: CommandMenuItemScope.RecordSelection,
+    key: SingleRecordCommandKeys.CONVERT_LEAD_TO_CUSTOMER,
+    label: 'Convert to customer',
+    shortLabel: 'Convert',
+    position: 1.5,
+    isPinned: true,
+    Icon: IconTargetArrow,
+    shouldBeRegistered: ({
+      objectMetadataItem,
+      selectedRecord,
+      hasAnySoftDeleteFilterOnView,
+    }) =>
+      objectMetadataItem?.nameSingular === 'lead' &&
+      isDefined(selectedRecord) &&
+      !selectedRecord.isRemote &&
+      !isDefined(selectedRecord?.deletedAt) &&
+      !hasAnySoftDeleteFilterOnView,
+    availableOn: [
+      CommandMenuItemViewType.INDEX_PAGE_SINGLE_RECORD_SELECTION,
+      CommandMenuItemViewType.SHOW_PAGE,
+    ],
+    component: <ConvertLeadToCustomerSingleRecordCommand />,
   },
   [NoSelectionRecordCommandKeys.CREATE_NEW_RECORD]: {
     type: CommandMenuItemType.Standard,
@@ -414,6 +441,29 @@ export const DEFAULT_RECORD_COMMAND_MENU_ITEMS_CONFIG: Record<
       !isRemote,
     availableOn: [CommandMenuItemViewType.INDEX_PAGE_BULK_SELECTION],
     component: <UpdateMultipleRecordsCommand />,
+  },
+  [MultipleRecordsCommandKeys.CONVERT_LEADS_TO_CUSTOMERS]: {
+    type: CommandMenuItemType.Standard,
+    scope: CommandMenuItemScope.RecordSelection,
+    key: MultipleRecordsCommandKeys.CONVERT_LEADS_TO_CUSTOMERS,
+    label: 'Convert selected leads to customers',
+    shortLabel: 'Convert selected leads',
+    position: 14.5,
+    Icon: IconTargetArrow,
+    accent: 'default',
+    isPinned: true,
+    shouldBeRegistered: ({
+      objectMetadataItem,
+      numberOfSelectedRecords,
+      hasAnySoftDeleteFilterOnView,
+    }) =>
+      objectMetadataItem?.nameSingular === 'lead' &&
+      isDefined(numberOfSelectedRecords) &&
+      numberOfSelectedRecords > 1 &&
+      numberOfSelectedRecords <= 20 &&
+      !hasAnySoftDeleteFilterOnView,
+    availableOn: [CommandMenuItemViewType.INDEX_PAGE_BULK_SELECTION],
+    component: <ConvertLeadsToCustomersMultipleRecordsCommand />,
   },
   [MultipleRecordsCommandKeys.MERGE]: {
     type: CommandMenuItemType.Standard,

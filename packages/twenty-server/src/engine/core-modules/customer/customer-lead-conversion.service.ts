@@ -179,6 +179,8 @@ export class CustomerLeadConversionService {
         contactId,
         customerId,
         leadId,
+        ownerId:
+          normalizeString(lead.assignedToId) ?? workspaceMemberId ?? null,
       };
     }, authContext);
   }
@@ -262,7 +264,6 @@ export class CustomerLeadConversionService {
       emails: buildEmailsValue(email),
       name: contactName ? { firstName: contactName, lastName: '' } : null,
       nickname: contactName,
-      phone,
       phones: buildPhonesValue(phone),
       updatedAt: now,
     });

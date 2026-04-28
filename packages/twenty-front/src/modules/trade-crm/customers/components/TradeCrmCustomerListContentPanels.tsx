@@ -196,8 +196,8 @@ export const TradeCrmCustomerListContentPanels = ({
       <StyledPanel>
         <StyledPanelTitle>Workspace Views</StyledPanelTitle>
         <StyledPanelDescription>
-          Jump into the seeded Trade CRM company views when sellers need the
-          native workspace table instead of the customer shell.
+          Jump into the live account views when sellers need the native object
+          table instead of the customer operating shell.
         </StyledPanelDescription>
         <StyledQuickLinkList>
           {workspaceViewLinks.map((viewLink) => (
@@ -211,7 +211,7 @@ export const TradeCrmCustomerListContentPanels = ({
     </StyledStack>
     <StyledStack>
       <TradeCrmCustomerTable
-        title="Customer List"
+        title="Active Customers"
         description="Keep company, owner, region, segmentation, and next action on the same row so customer follow-up decisions are visible at list level."
         columns={tableColumns}
         rows={customerRows}
