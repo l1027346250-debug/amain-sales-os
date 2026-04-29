@@ -333,6 +333,7 @@ export class TimelineMessagingService {
           await this.globalWorkspaceOrmManager.getRepository<CompanyWorkspaceEntity>(
             workspaceId,
             'company',
+            { shouldBypassPermissionChecks: true },
           );
 
         const companyThreadsBaseQuery = companyRepository

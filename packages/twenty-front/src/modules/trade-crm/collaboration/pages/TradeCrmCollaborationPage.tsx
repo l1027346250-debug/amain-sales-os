@@ -30,7 +30,7 @@ const collaborationWorkspaceViews: CollaborationWorkspaceView[] = [
   {
     key: 'tasks',
     label: 'Tasks',
-    title: 'Task Collaboration',
+    title: 'Tasks',
     heroTitle:
       'Keep tasks as the primary collaboration carrier instead of expanding CRM into an OA platform.',
     heroDescription:
@@ -348,7 +348,7 @@ export const TradeCrmCollaborationPage = () => {
 
   return (
     <QueueWorkspaceLayout
-      title="Collaboration"
+      title="Team"
       heroTitle={currentView.heroTitle}
       heroDescription={currentView.heroDescription}
       heroPills={[
@@ -358,18 +358,18 @@ export const TradeCrmCollaborationPage = () => {
         hasTaskObject ? `${taskTotalCount ?? 0} tasks` : 'Task setup pending',
       ]}
       tabs={tabs}
-      sidebarTitle="Collaboration workspace"
+      sidebarTitle="Team workspace"
       sidebarItems={sidebarItems}
       cards={cards}
-      insightTitle="Collaboration boundary"
-      insightDescription="The collaboration module stays narrow. It serves CRM execution and handoff instead of expanding into a general office platform."
+      insightTitle="Team boundary"
+      insightDescription="The team module stays narrow. It serves CRM execution and handoff instead of expanding into a general office platform."
       insights={insights}
       workspaceContext={{
-        workspace: 'Collaboration',
+        workspace: 'Team',
         channel: 'task-calendar-and-handoff',
         stage: currentView.title,
         summaryText: [
-          'Workspace: Collaboration',
+          'Workspace: Team',
           `Current view: ${currentView.title}`,
           `Task coverage: ${hasTaskObject ? `${taskTotalCount ?? 0} tasks` : 'task object unavailable'}`,
           `Tasks due today: ${hasTaskObject ? `${totalTasksDueTodayCount}` : 'unavailable'}`,

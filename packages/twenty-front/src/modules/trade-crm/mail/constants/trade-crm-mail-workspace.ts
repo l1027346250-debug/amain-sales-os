@@ -63,10 +63,23 @@ export type TradeCrmMailListItem = {
   tertiary: string;
   meta: string;
   status: string;
+  isPending?: boolean;
+  pendingReason?: string | null;
+  pendingUpdatedAt?: string | null;
   href?: string;
   threadId?: string;
   senderPoolMode?: string;
   tags?: string[];
+  personRecordId?: string;
+  personRecordHref?: string;
+  customerRecordId?: string;
+  customerRecordHref?: string;
+  opportunityRecordId?: string;
+  opportunityRecordHref?: string;
+  primaryRecordHref?: string;
+  primaryRecordLabel?: string;
+  secondaryRecordHref?: string;
+  secondaryRecordLabel?: string;
 };
 
 export type TradeCrmMailMetric = {
@@ -258,6 +271,37 @@ const customerSidebarItems: TradeCrmMailSidebarItem[] = [
   },
 ];
 
+const subordinateSidebarItems: TradeCrmMailSidebarItem[] = [
+  {
+    key: 'recent',
+    label: 'My Team',
+    hint: 'Review the latest mail activity across direct-report sellers.',
+    section: 'Subordinate queues',
+    countLabel: '12',
+  },
+  {
+    key: 'focus',
+    label: 'Needs Review',
+    hint: 'Escalate threads that still need manager review or owner correction.',
+    section: 'Subordinate queues',
+    countLabel: '5',
+  },
+  {
+    key: 'pending-replies',
+    label: 'Pending Handoff',
+    hint: 'Catch threads that are waiting on team follow-up or reassignment.',
+    section: 'Subordinate queues',
+    countLabel: '9',
+  },
+  {
+    key: 'long-tail',
+    label: 'Low Activity',
+    hint: 'Scan quiet subordinate accounts before they drift out of cadence.',
+    section: 'Subordinate queues',
+    countLabel: '18',
+  },
+];
+
 const campaignSidebarItems: TradeCrmMailSidebarItem[] = [
   {
     key: 'campaigns',
@@ -418,15 +462,20 @@ export const tradeCrmMailWorkspaceDefinitions: Record<
     listItems: [
       {
         id: 'mail-1',
+        threadId: '20202020-0d01-4e7c-8001-123456789def',
         primary: 'James Fischer <james@example.com>',
         secondary: 'Re: Quotation of the art design',
         tertiary:
           '客户已经回复并询问样品时间，报价附件与商机阶段需要一起复核。',
         meta: '2h ago · linked customer · active opportunity',
         status: 'Reply needed',
+        personRecordId: '29baa328-8e0c-4dc4-983d-f9393d701ec0',
+        customerRecordId: '0c0c525f-8814-4201-89ec-e14aef578f24',
+        opportunityRecordId: '5cba6b52-431d-4436-b6b7-27a84cdc19b7',
       },
       {
         id: 'mail-2',
+        threadId: '20202020-0d02-4e7c-8001-123456789def',
         primary: 'Raymond Zhao <raymond@buyer.com>',
         secondary: 'Unlock New Opportunities',
         tertiary:
@@ -436,6 +485,7 @@ export const tradeCrmMailWorkspaceDefinitions: Record<
       },
       {
         id: 'mail-3',
+        threadId: '20202020-0d03-4e7c-8001-123456789def',
         primary: 'System <noreply@example.com>',
         secondary: 'Shipping reminder',
         tertiary: '系统邮件应通过规则自动归档，不应长期停留在卖家待处理队列。',
@@ -520,6 +570,94 @@ export const tradeCrmMailWorkspaceDefinitions: Record<
         tertiary: '付款条款沟通需要和财务协同、风险标签以及回款状态一起呈现。',
         meta: 'Cooperating customer · active this week',
         status: 'Cross-team follow-up',
+      },
+    ],
+  },
+  subordinate: {
+    key: 'subordinate',
+    label: 'Subordinate View',
+    description: 'Manager mail review desk',
+    heroTitle:
+      'Review subordinate mail execution by owner, handoff pressure, and follow-up quality.',
+    heroDescription:
+      'The subordinate view is the manager surface for checking who replied, who is blocked, and which customer threads still need intervention. It should stay focused on execution, not become a second inbox.',
+    heroSummaryTitle: 'Current workspace',
+    heroSummaryText:
+      'Use this surface to inspect seller mail handling, reassign pressure, and coach follow-up quality without leaving the CRM operating layer.',
+    listTitle: 'Subordinate mail queue',
+    sidebarTitle: 'Subordinate view',
+    defaultViewKey: 'recent',
+    sidebarItems: subordinateSidebarItems,
+    metrics: [
+      {
+        label: 'Active sellers',
+        value: '12',
+        description:
+          'Direct-report sellers currently contributing visible mail activity.',
+      },
+      {
+        label: 'Needs review',
+        value: '5',
+        description:
+          'Threads that need manager review, reassignment, or next-step correction.',
+      },
+      {
+        label: 'Pending handoff',
+        value: '9',
+        description:
+          'Threads still waiting for owner follow-up or customer-to-opportunity handoff.',
+      },
+    ],
+    actionCards: [
+      {
+        title: 'Open Team Tasks',
+        description:
+          'Jump into the team task queue when mail review needs a concrete follow-up action.',
+        actionLabel: 'Open team tasks',
+        to: tradeCrmRouteMap.collaboration,
+      },
+      {
+        title: 'Open Customers',
+        description:
+          'Return to customer context when a subordinate thread should become an account action.',
+        actionLabel: 'Open customers',
+        to: tradeCrmRouteMap.customers,
+      },
+      {
+        title: 'Open Main Inbox',
+        description:
+          'Switch back to the inbox when the manager needs raw mailbox context before coaching the owner.',
+        actionLabel: 'Open inbox',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'inbox' }),
+      },
+    ],
+    listItems: [
+      {
+        id: 'subordinate-1',
+        primary: 'Tim Apple',
+        secondary: 'Latest thread: Re: Quotation for spring sourcing',
+        tertiary:
+          'Owner has not replied for 14 hours. Customer is already discussing quote timing and sample readiness.',
+        meta: 'Needs review · 3 active threads · quote stage',
+        status: 'Manager review',
+      },
+      {
+        id: 'subordinate-2',
+        primary: 'James Chen',
+        secondary: 'Latest thread: Sample lead time confirmation',
+        tertiary:
+          'Thread is waiting for owner handoff into the customer and opportunity workflow.',
+        meta: 'Pending handoff · 2 active threads · sample stage',
+        status: 'Reassign or coach',
+      },
+      {
+        id: 'subordinate-3',
+        primary: 'Annie Wu',
+        secondary: 'Latest thread: Pricing clarification for repeat buyer',
+        tertiary:
+          'Repeat customer is active again, but the follow-up rhythm has slowed and needs coaching.',
+        meta: 'Low activity · repeat customer · active this week',
+        status: 'Coaching needed',
       },
     ],
   },

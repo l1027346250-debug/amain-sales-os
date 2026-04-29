@@ -1,9 +1,15 @@
 ﻿import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { AppPath, SettingsPath } from 'twenty-shared/types';
+import {
+  AppPath,
+  CoreObjectNameSingular,
+  SettingsPath,
+} from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
+import { useOpenCreateActivityDrawer } from '@/activities/hooks/useOpenCreateActivityDrawer';
+import { type ActivityTargetableObject } from '@/activities/types/ActivityTargetableEntity';
 import { getTradeCrmCustomerPath } from '@/trade-crm/customers/utils/tradeCrmCustomerRouting';
 import {
   getTradeCrmScopedViewPath,
@@ -11,6 +17,8 @@ import {
 } from '@/trade-crm/navigation/tradeCrmRouteMap';
 
 import { MainContainerLayoutWithSidePanel } from '@/object-record/components/MainContainerLayoutWithSidePanel';
+import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
 import { TradeCrmMailFolderTree } from '@/trade-crm/mail/components/TradeCrmMailFolderTree';
 import {
   getTradeCrmMailSidebarLink,
@@ -26,6 +34,7 @@ import { QUEUE_DEVELOPMENT_EMAIL_CAMPAIGN } from '@/trade-crm/mail/graphql/mutat
 import { RECORD_DEVELOPMENT_EMAIL_BOUNCE_EVENT } from '@/trade-crm/mail/graphql/mutations/recordDevelopmentEmailBounceEvent';
 import { RECORD_DEVELOPMENT_EMAIL_EVENT } from '@/trade-crm/mail/graphql/mutations/recordDevelopmentEmailEvent';
 import { RECORD_DEVELOPMENT_EMAIL_UNSUBSCRIBE } from '@/trade-crm/mail/graphql/mutations/recordDevelopmentEmailUnsubscribe';
+import { UPSERT_TRADE_CRM_MAIL_THREAD_TASK_LINK } from '@/trade-crm/mail/graphql/mutations/upsertTradeCrmMailThreadTaskLink';
 import { START_DEVELOPMENT_EMAIL_SEND_JOB } from '@/trade-crm/mail/graphql/mutations/startDevelopmentEmailSendJob';
 import { UPDATE_TRADE_CRM_MAIL_THREAD_TAG } from '@/trade-crm/mail/graphql/mutations/updateTradeCrmMailThreadTag';
 import { UPDATE_TRADE_CRM_MAIL_THREAD_STATE } from '@/trade-crm/mail/graphql/mutations/updateTradeCrmMailThreadState';
@@ -42,6 +51,7 @@ import { GET_DEVELOPMENT_EMAIL_TRACKING_LINKS } from '@/trade-crm/mail/graphql/q
 import { GET_DEVELOPMENT_EMAIL_UNSUBSCRIBES } from '@/trade-crm/mail/graphql/queries/getDevelopmentEmailUnsubscribes';
 import { GET_DEVELOPMENT_EMAIL_WORKSPACE } from '@/trade-crm/mail/graphql/queries/getDevelopmentEmailWorkspace';
 import { GET_MY_INBOX_THREADS } from '@/trade-crm/mail/graphql/queries/getMyInboxThreads';
+import { GET_TRADE_CRM_MAIL_THREAD_TASK_LINKS } from '@/trade-crm/mail/graphql/queries/getTradeCrmMailThreadTaskLinks';
 import { useTradeCrmMailWorkspaceData } from '@/trade-crm/mail/hooks/useTradeCrmMailWorkspaceData';
 import {
   TRADE_CRM_MAIL_SCOPE_ORDER,
@@ -58,10 +68,63 @@ import { TradeCrmAiDock } from '@/trade-crm/shared/components/TradeCrmAiDock';
 import { TradeCrmLocaleSwitch } from '@/trade-crm/shared/components/TradeCrmLocaleSwitch';
 import { useTradeCrmLocale } from '@/trade-crm/shared/hooks/useTradeCrmLocale';
 import { tradeCrmUiTheme } from '@/trade-crm/shared/ui/tradeCrmUiTheme';
+import {
+  createTradeCrmRecordSource,
+  getTradeCrmRecordPathFromSource,
+} from '@/trade-crm/shared/navigation/tradeCrmRecordSource';
 import { PageContainer } from '@/ui/layout/page/components/PageContainer';
 import { PageHeader } from '@/ui/layout/page/components/PageHeader';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 import { formatToHumanReadableDate } from '~/utils/date-utils';
+
+type GenericTaskRecord = Record<string, unknown> & {
+  __typename: string;
+  id: string;
+};
+
+type TradeCrmMailThreadTaskLinkRecord = {
+  id: string;
+  threadId: string;
+  taskId: string;
+  updatedAt: string;
+};
+
+const getTaskTargets = (record: GenericTaskRecord | undefined) => {
+  if (!record || !('taskTargets' in record)) {
+    return [];
+  }
+
+  const taskTargets = record.taskTargets;
+
+  if (Array.isArray(taskTargets)) {
+    return taskTargets;
+  }
+
+  if (
+    taskTargets &&
+    typeof taskTargets === 'object' &&
+    Array.isArray((taskTargets as { edges?: unknown[] }).edges)
+  ) {
+    return (taskTargets as { edges: Array<{ node?: unknown }> }).edges
+      .map((edge) => edge.node)
+      .filter((node) => typeof node === 'object' && node !== null);
+  }
+
+  return [];
+};
+
+const getTaskTargetValue = (
+  taskTarget: unknown,
+  key: 'targetCompanyId' | 'companyId' | 'targetPersonId' | 'personId' | 'targetOpportunityId' | 'opportunityId',
+) => {
+  if (!taskTarget || typeof taskTarget !== 'object') {
+    return null;
+  }
+
+  const value = (taskTarget as Record<string, unknown>)[key];
+
+  return typeof value === 'string' ? value : null;
+};
 
 const StyledContent = styled.div`
   background: radial-gradient(
@@ -77,7 +140,7 @@ const StyledContent = styled.div`
   padding: ${themeCssVariables.spacing[3]};
 `;
 
-const StyledHero = styled.section`
+const StyledHero = styled.section<{ $compact?: boolean }>`
   align-items: center;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(31, 64, 112, 0.08);
@@ -86,12 +149,56 @@ const StyledHero = styled.section`
   display: flex;
   gap: ${themeCssVariables.spacing[3]};
   justify-content: space-between;
-  padding: ${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]};
+  padding: ${({ $compact }) =>
+    $compact
+      ? `${themeCssVariables.spacing[3]}`
+      : `${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]}`};
 
   @media (max-width: 1080px) {
     align-items: stretch;
     flex-direction: column;
   }
+`;
+
+const StyledCompactHeroStack = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledCompactHeroRow = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[3]};
+  justify-content: space-between;
+`;
+
+const StyledCompactHeroSummary = styled.div`
+  align-items: flex-start;
+  background: #f8fbff;
+  border: 1px solid rgba(10, 106, 255, 0.12);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[1]};
+  min-width: 240px;
+  padding: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledCompactHeroValue = styled.div`
+  color: #1e2126;
+  font-size: 22px;
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  line-height: 1.15;
+`;
+
+const StyledCompactHeroText = styled.div`
+  color: #66768f;
+  font-size: ${themeCssVariables.font.size.sm};
+  line-height: 1.5;
+  max-width: 680px;
 `;
 
 const StyledScopeTabs = styled.div`
@@ -217,17 +324,26 @@ const StyledHeroSummaryText = styled.div`
   line-height: 1.6;
 `;
 
-const StyledWorkspace = styled.div`
+const StyledWorkspace = styled.div<{
+  $withoutInsight?: boolean;
+  $relationshipScope?: boolean;
+}>`
   display: grid;
   gap: ${themeCssVariables.spacing[3]};
-  grid-template-columns: 260px minmax(0, 1fr) 340px;
+  grid-template-columns: ${({ $withoutInsight, $relationshipScope }) => {
+    const sidebarWidth = $relationshipScope ? '236px' : '260px';
+
+    return $withoutInsight
+      ? `${sidebarWidth} minmax(0, 1fr)`
+      : `${sidebarWidth} minmax(0, 1fr) 340px`;
+  }};
 
   @media (max-width: 1220px) {
     grid-template-columns: 1fr;
   }
 `;
 
-const StyledSidebar = styled.aside`
+const StyledSidebar = styled.aside<{ $relationshipScope?: boolean }>`
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(31, 64, 112, 0.08);
   border-radius: 18px;
@@ -235,7 +351,10 @@ const StyledSidebar = styled.aside`
   display: flex;
   flex-direction: column;
   gap: ${themeCssVariables.spacing[3]};
-  padding: ${themeCssVariables.spacing[3]};
+  padding: ${({ $relationshipScope }) =>
+    $relationshipScope
+      ? `${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[2]}`
+      : themeCssVariables.spacing[3]};
   position: sticky;
   top: ${themeCssVariables.spacing[4]};
 `;
@@ -323,6 +442,12 @@ const StyledSidebarHint = styled.div`
   color: #98a2b3;
   font-size: ${themeCssVariables.font.size.xs};
   line-height: 1.45;
+`;
+
+const StyledSidebarControls = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledMainColumn = styled.div`
@@ -536,10 +661,13 @@ const StyledListActions = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledMailWorkbench = styled.div`
+const StyledMailWorkbench = styled.div<{ $relationshipView?: boolean }>`
   display: grid;
   gap: ${themeCssVariables.spacing[3]};
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.9fr);
+  grid-template-columns: ${({ $relationshipView }) =>
+    $relationshipView
+      ? 'minmax(320px, 0.88fr) minmax(520px, 1.12fr)'
+      : 'minmax(0, 1.2fr) minmax(280px, 0.9fr)'};
 
   @media (max-width: 1180px) {
     grid-template-columns: 1fr;
@@ -627,8 +755,8 @@ const StyledMailWorkbenchItem = styled.button<{ $active: boolean }>`
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: ${themeCssVariables.spacing[2]};
-  padding: ${themeCssVariables.spacing[3]};
+  gap: 10px;
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
   text-align: left;
 `;
 
@@ -652,7 +780,9 @@ const StyledMailWorkbenchMeta = styled.div`
   line-height: 1.45;
 `;
 
-const StyledMailWorkbenchPreview = styled.div`
+const StyledMailWorkbenchPreview = styled.div<{ $relationshipView?: boolean }>`
+  align-self: ${({ $relationshipView }) =>
+    $relationshipView ? 'start' : 'stretch'};
   background: #fbfdff;
   border: 1px solid rgba(31, 64, 112, 0.08);
   border-radius: 18px;
@@ -661,6 +791,10 @@ const StyledMailWorkbenchPreview = styled.div`
   gap: ${themeCssVariables.spacing[3]};
   min-height: 100%;
   padding: ${themeCssVariables.spacing[3]};
+  position: ${({ $relationshipView }) =>
+    $relationshipView ? 'sticky' : 'static'};
+  top: ${({ $relationshipView }) =>
+    $relationshipView ? themeCssVariables.spacing[4] : 'auto'};
 `;
 
 const StyledMailPreviewTopbar = styled.div`
@@ -681,6 +815,76 @@ const StyledMailPreviewSideStack = styled.div`
   display: grid;
   gap: ${themeCssVariables.spacing[3]};
   grid-template-columns: minmax(0, 1fr);
+`;
+
+const StyledMailRelationshipPreviewGrid = styled.div`
+  display: grid;
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.98fr);
+
+  @media (max-width: 1180px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const StyledMailRelationshipDetailStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMailAssistantTabs = styled.div`
+  align-items: center;
+  border-bottom: 1px solid rgba(31, 64, 112, 0.08);
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+  padding-bottom: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledMailAssistantTab = styled.button`
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #76839b;
+  cursor: pointer;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  padding: 0 0 ${themeCssVariables.spacing[1]} 0;
+
+  &[data-active='true'] {
+    border-bottom-color: #0a6aff;
+    color: #0a6aff;
+  }
+`;
+
+const StyledMailTagRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledMailTag = styled.div`
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 999px;
+  color: #0a6aff;
+  display: inline-flex;
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+  min-height: 28px;
+  padding: 0 ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMailQuote = styled.div`
+  background: #f8fbff;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 12px;
+  color: ${tradeCrmUiTheme.colors.inkMuted};
+  font-size: ${themeCssVariables.font.size.sm};
+  line-height: 1.7;
+  padding: ${themeCssVariables.spacing[3]};
+  white-space: pre-wrap;
 `;
 
 const StyledMailProfileGrid = styled.div`
@@ -1100,6 +1304,35 @@ const getInsightItems = (scope: TradeCrmMailScopeKey): RecordInsightItem[] => {
     ];
   }
 
+  if (scope === 'subordinate') {
+    return [
+      {
+        label: 'Primary goal',
+        value: 'Manager review and coaching',
+        description:
+          'This surface exists to review subordinate reply quality, handoff delays, and ownership gaps before they become customer risk.',
+      },
+      {
+        label: 'Priority logic',
+        value: 'Owner pressure plus customer value',
+        description:
+          'Threads should rise when reply latency, quote-stage activity, or key-account value makes manager intervention necessary.',
+      },
+      {
+        label: 'CRM discipline',
+        value: 'Coach back into customer flow',
+        description:
+          'A subordinate thread only matters if it returns to customer, opportunity, or team-task execution with a clear owner.',
+      },
+      {
+        label: 'AI boundary',
+        value: 'Summarize and route',
+        description:
+          'AI can highlight blocked sellers and suggest reassignment, but it cannot change ownership or send mail on behalf of a manager.',
+      },
+    ];
+  }
+
   return [
     {
       label: 'Core reuse',
@@ -1128,7 +1361,40 @@ const getInsightItems = (scope: TradeCrmMailScopeKey): RecordInsightItem[] => {
   ];
 };
 
+const getInsightPanelCopy = (scope: TradeCrmMailScopeKey) => {
+  if (scope === 'campaign') {
+    return {
+      title: 'Outbound Control',
+      description:
+        'Keep sender health, unsubscribe discipline, delivery risk, and operator actions visible in the right-side control panel.',
+    };
+  }
+
+  if (scope === 'customer') {
+    return {
+      title: 'Customer Communication Context',
+      description:
+        'Use the right-side panel to keep customer value, latest mail signal, and the next CRM action visible while handling threads.',
+    };
+  }
+
+  if (scope === 'subordinate') {
+    return {
+      title: 'Manager Review Context',
+      description:
+        'The right-side panel should help a manager spot reply pressure, coaching needs, and handoff risk without leaving the mail desk.',
+    };
+  }
+
+  return {
+    title: 'Mailbox Operating Rules',
+    description:
+      'Keep reply pressure, folder discipline, CRM linkage, and AI guardrails visible while sellers work through the inbox.',
+  };
+};
+
 export const TradeCrmMailPage = () => {
+  const apolloCoreClient = useApolloCoreClient();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedScope = searchParams.get('scope');
@@ -1159,6 +1425,9 @@ export const TradeCrmMailPage = () => {
   const { tr } = useTradeCrmLocale();
   const { copyToClipboard } = useCopyToClipboard();
   const { openEmailThreadInSidePanel } = useOpenEmailThreadInSidePanel();
+  const openCreateTaskDrawer = useOpenCreateActivityDrawer({
+    activityObjectNameSingular: CoreObjectNameSingular.Task,
+  });
   const [audienceEmail, setAudienceEmail] = useState('');
   const [audienceDisplayName, setAudienceDisplayName] = useState('');
   const [templateName, setTemplateName] = useState('');
@@ -1244,6 +1513,12 @@ export const TradeCrmMailPage = () => {
     updateTradeCrmMailThreadStateMutation,
     { loading: updatingTradeCrmMailThreadState },
   ] = useMutation(UPDATE_TRADE_CRM_MAIL_THREAD_STATE);
+  const [upsertTradeCrmMailThreadTaskLinkMutation] = useMutation(
+    UPSERT_TRADE_CRM_MAIL_THREAD_TASK_LINK,
+    {
+      client: apolloCoreClient,
+    },
+  );
   const currentScope = getCurrentScope(
     legacyMailRouteTarget?.scope ?? requestedScope,
   );
@@ -1931,8 +2206,26 @@ export const TradeCrmMailPage = () => {
   });
   const renderedMetrics =
     inboxMetrics.length > 0 ? inboxMetrics : workspace.metrics;
+  const shouldUseWorkspaceListFallback =
+    currentScope === 'mail' &&
+    ![
+      'pending-replies',
+      'templates',
+      'sequences',
+      'sender-pool',
+      'campaigns',
+      'jobs',
+      'bounces',
+      'unsubscribes',
+      'analytics',
+      'reports',
+    ].includes(currentViewKey);
   const renderedListItems =
-    recentThreads.length > 0 ? recentThreads : workspace.listItems;
+    recentThreads.length > 0
+      ? recentThreads
+      : shouldUseWorkspaceListFallback
+        ? workspace.listItems
+        : [];
   const filteredRenderedListItems =
     currentScope === 'campaign' && currentViewKey === 'jobs'
       ? renderedListItems.filter((item) => {
@@ -1965,21 +2258,56 @@ export const TradeCrmMailPage = () => {
       : availableSendJobs.length;
   const isMailboxWorkbenchView =
     currentScope === 'mail' &&
-    ['inbox', 'sent', 'unread', 'pending', 'tagged', 'search'].includes(
+    ['inbox', 'sent', 'unread', 'tagged', 'search'].includes(
+      currentViewKey,
+    );
+  const isPendingActionQueueView =
+    currentScope === 'mail' && currentViewKey === 'pending';
+  const pendingThreadIds = isPendingActionQueueView
+    ? filteredRenderedListItems
+        .map((item) => item.threadId)
+        .filter((threadId): threadId is string => typeof threadId === 'string')
+    : [];
+  const { data: pendingThreadTaskLinksData } = useQuery<{
+    getTradeCrmMailThreadTaskLinks: TradeCrmMailThreadTaskLinkRecord[];
+  }>(GET_TRADE_CRM_MAIL_THREAD_TASK_LINKS, {
+    client: apolloCoreClient,
+    variables: {
+      threadIds: pendingThreadIds,
+    },
+    skip: pendingThreadIds.length === 0,
+  });
+  const pendingThreadTaskLinksByThreadId = useMemo(
+    () =>
+      (
+        pendingThreadTaskLinksData?.getTradeCrmMailThreadTaskLinks ?? []
+      ).reduce<Record<string, string>>((accumulator, threadTaskLink) => {
+        accumulator[threadTaskLink.threadId] = threadTaskLink.taskId;
+
+        return accumulator;
+      }, {}),
+    [pendingThreadTaskLinksData],
+  );
+  const isSubordinateWorkbenchView =
+    currentScope === 'subordinate' &&
+    ['recent', 'focus', 'pending-replies', 'long-tail'].includes(
       currentViewKey,
     );
   const isCustomerWorkbenchView =
-    currentScope === 'customer' &&
-    [
-      'recent',
-      'focus',
-      'cooperating',
-      'potential',
-      'intent',
-      'key',
-      'normal',
-      'long-tail',
-    ].includes(currentViewKey);
+    (currentScope === 'customer' &&
+      [
+        'recent',
+        'focus',
+        'cooperating',
+        'potential',
+        'intent',
+        'key',
+        'normal',
+        'long-tail',
+      ].includes(currentViewKey)) ||
+    isSubordinateWorkbenchView;
+  const isFolderManagementView =
+    currentScope === 'mail' && currentViewKey === 'folders';
   const hasNoFilteredSendJobs =
     currentScope === 'campaign' &&
     currentViewKey === 'jobs' &&
@@ -2141,6 +2469,13 @@ export const TradeCrmMailPage = () => {
         )
       : null) ??
     (isMailboxWorkbenchView ? filteredRenderedListItems[0] : undefined);
+  const selectedPendingPreviewItem =
+    (isPendingActionQueueView
+      ? filteredRenderedListItems.find(
+          (item) => item.threadId === selectedPreviewThreadId,
+        )
+      : null) ??
+    (isPendingActionQueueView ? filteredRenderedListItems[0] : undefined);
   const selectedCustomerPreviewItem =
     (isCustomerWorkbenchView
       ? filteredRenderedListItems.find(
@@ -2183,6 +2518,7 @@ export const TradeCrmMailPage = () => {
     selectedCustomerPreviewItem?.tertiary ?? '当前分组下没有可预览的客户邮件。';
   const customerSelectedMeta =
     selectedCustomerPreviewItem?.meta ?? '暂无最近活动';
+  const customerSelectedThreadId = selectedCustomerPreviewItem?.threadId ?? null;
   const customerSelectedSuggestions = selectedCustomerPreviewItem
     ? [
         '优先判断当前客户是否需要回到商机、报价或样品推进链路。',
@@ -2190,6 +2526,238 @@ export const TradeCrmMailPage = () => {
         '如果客户持续活跃但未推进，建议补任务、负责人和标签。',
       ]
     : ['当前没有可操作客户，请先从列表选择一个客户。'];
+  const pendingSelectedCustomerName =
+    selectedPendingPreviewItem?.primary ?? '当前没有选中待处理线程';
+  const pendingSelectedThreadTitle =
+    selectedPendingPreviewItem?.secondary ?? '暂无待处理线程';
+  const pendingSelectedThreadSummary =
+    selectedPendingPreviewItem?.tertiary ??
+    '当前筛选条件下没有待处理邮件。';
+  const pendingSelectedThreadMeta =
+    selectedPendingPreviewItem?.meta ?? '暂无待处理记录';
+  const pendingSelectedReason =
+    selectedPendingPreviewItem?.pendingReason ?? 'Manual review';
+  const pendingSelectedUpdatedAt =
+    selectedPendingPreviewItem?.pendingUpdatedAt
+      ? formatToHumanReadableDate(selectedPendingPreviewItem.pendingUpdatedAt)
+      : 'not recorded';
+  const pendingPrimaryActionPath =
+    selectedPendingPreviewItem?.primaryRecordHref ?? tradeCrmRouteMap.customers;
+  const pendingPrimaryActionLabel =
+    selectedPendingPreviewItem?.primaryRecordLabel ?? '进入客户处理';
+  const pendingSecondaryActionPath =
+    selectedPendingPreviewItem?.secondaryRecordHref ??
+    tradeCrmRouteMap.opportunities;
+  const pendingSecondaryActionLabel =
+    selectedPendingPreviewItem?.secondaryRecordLabel ?? '进入商机处理';
+  const pendingSuggestedDestination = [
+    selectedPendingPreviewItem?.primaryRecordLabel,
+    selectedPendingPreviewItem?.secondaryRecordLabel,
+    'Tasks',
+  ]
+    .filter((label): label is string => Boolean(label))
+    .join(' / ');
+  const pendingSelectedSuggestions = selectedPendingPreviewItem
+    ? [
+        '先打开线程确认回复责任，再决定是否清除待处理或继续保留。',
+        '对未挂客户或商机的线程，优先回到 Customers 或 Opportunities 补业务上下文。',
+        '如果线程已过卖家可控范围，就把下一步动作转回任务队列和负责人。',
+      ]
+    : ['当前没有待处理线程，请先从待处理列表选择一项。'];
+  const pendingTaskTargetableObject: ActivityTargetableObject | null =
+    selectedPendingPreviewItem?.opportunityRecordId
+      ? {
+          id: selectedPendingPreviewItem.opportunityRecordId,
+          targetObjectNameSingular: CoreObjectNameSingular.Opportunity,
+        }
+      : selectedPendingPreviewItem?.customerRecordId
+        ? {
+            id: selectedPendingPreviewItem.customerRecordId,
+            targetObjectNameSingular: CoreObjectNameSingular.Company,
+          }
+        : selectedPendingPreviewItem?.personRecordId
+          ? {
+              id: selectedPendingPreviewItem.personRecordId,
+              targetObjectNameSingular: CoreObjectNameSingular.Person,
+            }
+          : null;
+  const { records: pendingTaskRecords } = useFindManyRecords<GenericTaskRecord>({
+    objectNameSingular: CoreObjectNameSingular.Task,
+    limit: 100,
+    skip:
+      !isPendingActionQueueView || pendingTaskTargetableObject === null,
+  });
+  const pendingTaskRecordSource = useMemo(
+    () =>
+      createTradeCrmRecordSource({
+        href: getTradeCrmMailPath({
+          scope: currentScope,
+          view: currentViewKey,
+        }),
+        workspaceKey: 'mail',
+        workspaceLabel: 'Mail',
+        viewKey: currentViewKey,
+        viewLabel: currentViewItem.label,
+        trail: selectedPendingPreviewItem?.threadId
+          ? `thread:${selectedPendingPreviewItem.threadId}`
+          : undefined,
+      }),
+    [
+      currentScope,
+      currentViewItem.label,
+      currentViewKey,
+      selectedPendingPreviewItem?.threadId,
+    ],
+  );
+  const exactPendingTaskRecordId = selectedPendingPreviewItem?.threadId
+    ? pendingThreadTaskLinksByThreadId[selectedPendingPreviewItem.threadId]
+    : undefined;
+  const pendingLinkedTaskRecord = useMemo(() => {
+    if (!selectedPendingPreviewItem) {
+      return undefined;
+    }
+
+    if (typeof exactPendingTaskRecordId === 'string') {
+      return (pendingTaskRecords ?? []).find(
+        (record) => record.id === exactPendingTaskRecordId,
+      );
+    }
+
+    return (pendingTaskRecords ?? []).find((record) => {
+      const taskTargets = getTaskTargets(record);
+
+      return taskTargets.some((taskTarget) => {
+        const targetOpportunityId =
+          getTaskTargetValue(taskTarget, 'targetOpportunityId') ??
+          getTaskTargetValue(taskTarget, 'opportunityId');
+        const targetCompanyId =
+          getTaskTargetValue(taskTarget, 'targetCompanyId') ??
+          getTaskTargetValue(taskTarget, 'companyId');
+        const targetPersonId =
+          getTaskTargetValue(taskTarget, 'targetPersonId') ??
+          getTaskTargetValue(taskTarget, 'personId');
+
+        return (
+          (selectedPendingPreviewItem.opportunityRecordId != null &&
+            targetOpportunityId ===
+              selectedPendingPreviewItem.opportunityRecordId) ||
+          (selectedPendingPreviewItem.customerRecordId != null &&
+            targetCompanyId === selectedPendingPreviewItem.customerRecordId) ||
+          (selectedPendingPreviewItem.personRecordId != null &&
+            targetPersonId === selectedPendingPreviewItem.personRecordId)
+        );
+      });
+    });
+  }, [
+    exactPendingTaskRecordId,
+    pendingTaskRecords,
+    selectedPendingPreviewItem,
+  ]);
+  const pendingLinkedTaskRecordId =
+    pendingLinkedTaskRecord?.id ?? exactPendingTaskRecordId;
+  const pendingTaskRecordPath =
+    typeof pendingLinkedTaskRecordId === 'string'
+      ? getTradeCrmRecordPathFromSource({
+          objectNameSingular: CoreObjectNameSingular.Task,
+          objectRecordId: pendingLinkedTaskRecordId,
+          source: pendingTaskRecordSource,
+        })
+      : undefined;
+  const handleCreatePendingTask = async () => {
+    const createdTaskId = await openCreateTaskDrawer({
+      targetableObjects: pendingTaskTargetableObject
+        ? [pendingTaskTargetableObject]
+        : [],
+    });
+
+    if (!selectedPendingPreviewItem?.threadId) {
+      return;
+    }
+
+    await upsertTradeCrmMailThreadTaskLinkMutation({
+      variables: {
+        input: {
+          threadId: selectedPendingPreviewItem.threadId,
+          taskId: createdTaskId,
+        },
+      },
+      refetchQueries:
+        pendingThreadIds.length > 0
+          ? [
+              {
+                query: GET_TRADE_CRM_MAIL_THREAD_TASK_LINKS,
+                variables: {
+                  threadIds: pendingThreadIds,
+                },
+              },
+            ]
+          : [],
+      awaitRefetchQueries: true,
+    });
+  };
+  const subordinateSelectedSuggestions = selectedCustomerPreviewItem
+    ? [
+        '先确认负责人是否超时未回复，再决定是否直接介入或转交。',
+        '如果线程已经进入报价或样品阶段，优先把动作压回客户和商机链路。',
+        '对持续低活跃的销售，补充下一步动作和管理备注，避免客户再次沉默。',
+      ]
+    : ['当前没有可审阅的下属线程，请先从左侧列表选择一项。'];
+  const relationshipWorkbenchTitle = isSubordinateWorkbenchView
+    ? '下属邮件面板'
+    : '客户邮件面板';
+  const relationshipListPrimaryLabel = isSubordinateWorkbenchView
+    ? '负责人'
+    : '客户';
+  const relationshipListMetaLabel = isSubordinateWorkbenchView
+    ? '负责人与最近线程'
+    : '最近线程与摘要';
+  const relationshipStatusLabel = isSubordinateWorkbenchView
+    ? '处理状态 / 风险'
+    : '分组 / 状态';
+  const relationshipRecordLabel = isSubordinateWorkbenchView
+    ? '负责人档案'
+    : '客户档案';
+  const relationshipNameLabel = isSubordinateWorkbenchView
+    ? '负责人'
+    : '客户名称';
+  const relationshipGroupLabel = isSubordinateWorkbenchView
+    ? '管理分组'
+    : '客户分组';
+  const relationshipActionPrimaryLabel = isSubordinateWorkbenchView
+    ? '打开团队工作面'
+    : selectedCustomerPreviewItem?.primaryRecordLabel ?? '打开客户详情';
+  const relationshipActionPrimaryPath = isSubordinateWorkbenchView
+    ? tradeCrmRouteMap.collaboration
+    : selectedCustomerPreviewItem?.primaryRecordHref ??
+      selectedCustomerPreviewItem?.href ??
+      tradeCrmRouteMap.customers;
+  const relationshipActionSecondaryLabel = isSubordinateWorkbenchView
+    ? '进入客户处理'
+    : selectedCustomerPreviewItem?.secondaryRecordLabel ?? '进入商机处理';
+  const relationshipActionSecondaryPath = isSubordinateWorkbenchView
+    ? tradeCrmRouteMap.customers
+    : selectedCustomerPreviewItem?.secondaryRecordHref ??
+      tradeCrmRouteMap.opportunities;
+  const relationshipSuggestions = isSubordinateWorkbenchView
+    ? subordinateSelectedSuggestions
+    : customerSelectedSuggestions;
+  const relationshipAssistantTabs = isSubordinateWorkbenchView
+    ? ['AI 审阅', '动态', '资料', '团队负载', '风险']
+    : ['OKKI AI', '动态', '资料', '商机&交易', '数据'];
+  const relationshipTags = isSubordinateWorkbenchView
+    ? [currentViewItem.label, selectedCustomerPreviewItem?.status ?? '待审阅']
+    : [currentViewItem.label, selectedCustomerPreviewItem?.status ?? '待推进', '客户邮件'];
+  const relationshipDetailBody = isSubordinateWorkbenchView
+    ? [
+        `负责人视角：${customerSelectedName}`,
+        customerSelectedSummary,
+        '优先检查是否超时未回复、是否需要转交，以及是否已经回写到客户或商机链路。',
+      ].join('\n\n')
+    : [
+        customerSelectedSummary,
+        '建议在这里同时判断客户阶段、最近一封邮件、下一步动作，以及是否应该回到商机或报价链路继续推进。',
+      ].join('\n\n');
+  const insightPanelCopy = getInsightPanelCopy(currentScope);
   const isDevelopmentEmailWorkbenchView =
     currentScope === 'campaign' &&
     ['campaigns', 'jobs', 'analytics'].includes(currentViewKey);
@@ -2239,6 +2807,15 @@ export const TradeCrmMailPage = () => {
     typeof selectedSendTask?.trackingSnapshot?.lastCallbackAt === 'string'
       ? selectedSendTask.trackingSnapshot.lastCallbackAt
       : null;
+  const isOperationalMailScope = currentScope !== 'campaign';
+  const shouldHideInsightRail = isOperationalMailScope;
+  const shouldRenderNarrativeMetrics = currentScope === 'campaign';
+  const compactHeroSummaryText =
+    currentScope === 'mail'
+      ? '收件箱、待处理、文件夹、标签和 CRM 上下文放在同一工作面里处理。'
+      : currentScope === 'customer'
+        ? '按客户归档邮件，把线程持续压回客户、联系人和商机。'
+        : '按负责人审阅下属邮件，把跟进压力、交接风险和管理动作放在一起。';
   const selectedSendTaskStatusFromCallback =
     typeof selectedSendTask?.trackingSnapshot?.statusFromCallback === 'string'
       ? selectedSendTask.trackingSnapshot.statusFromCallback
@@ -2976,68 +3553,179 @@ export const TradeCrmMailPage = () => {
       </PageHeader>
       <MainContainerLayoutWithSidePanel>
         <StyledContent>
-          <StyledHero>
-            <StyledScopeTabs>
-              {TRADE_CRM_MAIL_SCOPE_ORDER.map((scopeKey) => {
-                const scopeWorkspace = getTradeCrmMailWorkspace(scopeKey);
+          <StyledHero $compact={isOperationalMailScope}>
+            {isOperationalMailScope ? (
+              <StyledCompactHeroStack>
+                <StyledCompactHeroRow>
+                  <StyledScopeTabs>
+                    {TRADE_CRM_MAIL_SCOPE_ORDER.map((scopeKey) => {
+                      const scopeWorkspace = getTradeCrmMailWorkspace(scopeKey);
 
-                return (
-                  <StyledScopeTab
-                    key={scopeKey}
-                    to={getTradeCrmMailPath({
-                      scope: scopeKey,
-                      view: scopeWorkspace.defaultViewKey,
+                      return (
+                        <StyledScopeTab
+                          key={scopeKey}
+                          to={getTradeCrmMailPath({
+                            scope: scopeKey,
+                            view: scopeWorkspace.defaultViewKey,
+                          })}
+                          data-active={
+                            scopeKey === currentScope ? 'true' : 'false'
+                          }
+                        >
+                          {tr(scopeWorkspace.label)}
+                        </StyledScopeTab>
+                      );
                     })}
-                    data-active={scopeKey === currentScope ? 'true' : 'false'}
-                  >
-                    {tr(scopeWorkspace.label)}
-                  </StyledScopeTab>
-                );
-              })}
-            </StyledScopeTabs>
-            <StyledSubviewTabs>
-              {heroSubviewItems.map((item) => (
-                <StyledSubviewTab
-                  key={item.key}
-                  to={getTradeCrmMailSidebarLink({
-                    scope: currentScope,
-                    item,
+                  </StyledScopeTabs>
+                  <StyledSubviewTabs>
+                    {heroSubviewItems.map((item) => (
+                      <StyledSubviewTab
+                        key={item.key}
+                        to={getTradeCrmMailSidebarLink({
+                          scope: currentScope,
+                          item,
+                        })}
+                        data-active={
+                          item.key === currentViewKey ? 'true' : 'false'
+                        }
+                      >
+                        {tr(item.label)}
+                      </StyledSubviewTab>
+                    ))}
+                  </StyledSubviewTabs>
+                </StyledCompactHeroRow>
+                <StyledCompactHeroSummary>
+                  <StyledEyebrow>{tr(workspace.description)}</StyledEyebrow>
+                  <StyledCompactHeroValue>
+                    {tr(currentViewItem.label)}
+                  </StyledCompactHeroValue>
+                  <StyledCompactHeroText>
+                    {tr(compactHeroSummaryText)}
+                  </StyledCompactHeroText>
+                </StyledCompactHeroSummary>
+              </StyledCompactHeroStack>
+            ) : (
+              <>
+                <StyledScopeTabs>
+                  {TRADE_CRM_MAIL_SCOPE_ORDER.map((scopeKey) => {
+                    const scopeWorkspace = getTradeCrmMailWorkspace(scopeKey);
+
+                    return (
+                      <StyledScopeTab
+                        key={scopeKey}
+                        to={getTradeCrmMailPath({
+                          scope: scopeKey,
+                          view: scopeWorkspace.defaultViewKey,
+                        })}
+                        data-active={
+                          scopeKey === currentScope ? 'true' : 'false'
+                        }
+                      >
+                        {tr(scopeWorkspace.label)}
+                      </StyledScopeTab>
+                    );
                   })}
-                  data-active={item.key === currentViewKey ? 'true' : 'false'}
-                >
-                  {tr(item.label)}
-                </StyledSubviewTab>
-              ))}
-            </StyledSubviewTabs>
-            <StyledHeroGrid>
-              <StyledHeroCopy>
-                <StyledEyebrow>{tr(workspace.description)}</StyledEyebrow>
-                <StyledHeroTitle>{tr(workspace.heroTitle)}</StyledHeroTitle>
-                <StyledHeroDescription>
-                  {tr(workspace.heroDescription)}
-                </StyledHeroDescription>
-              </StyledHeroCopy>
-              <StyledHeroSummary>
-                <StyledHeroSummaryTitle>
-                  {tr(workspace.heroSummaryTitle)}
-                </StyledHeroSummaryTitle>
-                <StyledHeroSummaryValue>
-                  {tr(currentViewItem.label)}
-                </StyledHeroSummaryValue>
-                <StyledHeroSummaryText>
-                  {tr(workspace.heroSummaryText)}
-                </StyledHeroSummaryText>
-              </StyledHeroSummary>
-            </StyledHeroGrid>
+                </StyledScopeTabs>
+                <StyledSubviewTabs>
+                  {heroSubviewItems.map((item) => (
+                    <StyledSubviewTab
+                      key={item.key}
+                      to={getTradeCrmMailSidebarLink({
+                        scope: currentScope,
+                        item,
+                      })}
+                      data-active={
+                        item.key === currentViewKey ? 'true' : 'false'
+                      }
+                    >
+                      {tr(item.label)}
+                    </StyledSubviewTab>
+                  ))}
+                </StyledSubviewTabs>
+                <StyledHeroGrid>
+                  <StyledHeroCopy>
+                    <StyledEyebrow>{tr(workspace.description)}</StyledEyebrow>
+                    <StyledHeroTitle>{tr(workspace.heroTitle)}</StyledHeroTitle>
+                    <StyledHeroDescription>
+                      {tr(workspace.heroDescription)}
+                    </StyledHeroDescription>
+                  </StyledHeroCopy>
+                  <StyledHeroSummary>
+                    <StyledHeroSummaryTitle>
+                      {tr(workspace.heroSummaryTitle)}
+                    </StyledHeroSummaryTitle>
+                    <StyledHeroSummaryValue>
+                      {tr(currentViewItem.label)}
+                    </StyledHeroSummaryValue>
+                    <StyledHeroSummaryText>
+                      {tr(workspace.heroSummaryText)}
+                    </StyledHeroSummaryText>
+                  </StyledHeroSummary>
+                </StyledHeroGrid>
+              </>
+            )}
           </StyledHero>
-          <StyledWorkspace>
-            <StyledSidebar>
-              <StyledSidebarTitle>
-                {tr(workspace.sidebarTitle)}
-              </StyledSidebarTitle>
+          <StyledWorkspace
+            $relationshipScope={
+              currentScope === 'customer' || currentScope === 'subordinate'
+            }
+            $withoutInsight={shouldHideInsightRail}
+          >
+            <StyledSidebar
+              $relationshipScope={
+                currentScope === 'customer' || currentScope === 'subordinate'
+              }
+            >
+              <StyledSidebarTitle>{tr(workspace.sidebarTitle)}</StyledSidebarTitle>
               <StyledComposeButton to={composeEntryPath}>
                 {composeEntryLabel}
               </StyledComposeButton>
+              {currentScope === 'customer' ? (
+                <StyledSidebarControls>
+                  <StyledInput
+                    onChange={(event) =>
+                      handleMailSearchChange(event.target.value)
+                    }
+                    placeholder={tr('客户名称/编号/邮箱/联系人')}
+                    value={mailSearchQuery}
+                  />
+                  <StyledSelect
+                    onChange={(event) => {
+                      window.location.assign(
+                        getTradeCrmMailPath({
+                          scope: 'customer',
+                          view: event.target.value as TradeCrmMailViewKey,
+                        }),
+                      );
+                    }}
+                    value={currentViewKey}
+                  >
+                    {heroSubviewItems.map((item) => (
+                      <option key={item.key} value={item.key}>
+                        {tr(item.label)}
+                      </option>
+                    ))}
+                  </StyledSelect>
+                </StyledSidebarControls>
+              ) : null}
+              {currentScope === 'subordinate' ? (
+                <StyledSidebarControls>
+                  <StyledInput
+                    onChange={(event) =>
+                      handleMailSearchChange(event.target.value)
+                    }
+                    placeholder={tr('负责人 / 客户 / 主题')}
+                    value={mailSearchQuery}
+                  />
+                  <StyledSelect
+                    aria-label={tr('Subordinate filter')}
+                    onChange={() => undefined}
+                    value="all"
+                  >
+                    <option value="all">{tr('所有下属')}</option>
+                  </StyledSelect>
+                </StyledSidebarControls>
+              ) : null}
               {sidebarSections.map(({ section, items }, index) => (
                 <StyledSidebarSection
                   key={section}
@@ -3372,17 +4060,19 @@ export const TradeCrmMailPage = () => {
                     })}
                   </StyledFilterPresetRow>
                 ) : null}
-                <StyledMetrics>
-                  {renderedMetrics.map((metric) => (
-                    <StyledMetricCard key={metric.label}>
-                      <StyledMetricLabel>{tr(metric.label)}</StyledMetricLabel>
-                      <StyledMetricValue>{metric.value}</StyledMetricValue>
-                      <StyledMetricDescription>
-                        {tr(metric.description)}
-                      </StyledMetricDescription>
-                    </StyledMetricCard>
-                  ))}
-                </StyledMetrics>
+                {shouldRenderNarrativeMetrics ? (
+                  <StyledMetrics>
+                    {renderedMetrics.map((metric) => (
+                      <StyledMetricCard key={metric.label}>
+                        <StyledMetricLabel>{tr(metric.label)}</StyledMetricLabel>
+                        <StyledMetricValue>{metric.value}</StyledMetricValue>
+                        <StyledMetricDescription>
+                          {tr(metric.description)}
+                        </StyledMetricDescription>
+                      </StyledMetricCard>
+                    ))}
+                  </StyledMetrics>
+                ) : null}
               </StyledPanel>
               <StyledPanel>
                 <StyledSectionTitle>
@@ -5281,13 +5971,228 @@ export const TradeCrmMailPage = () => {
                       )}
                     </StyledMailWorkbenchPreview>
                   </StyledMailWorkbench>
-                ) : isCustomerWorkbenchView ? (
+                ) : isPendingActionQueueView ? (
                   <StyledMailWorkbench>
                     <StyledMailWorkbenchList>
                       <StyledMailWorkbenchListHeader>
-                        <div>{tr('客户')}</div>
-                        <div>{tr('最近线程与摘要')}</div>
-                        <div>{tr('分组 / 状态')}</div>
+                        <div>{tr('客户 / 线程')}</div>
+                        <div>{tr('待处理原因')}</div>
+                        <div>{tr('更新时间 / 状态')}</div>
+                      </StyledMailWorkbenchListHeader>
+                      {filteredRenderedListItems.map((item) => (
+                        <StyledMailWorkbenchItem
+                          $active={item.id === selectedPendingPreviewItem?.id}
+                          key={item.id}
+                          onClick={() =>
+                            item.threadId
+                              ? handlePreviewThreadSelection(item.threadId)
+                              : undefined
+                          }
+                          type="button"
+                        >
+                          <StyledMailWorkbenchRow>
+                            <StyledMailSenderCell>
+                              {tr(item.primary)}
+                            </StyledMailSenderCell>
+                            <StyledMailSubjectCell>
+                              <StyledMailWorkbenchTitle>
+                                {tr(item.secondary)}
+                              </StyledMailWorkbenchTitle>
+                              <StyledListTertiary>
+                                {tr(item.pendingReason ?? item.tertiary)}
+                              </StyledListTertiary>
+                            </StyledMailSubjectCell>
+                            <StyledMailTimeCell>
+                              <div>
+                                {tr(
+                                  item.pendingUpdatedAt
+                                    ? formatToHumanReadableDate(
+                                        item.pendingUpdatedAt,
+                                      )
+                                    : item.meta,
+                                )}
+                              </div>
+                              <StyledMailWorkbenchSummaryRow>
+                                <StyledMailWorkbenchChip $tone="accent">
+                                  {tr(item.status)}
+                                </StyledMailWorkbenchChip>
+                              </StyledMailWorkbenchSummaryRow>
+                            </StyledMailTimeCell>
+                          </StyledMailWorkbenchRow>
+                        </StyledMailWorkbenchItem>
+                      ))}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      {selectedPendingPreviewItem ? (
+                        <>
+                          <StyledMailPreviewTopbar>
+                            <StyledMailPreviewTopbarCopy>
+                              <StyledMailPreviewLabel>
+                                {tr('待处理邮件面板')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailPreviewTitle>
+                                {tr(pendingSelectedThreadTitle)}
+                              </StyledMailPreviewTitle>
+                            </StyledMailPreviewTopbarCopy>
+                            <StyledMailWorkbenchSummaryRow>
+                              <StyledMailWorkbenchChip $tone="accent">
+                                {tr(selectedPendingPreviewItem.status)}
+                              </StyledMailWorkbenchChip>
+                              <StyledMailWorkbenchChip>
+                                {tr(pendingSelectedReason)}
+                              </StyledMailWorkbenchChip>
+                            </StyledMailWorkbenchSummaryRow>
+                          </StyledMailPreviewTopbar>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('当前客户')}
+                            </StyledMailPreviewLabel>
+                            <StyledListPrimary>
+                              {tr(pendingSelectedCustomerName)}
+                            </StyledListPrimary>
+                            <StyledListMeta>
+                              {tr(pendingSelectedThreadMeta)}
+                            </StyledListMeta>
+                          </StyledMailPreviewBlock>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('邮件摘要')}
+                            </StyledMailPreviewLabel>
+                            <StyledListTertiary>
+                              {tr(pendingSelectedThreadSummary)}
+                            </StyledListTertiary>
+                          </StyledMailPreviewBlock>
+                          <StyledMailPreviewSideStack>
+                            <StyledMailPreviewBlock>
+                              <StyledMailPreviewLabel>
+                                {tr('待处理信息')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailProfileGrid>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('待处理原因')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(pendingSelectedReason)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('最后更新')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(pendingSelectedUpdatedAt)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                <StyledMailProfileItem>
+                                  <StyledMailProfileLabel>
+                                    {tr('当前视图')}
+                                  </StyledMailProfileLabel>
+                                  <StyledMailProfileValue>
+                                    {tr(currentViewItem.label)}
+                                  </StyledMailProfileValue>
+                                </StyledMailProfileItem>
+                                  <StyledMailProfileItem>
+                                    <StyledMailProfileLabel>
+                                      {tr('建议去向')}
+                                    </StyledMailProfileLabel>
+                                    <StyledMailProfileValue>
+                                      {tr(pendingSuggestedDestination)}
+                                    </StyledMailProfileValue>
+                                  </StyledMailProfileItem>
+                                </StyledMailProfileGrid>
+                              </StyledMailPreviewBlock>
+                            <StyledMailPreviewBlock>
+                              <StyledMailPreviewLabel>
+                                {tr('AI 处理建议')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailAiList>
+                                {pendingSelectedSuggestions.map(
+                                  (suggestion, index) => (
+                                    <StyledMailAiItem
+                                      key={`${selectedPendingPreviewItem.id}-${index}`}
+                                    >
+                                      <StyledMailAiIndex>
+                                        {index + 1}
+                                      </StyledMailAiIndex>
+                                      <StyledListSecondary>
+                                        {tr(suggestion)}
+                                      </StyledListSecondary>
+                                    </StyledMailAiItem>
+                                  ),
+                                )}
+                              </StyledMailAiList>
+                            </StyledMailPreviewBlock>
+                          </StyledMailPreviewSideStack>
+                          <StyledButtonRow>
+                            {selectedPendingPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  openEmailThreadInSidePanel(
+                                    selectedPendingPreviewItem.threadId ?? '',
+                                  )
+                                }
+                                type="button"
+                              >
+                                {tr('打开线程')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedPendingPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  handleUpdateThreadPendingState({
+                                    threadId:
+                                      selectedPendingPreviewItem.threadId ?? '',
+                                    isPending: false,
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr('清除待处理')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {pendingTaskRecordPath ? (
+                              <StyledActionLink to={pendingTaskRecordPath}>
+                                {tr('打开跟进任务')}
+                              </StyledActionLink>
+                            ) : null}
+                            <StyledSecondaryButton
+                              onClick={() => void handleCreatePendingTask()}
+                              type="button"
+                            >
+                              {tr(
+                                pendingTaskRecordPath
+                                  ? '新增跟进任务'
+                                  : '创建跟进任务',
+                              )}
+                            </StyledSecondaryButton>
+                            <StyledActionLink to={pendingPrimaryActionPath}>
+                              {tr(pendingPrimaryActionLabel)}
+                            </StyledActionLink>
+                            <StyledActionLink to={pendingSecondaryActionPath}>
+                              {tr(pendingSecondaryActionLabel)}
+                            </StyledActionLink>
+                          </StyledButtonRow>
+                          </>
+                      ) : (
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('待处理邮件面板')}
+                          </StyledMailPreviewLabel>
+                          <StyledListMeta>
+                            {tr('当前筛选条件下没有待处理邮件。')}
+                          </StyledListMeta>
+                        </StyledMailPreviewBlock>
+                      )}
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : isCustomerWorkbenchView ? (
+                  <StyledMailWorkbench $relationshipView>
+                    <StyledMailWorkbenchList>
+                      <StyledMailWorkbenchListHeader>
+                        <div>{tr(relationshipListPrimaryLabel)}</div>
+                        <div>{tr(relationshipListMetaLabel)}</div>
+                        <div>{tr(relationshipStatusLabel)}</div>
                       </StyledMailWorkbenchListHeader>
                       {filteredRenderedListItems.map((item) => (
                         <StyledMailWorkbenchItem
@@ -5322,13 +6227,13 @@ export const TradeCrmMailPage = () => {
                         </StyledMailWorkbenchItem>
                       ))}
                     </StyledMailWorkbenchList>
-                    <StyledMailWorkbenchPreview>
+                    <StyledMailWorkbenchPreview $relationshipView>
                       {selectedCustomerPreviewItem ? (
                         <>
                           <StyledMailPreviewTopbar>
                             <StyledMailPreviewTopbarCopy>
                               <StyledMailPreviewLabel>
-                                {tr('客户邮件面板')}
+                                {tr(relationshipWorkbenchTitle)}
                               </StyledMailPreviewLabel>
                               <StyledMailPreviewTitle>
                                 {tr(customerSelectedName)}
@@ -5343,116 +6248,301 @@ export const TradeCrmMailPage = () => {
                               </StyledMailWorkbenchChip>
                             </StyledMailWorkbenchSummaryRow>
                           </StyledMailPreviewTopbar>
-                          <StyledMailPreviewBlock>
-                            <StyledMailPreviewLabel>
-                              {tr('最近线程')}
-                            </StyledMailPreviewLabel>
-                            <StyledMailPreviewTitle>
-                              {tr(customerSelectedLatestThread)}
-                            </StyledMailPreviewTitle>
-                            <StyledListMeta>
-                              {tr(customerSelectedMeta)}
-                            </StyledListMeta>
-                          </StyledMailPreviewBlock>
-                          <StyledMailPreviewBlock>
-                            <StyledMailPreviewLabel>
-                              {tr('往来摘要')}
-                            </StyledMailPreviewLabel>
-                            <StyledListTertiary>
-                              {tr(customerSelectedSummary)}
-                            </StyledListTertiary>
-                          </StyledMailPreviewBlock>
-                          <StyledMailPreviewSideStack>
-                            <StyledMailPreviewBlock>
-                              <StyledMailPreviewLabel>
-                                {tr('客户档案')}
-                              </StyledMailPreviewLabel>
-                              <StyledMailProfileGrid>
-                                <StyledMailProfileItem>
-                                  <StyledMailProfileLabel>
-                                    {tr('客户名称')}
-                                  </StyledMailProfileLabel>
-                                  <StyledMailProfileValue>
-                                    {tr(customerSelectedName)}
-                                  </StyledMailProfileValue>
-                                </StyledMailProfileItem>
-                                <StyledMailProfileItem>
-                                  <StyledMailProfileLabel>
-                                    {tr('客户分组')}
-                                  </StyledMailProfileLabel>
-                                  <StyledMailProfileValue>
-                                    {tr(currentViewItem.label)}
-                                  </StyledMailProfileValue>
-                                </StyledMailProfileItem>
-                                <StyledMailProfileItem>
-                                  <StyledMailProfileLabel>
-                                    {tr('最近动作')}
-                                  </StyledMailProfileLabel>
-                                  <StyledMailProfileValue>
-                                    {tr(customerSelectedMeta)}
-                                  </StyledMailProfileValue>
-                                </StyledMailProfileItem>
-                                <StyledMailProfileItem>
-                                  <StyledMailProfileLabel>
-                                    {tr('跟进状态')}
-                                  </StyledMailProfileLabel>
-                                  <StyledMailProfileValue>
-                                    {tr(selectedCustomerPreviewItem.status)}
-                                  </StyledMailProfileValue>
-                                </StyledMailProfileItem>
-                              </StyledMailProfileGrid>
-                            </StyledMailPreviewBlock>
-                            <StyledMailPreviewBlock>
-                              <StyledMailPreviewLabel>
-                                {tr('AI 跟进建议')}
-                              </StyledMailPreviewLabel>
-                              <StyledMailAiList>
-                                {customerSelectedSuggestions.map(
-                                  (suggestion, index) => (
-                                    <StyledMailAiItem
-                                      key={`${selectedCustomerPreviewItem.id}-${index}`}
+                          <StyledMailRelationshipPreviewGrid>
+                            <StyledMailRelationshipDetailStack>
+                              <StyledMailPreviewBlock>
+                                <StyledMailPreviewLabel>
+                                  {tr('邮件详情')}
+                                </StyledMailPreviewLabel>
+                                <StyledMailPreviewTitle>
+                                  {tr(customerSelectedLatestThread)}
+                                </StyledMailPreviewTitle>
+                                <StyledListMeta>
+                                  {tr(customerSelectedMeta)}
+                                </StyledListMeta>
+                                <StyledMailTagRow>
+                                  {relationshipTags.map((tag) => (
+                                    <StyledMailTag key={tag}>
+                                      {tr(tag)}
+                                    </StyledMailTag>
+                                  ))}
+                                </StyledMailTagRow>
+                                <StyledMailQuote>
+                                  {tr(relationshipDetailBody)}
+                                </StyledMailQuote>
+                              </StyledMailPreviewBlock>
+                              <StyledMailPreviewBlock>
+                                <StyledMailPreviewLabel>
+                                  {tr('处理动作')}
+                                </StyledMailPreviewLabel>
+                                <StyledButtonRow>
+                                  {customerSelectedThreadId ? (
+                                    <StyledSecondaryButton
+                                      onClick={() =>
+                                        openEmailThreadInSidePanel(
+                                          customerSelectedThreadId,
+                                        )
+                                      }
+                                      type="button"
                                     >
-                                      <StyledMailAiIndex>
-                                        {index + 1}
-                                      </StyledMailAiIndex>
-                                      <StyledListSecondary>
-                                        {tr(suggestion)}
-                                      </StyledListSecondary>
-                                    </StyledMailAiItem>
-                                  ),
-                                )}
-                              </StyledMailAiList>
-                            </StyledMailPreviewBlock>
-                          </StyledMailPreviewSideStack>
+                                      {tr('打开线程')}
+                                    </StyledSecondaryButton>
+                                  ) : null}
+                                  <StyledActionLink
+                                    to={relationshipActionPrimaryPath}
+                                  >
+                                    {tr(relationshipActionPrimaryLabel)}
+                                  </StyledActionLink>
+                                  <StyledActionLink
+                                    to={relationshipActionSecondaryPath}
+                                  >
+                                    {tr(relationshipActionSecondaryLabel)}
+                                  </StyledActionLink>
+                                  <StyledActionLink
+                                    to={getTradeCrmMailPath({
+                                      scope: 'mail',
+                                      view: 'search',
+                                    })}
+                                  >
+                                    {tr('查看相关邮件')}
+                                  </StyledActionLink>
+                                </StyledButtonRow>
+                              </StyledMailPreviewBlock>
+                            </StyledMailRelationshipDetailStack>
+                            <StyledMailPreviewSideStack>
+                              <StyledMailPreviewBlock>
+                                <StyledMailPreviewLabel>
+                                  {tr(relationshipRecordLabel)}
+                                </StyledMailPreviewLabel>
+                                <StyledMailProfileGrid>
+                                  <StyledMailProfileItem>
+                                    <StyledMailProfileLabel>
+                                      {tr(relationshipNameLabel)}
+                                    </StyledMailProfileLabel>
+                                    <StyledMailProfileValue>
+                                      {tr(customerSelectedName)}
+                                    </StyledMailProfileValue>
+                                  </StyledMailProfileItem>
+                                  <StyledMailProfileItem>
+                                    <StyledMailProfileLabel>
+                                      {tr(relationshipGroupLabel)}
+                                    </StyledMailProfileLabel>
+                                    <StyledMailProfileValue>
+                                      {tr(currentViewItem.label)}
+                                    </StyledMailProfileValue>
+                                  </StyledMailProfileItem>
+                                  <StyledMailProfileItem>
+                                    <StyledMailProfileLabel>
+                                      {tr('最近动作')}
+                                    </StyledMailProfileLabel>
+                                    <StyledMailProfileValue>
+                                      {tr(customerSelectedMeta)}
+                                    </StyledMailProfileValue>
+                                  </StyledMailProfileItem>
+                                  <StyledMailProfileItem>
+                                    <StyledMailProfileLabel>
+                                      {tr('跟进状态')}
+                                    </StyledMailProfileLabel>
+                                    <StyledMailProfileValue>
+                                      {tr(selectedCustomerPreviewItem.status)}
+                                    </StyledMailProfileValue>
+                                  </StyledMailProfileItem>
+                                </StyledMailProfileGrid>
+                              </StyledMailPreviewBlock>
+                              <StyledMailPreviewBlock>
+                                <StyledMailAssistantTabs>
+                                  {relationshipAssistantTabs.map(
+                                    (assistantTab, index) => (
+                                      <StyledMailAssistantTab
+                                        data-active={
+                                          index === 0 ? 'true' : 'false'
+                                        }
+                                        key={assistantTab}
+                                        type="button"
+                                      >
+                                        {tr(assistantTab)}
+                                      </StyledMailAssistantTab>
+                                    ),
+                                  )}
+                                </StyledMailAssistantTabs>
+                                <StyledMailPreviewLabel>
+                                  {tr(
+                                    isSubordinateWorkbenchView
+                                      ? 'AI 管理建议'
+                                      : 'AI 销售助手',
+                                  )}
+                                </StyledMailPreviewLabel>
+                                <StyledMailAiList>
+                                  {relationshipSuggestions.map(
+                                    (suggestion, index) => (
+                                      <StyledMailAiItem
+                                        key={`${selectedCustomerPreviewItem.id}-${index}`}
+                                      >
+                                        <StyledMailAiIndex>
+                                          {index + 1}
+                                        </StyledMailAiIndex>
+                                        <StyledListSecondary>
+                                          {tr(suggestion)}
+                                        </StyledListSecondary>
+                                      </StyledMailAiItem>
+                                    ),
+                                  )}
+                                </StyledMailAiList>
+                              </StyledMailPreviewBlock>
+                            </StyledMailPreviewSideStack>
+                          </StyledMailRelationshipPreviewGrid>
                           <StyledButtonRow>
-                            <StyledActionLink to={tradeCrmRouteMap.customers}>
-                              {tr('打开客户详情')}
-                            </StyledActionLink>
-                            <StyledActionLink
-                              to={tradeCrmRouteMap.opportunities}
-                            >
-                              {tr('进入商机处理')}
-                            </StyledActionLink>
-                            <StyledActionLink
-                              to={getTradeCrmMailPath({
-                                scope: 'mail',
-                                view: 'search',
-                              })}
-                            >
-                              {tr('查看相关邮件')}
-                            </StyledActionLink>
+                            <StyledMailWorkbenchChip $tone="accent">
+                              {tr(isSubordinateWorkbenchView ? 'Manager Review' : 'Customer Conversation')}
+                            </StyledMailWorkbenchChip>
+                            <StyledMailWorkbenchChip>
+                              {tr(selectedCustomerPreviewItem.threadId ? 'Thread linked' : 'Summary only')}
+                            </StyledMailWorkbenchChip>
                           </StyledButtonRow>
                         </>
                       ) : (
                         <StyledMailPreviewBlock>
                           <StyledMailPreviewLabel>
-                            {tr('客户邮件面板')}
+                            {tr(relationshipWorkbenchTitle)}
                           </StyledMailPreviewLabel>
                           <StyledListMeta>
-                            {tr('当前分组下没有可预览的客户。')}
+                            {tr(
+                              isSubordinateWorkbenchView
+                                ? '当前分组下没有可预览的下属邮件。'
+                                : '当前分组下没有可预览的客户。',
+                            )}
                           </StyledListMeta>
+                          {isSubordinateWorkbenchView ? null : (
+                            <StyledButtonRow>
+                              <StyledActionLink
+                                to={getTradeCrmScopedViewPath(
+                                  tradeCrmRouteMap.mail,
+                                  'search',
+                                )}
+                              >
+                                {tr('去邮件搜索补关联')}
+                              </StyledActionLink>
+                              <StyledActionLink
+                                to={getTradeCrmCustomerPath('list')}
+                              >
+                                {tr('打开客户工作台')}
+                              </StyledActionLink>
+                            </StyledButtonRow>
+                          )}
                         </StyledMailPreviewBlock>
                       )}
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : isFolderManagementView ? (
+                  <StyledMailWorkbench>
+                    <StyledMailWorkbenchList>
+                      <StyledMailWorkbenchListHeader>
+                        <div>{tr('文件夹')}</div>
+                        <div>{tr('同步与可见性')}</div>
+                        <div>{tr('状态')}</div>
+                      </StyledMailWorkbenchListHeader>
+                      {filteredRenderedListItems.map((item) => (
+                        <StyledMailWorkbenchItem
+                          $active={item.id === selectedPreviewCustomerId}
+                          key={item.id}
+                          onClick={() =>
+                            handlePreviewCustomerSelection(item.id)
+                          }
+                          type="button"
+                        >
+                          <StyledMailWorkbenchRow>
+                            <StyledMailSenderCell>
+                              {tr(item.primary)}
+                            </StyledMailSenderCell>
+                            <StyledMailSubjectCell>
+                              <StyledMailWorkbenchTitle>
+                                {tr(item.secondary)}
+                              </StyledMailWorkbenchTitle>
+                              <StyledListTertiary>
+                                {tr(item.tertiary)}
+                              </StyledListTertiary>
+                            </StyledMailSubjectCell>
+                            <StyledMailTimeCell>
+                              <div>{tr(item.meta)}</div>
+                              <StyledMailWorkbenchSummaryRow>
+                                <StyledMailWorkbenchChip $tone="accent">
+                                  {tr(item.status)}
+                                </StyledMailWorkbenchChip>
+                              </StyledMailWorkbenchSummaryRow>
+                            </StyledMailTimeCell>
+                          </StyledMailWorkbenchRow>
+                        </StyledMailWorkbenchItem>
+                      ))}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      <StyledMailPreviewTopbar>
+                        <StyledMailPreviewTopbarCopy>
+                          <StyledMailPreviewLabel>
+                            {tr('文件夹与标签管理')}
+                          </StyledMailPreviewLabel>
+                          <StyledMailPreviewTitle>
+                            {tr('管理文件夹树、同步范围与邮件分类规则')}
+                          </StyledMailPreviewTitle>
+                        </StyledMailPreviewTopbarCopy>
+                        <StyledMailWorkbenchSummaryRow>
+                          <StyledMailWorkbenchChip $tone="accent">
+                            {tr(`${rootFolders.length} folders`)}
+                          </StyledMailWorkbenchChip>
+                          <StyledMailWorkbenchChip>
+                            {tr(`${filteredRenderedListItems.length} visible`)}
+                          </StyledMailWorkbenchChip>
+                        </StyledMailWorkbenchSummaryRow>
+                      </StyledMailPreviewTopbar>
+                      <StyledMailPreviewBlock>
+                        <StyledMailPreviewLabel>
+                          {tr('文件夹树')}
+                        </StyledMailPreviewLabel>
+                        {rootFolders.length > 0 ? (
+                          <TradeCrmMailFolderTree folderTreeNodes={rootFolders} />
+                        ) : (
+                          <StyledListMeta>
+                            {tr(
+                              'No synced folders are available yet, or the primary inbox has not completed initialization.',
+                            )}
+                          </StyledListMeta>
+                        )}
+                      </StyledMailPreviewBlock>
+                      <StyledMailPreviewSideStack>
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('标签与归类规则')}
+                          </StyledMailPreviewLabel>
+                          <StyledMailAiList>
+                            {[
+                              '重点客户、报价阶段、异常同步应优先形成标签规则。',
+                              '文件夹负责来源归档，标签负责业务语义，不要混成一层。',
+                              '批量移动和标签应立即回写到客户与商机检索条件里。',
+                            ].map((suggestion, index) => (
+                              <StyledMailAiItem key={`folder-ai-${index}`}>
+                                <StyledMailAiIndex>{index + 1}</StyledMailAiIndex>
+                                <StyledListSecondary>
+                                  {tr(suggestion)}
+                                </StyledListSecondary>
+                              </StyledMailAiItem>
+                            ))}
+                          </StyledMailAiList>
+                        </StyledMailPreviewBlock>
+                      </StyledMailPreviewSideStack>
+                      <StyledButtonRow>
+                        <StyledActionLink
+                          to={getSettingsPath(SettingsPath.AccountsEmails)}
+                        >
+                          {tr('打开邮箱账号')}
+                        </StyledActionLink>
+                        <StyledActionLink
+                          to={getTradeCrmMailPath({
+                            scope: 'mail',
+                            view: 'tagged',
+                          })}
+                        >
+                          {tr('查看标签邮件')}
+                        </StyledActionLink>
+                      </StyledButtonRow>
                     </StyledMailWorkbenchPreview>
                   </StyledMailWorkbench>
                 ) : !(
@@ -5611,37 +6701,39 @@ export const TradeCrmMailPage = () => {
                   </StyledList>
                 ) : null}
               </StyledPanel>
-              <StyledPanel>
-                <StyledSectionTitle>{tr('Key Entries')}</StyledSectionTitle>
-                <StyledCardGrid>
-                  {workspace.actionCards.map((card) => (
-                    <StyledActionCard key={card.title}>
-                      <StyledActionTitle>{tr(card.title)}</StyledActionTitle>
-                      <StyledActionDescription>
-                        {tr(card.description)}
-                      </StyledActionDescription>
-                      {card.to ? (
-                        <StyledActionLink to={card.to}>
-                          {tr(card.actionLabel ?? 'Open')}
-                        </StyledActionLink>
-                      ) : null}
-                    </StyledActionCard>
-                  ))}
-                </StyledCardGrid>
-              </StyledPanel>
+              {shouldRenderNarrativeMetrics ? (
+                <StyledPanel>
+                  <StyledSectionTitle>{tr('Key Entries')}</StyledSectionTitle>
+                  <StyledCardGrid>
+                    {workspace.actionCards.map((card) => (
+                      <StyledActionCard key={card.title}>
+                        <StyledActionTitle>{tr(card.title)}</StyledActionTitle>
+                        <StyledActionDescription>
+                          {tr(card.description)}
+                        </StyledActionDescription>
+                        {card.to ? (
+                          <StyledActionLink to={card.to}>
+                            {tr(card.actionLabel ?? 'Open')}
+                          </StyledActionLink>
+                        ) : null}
+                      </StyledActionCard>
+                    ))}
+                  </StyledCardGrid>
+                </StyledPanel>
+              ) : null}
             </StyledMainColumn>
-            <RecordInsightPanel
-              title={tr('System Constraints and Design Rules')}
-              description={tr(
-                'The right side keeps product boundaries, reuse points, and development rules visible. It will later absorb customer profile, AI summary, sender-pool health, and campaign KPI context.',
-              )}
-              items={getInsightItems(currentScope).map((item) => ({
-                ...item,
-                label: tr(item.label),
-                value: tr(item.value),
-                description: tr(item.description),
-              }))}
-            />
+            {!shouldHideInsightRail ? (
+              <RecordInsightPanel
+                title={tr(insightPanelCopy.title)}
+                description={tr(insightPanelCopy.description)}
+                items={getInsightItems(currentScope).map((item) => ({
+                  ...item,
+                  label: tr(item.label),
+                  value: tr(item.value),
+                  description: tr(item.description),
+                }))}
+              />
+            ) : null}
           </StyledWorkspace>
         </StyledContent>
         <TradeCrmAiDock
@@ -5653,7 +6745,15 @@ export const TradeCrmMailPage = () => {
             summaryText: [
               `Scope: ${workspace.label}`,
               `Current view: ${currentViewItem.label}`,
-              'Current focus: rebuild mail as a full workspace, customer communication center, and campaign operating system.',
+              currentScope === 'subordinate'
+                ? 'Current focus: review subordinate reply quality, handoff delays, and coaching pressure.'
+                : currentScope === 'customer'
+                  ? 'Current focus: keep customer communication tied to relationship and opportunity follow-up.'
+                  : currentScope === 'campaign'
+                    ? 'Current focus: manage outbound audiences, sender health, and execution risk in one workspace.'
+                    : isFolderManagementView
+                      ? 'Current focus: keep folder hierarchy, sync scope, and mail tagging rules clean and searchable.'
+                      : 'Current focus: move inbox work into customer, opportunity, and task execution with minimal friction.',
               'Guardrail: AI can summarize and draft, but cannot auto-send or mutate CRM status.',
             ].join('\n'),
           }}

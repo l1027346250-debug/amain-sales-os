@@ -21,4 +21,13 @@ export class ConvertLeadToCustomerResultDTO {
 
   @Field(() => UUIDScalarType, { nullable: true })
   ownerId: string | null;
+
+  @Field(() => Boolean)
+  alreadyConverted: boolean;
+
+  @Field(() => Boolean)
+  customerReused: boolean;
+
+  @Field(() => Boolean)
+  contactReused: boolean;
 }

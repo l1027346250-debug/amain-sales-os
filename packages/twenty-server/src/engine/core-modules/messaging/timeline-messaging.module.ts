@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { DevelopmentEmailModule } from 'src/engine/core-modules/development-email/development-email.module';
 import { TradeCrmMailThreadTagEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-tag.entity';
+import { TradeCrmMailThreadTaskLinkEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-task-link.entity';
 import { TradeCrmMailThreadStateEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-state.entity';
 import { DevelopmentEmailWorkspaceService } from 'src/engine/core-modules/messaging/services/development-email-workspace.service';
 import { GetMessagesService } from 'src/engine/core-modules/messaging/services/get-messages.service';
@@ -19,6 +20,7 @@ import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permi
     TypeOrmModule.forFeature([
       TradeCrmMailThreadStateEntity,
       TradeCrmMailThreadTagEntity,
+      TradeCrmMailThreadTaskLinkEntity,
     ]),
     WorkspaceDataSourceModule,
     UserModule,

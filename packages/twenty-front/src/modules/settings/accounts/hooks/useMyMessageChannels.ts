@@ -42,13 +42,16 @@ export const useMyMessageChannels = () => {
 
   const { records: workspaceAccounts } = useFindManyRecords<ConnectedAccount>({
     objectNameSingular: CoreObjectNameSingular.ConnectedAccount,
-    filter: {
-      accountOwnerId: {
-        eq: currentWorkspaceMember?.id,
-      },
-    },
-    skip: isMigrated,
+    skip: isMigrated || !currentWorkspaceMember?.id,
   });
+
+  const ownedWorkspaceAccounts = useMemo(
+    () =>
+      workspaceAccounts.filter(
+        (account) => account.accountOwnerId === currentWorkspaceMember?.id,
+      ),
+    [workspaceAccounts, currentWorkspaceMember?.id],
+  );
 
   const { recordGqlFields } = useGenerateDepthRecordGqlFieldsFromObject({
     objectNameSingular: CoreObjectNameSingular.MessageChannel,
@@ -61,7 +64,7 @@ export const useMyMessageChannels = () => {
         objectNameSingular: CoreObjectNameSingular.MessageChannel,
         filter: {
           connectedAccountId: {
-            in: workspaceAccounts.map((account) => account.id),
+            in: ownedWorkspaceAccounts.map((account) => account.id),
           },
           isSyncEnabled: { eq: true },
           syncStage: {
@@ -69,7 +72,7 @@ export const useMyMessageChannels = () => {
           },
         },
         recordGqlFields,
-        skip: isMigrated || !workspaceAccounts.length,
+        skip: isMigrated || !ownedWorkspaceAccounts.length,
       },
     );
 

@@ -22,6 +22,8 @@ import { UpdateTradeCrmMailThreadStateInput } from 'src/engine/core-modules/mess
 import { DevelopmentEmailWorkspaceDTO } from 'src/engine/core-modules/messaging/dtos/development-email-workspace.dto';
 import { TimelineCompanyThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-company-threads-with-total.dto';
 import { TimelineThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-threads-with-total.dto';
+import { UpsertTradeCrmMailThreadTaskLinkInput } from 'src/engine/core-modules/messaging/dtos/upsert-trade-crm-mail-thread-task-link.input';
+import { TradeCrmMailThreadTaskLinkEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-task-link.entity';
 import { DevelopmentEmailWorkspaceService } from 'src/engine/core-modules/messaging/services/development-email-workspace.service';
 import { GetMessagesService } from 'src/engine/core-modules/messaging/services/get-messages.service';
 import { UserService } from 'src/engine/core-modules/user/services/user.service';
@@ -114,6 +116,12 @@ class GetMyCustomerMailCompaniesArgs {
   @Field(() => Int)
   @Max(TIMELINE_THREADS_MAX_PAGE_SIZE)
   pageSize: number;
+}
+
+@ArgsType()
+class GetTradeCrmMailThreadTaskLinksArgs {
+  @Field(() => [UUIDScalarType])
+  threadIds: string[];
 }
 
 @UseGuards(WorkspaceAuthGuard, UserAuthGuard, CustomPermissionGuard)
@@ -304,6 +312,41 @@ export class TimelineMessagingResolver {
       page,
       pageSize,
     );
+  }
+
+  @Query(() => [TradeCrmMailThreadTaskLinkEntity])
+  async getTradeCrmMailThreadTaskLinks(
+    @AuthUser() user: AuthContextUser,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args() { threadIds }: GetTradeCrmMailThreadTaskLinksArgs,
+  ) {
+    if (!(await this.userService.loadWorkspaceMember(user, workspace))) {
+      return [];
+    }
+
+    return this.getMessagesFromPersonIdsService.getTradeCrmMailThreadTaskLinks(
+      workspace.id,
+      threadIds,
+    );
+  }
+
+  @Mutation(() => Boolean)
+  async upsertTradeCrmMailThreadTaskLink(
+    @AuthUser() user: AuthContextUser,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('input') input: UpsertTradeCrmMailThreadTaskLinkInput,
+  ): Promise<boolean> {
+    if (!(await this.userService.loadWorkspaceMember(user, workspace))) {
+      return false;
+    }
+
+    await this.getMessagesFromPersonIdsService.upsertTradeCrmMailThreadTaskLink(
+      workspace.id,
+      input.threadId,
+      input.taskId,
+    );
+
+    return true;
   }
 
   @Query(() => DevelopmentEmailWorkspaceDTO)

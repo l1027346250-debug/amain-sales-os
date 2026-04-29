@@ -317,3 +317,49 @@
 - 定向测试通过：`node .\.yarn\releases\yarn-4.13.0.cjs jest packages/twenty-front/src/pages/enterprise/customer-export/components/__tests__/EnterpriseCustomerExportComponents.test.tsx --config=packages/twenty-front/jest.config.mjs`，6 个测试通过。
 - 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx typecheck twenty-front`。
 - 验证通过：`node .\.yarn\releases\yarn-4.13.0.cjs nx lint:diff-with-main twenty-front`，脚本仍输出 `No changed files`，仅作为命令通过参考。
+# 2026-04-28 进度日志
+
+- 建立当前主线 TODO 板，开始按任务板推进而不是口头跟踪。
+- 已完成 Customers / Opportunities 语义回归与截图复核。
+- 已在 `customer-lead-conversion.service.ts` 中加入幂等性逻辑：
+  - 重复 lead 转化复用既有 customer / contact
+  - 重复联系人邮箱复用既有 person
+  - 精确同名 company 复用既有 customer
+- 已新增 `customer-lead-conversion.service.spec.ts`，覆盖：
+  - 已转过的 lead 会直接复用既有 customer / contact
+  - 重复邮箱 contact 会复用 person 而不是重复插入
+- 已扩展 `ConvertLeadToCustomerResultDTO`，返回：
+  - `alreadyConverted`
+  - `customerReused`
+  - `contactReused`
+- 批量 lead 转化命令现在会展示更明确的结果摘要，不再只有成功/失败两档。
+## 2026-04-29 Mail module progress
+
+- Refactored the Mail workspace toward a Xiaoman-style dense operating surface instead of a dashboard-style layout.
+- Compressed the inbox / customer / subordinate top areas and removed operational metrics clutter from the main working views.
+- Fixed a backend GraphQL schema boot error by declaring `pendingUpdatedAt` explicitly as a Date field on `TimelineThreadDTO`.
+- Identified the inbox toast root cause as a `connectedAccounts` filter compatibility error on `accountOwnerId`.
+- Reworked the account hooks to fetch workspace connected accounts first and filter by the current workspace member on the client side.
+- Replaced pending-mail task handoff with a real Task drawer action so pending replies now create an actual Task record instead of only redirecting to the task workspace.
+- Fixed the Mail customer view to use the core Apollo client for business queries so customer conversations no longer hit `/metadata`.
+- Tuned the customer / subordinate three-column proportions toward the Xiaoman reference and re-ran browser regression on both scopes.
+- Removed the subordinate view read-only `select` warning by giving the fixed filter control an explicit no-op `onChange`.
+- Cleared the remaining `GetMyCustomerMailCompanies` permission error by reading company-thread aggregation through the system repository path with bypassed object-permission checks.
+- Revalidated the Mail relationship workbench in-browser: customer view no longer throws GraphQL permission errors, subordinate view is warning-free.
+- Removed the customer-view fallback to static workspace list items so the page no longer pretends sample customers are real CRM-linked mail records.
+- Added actionable customer-view empty-state links for “go to mail search and attach CRM context” and “open customers workspace”.
+## 2026-04-29 Mail task deep-link progress
+
+- Added a lightweight Task lookup inside the pending-replies workbench so Mail can surface an existing follow-up task before falling back to task creation.
+- Pending-replies now deep-links to a real Task record with Mail source context preserved, and keeps `新增跟进任务` as a secondary action when a live task already exists.
+- Revalidated this change with `npx nx typecheck twenty-front` and `corepack yarn nx build twenty-front`.
+- Browser navigation to `http://localhost:3001/trade-crm/mail?scope=mail&view=pending` still resolves cleanly after the change.
+
+## 2026-04-29 Mail thread-task binding progress
+
+- Added a new core `tradeCrmMailThreadTaskLink` entity, migration, and Timeline Messaging GraphQL read/write endpoints so Mail can bind a pending thread to an exact Task record.
+- Updated `useOpenCreateActivityDrawer` to return the created activity id, then used that id in Mail pending-replies to immediately upsert `threadId -> taskId` after `创建跟进任务`.
+- Pending Mail now resolves existing tasks by exact thread binding first and only falls back to target-based `opportunity/company/person` matching when no thread link exists yet.
+- Verified with targeted tests: `useOpenCreateActivityDrawer.test.tsx` and `get-messages.service.spec.ts`, plus `npx nx typecheck twenty-front`, `corepack yarn nx build twenty-front`, and `npx nx build twenty-server`.
+- Added fallback pending thread ids and switched the pending thread-link query/mutation to `useApolloCoreClient()` so dev runtime now reads the exact thread-task binding through the same core GraphQL path as the rest of Mail.
+- Browser regression on `http://localhost:3001/trade-crm/mail?scope=mail&view=pending` now shows `打开跟进任务`; the pending queue is reading a real `threadId -> taskId` binding instead of falling back to task creation only.

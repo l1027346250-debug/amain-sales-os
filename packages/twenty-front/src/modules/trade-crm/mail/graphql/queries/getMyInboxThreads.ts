@@ -25,6 +25,9 @@ export const GET_MY_INBOX_THREADS = gql`
       timelineThreads {
         id
         read
+        isPending
+        pendingReason
+        pendingUpdatedAt
         tags
         visibility
         lastMessageReceivedAt

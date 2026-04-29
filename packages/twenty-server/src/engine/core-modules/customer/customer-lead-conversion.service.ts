@@ -25,11 +25,15 @@ type WorkspaceLeadRecord = ObjectLiteral & {
 };
 
 type WorkspaceCompanyRecord = ObjectLiteral & {
+  accountOwnerId?: string | null;
   id: string;
   name?: string | null;
 };
 
 type WorkspacePersonRecord = ObjectLiteral & {
+  emails?: {
+    primaryEmail?: string | null;
+  } | null;
   id: string;
   companyId?: string | null;
 };
@@ -42,6 +46,15 @@ type WorkspaceTimelineActivityRecord = ObjectLiteral & {
   linkedRecordId?: string | null;
   targetCompanyId?: string | null;
   happensAt?: string | null;
+};
+
+type ExistingLeadConversionResult = {
+  alreadyConverted: boolean;
+  contactId: string | null;
+  contactReused: boolean;
+  customerId: string;
+  customerReused: boolean;
+  ownerId: string | null;
 };
 
 type WorkspaceCustomerOperationLogRecord = ObjectLiteral & {
@@ -137,17 +150,53 @@ export class CustomerLeadConversionService {
         throw new NotFoundException('Lead was not found.');
       }
 
+      const existingConversionResult =
+        await this.findExistingLeadConversionResult({
+          leadId,
+          workspaceId,
+        });
+
+      if (existingConversionResult) {
+        await leadRepository.update(
+          leadId,
+          {
+            leadStatus: CONVERTED_LEAD_STATUS,
+          } as unknown as QueryDeepPartialEntity<WorkspaceLeadRecord>,
+        );
+
+        return {
+          alreadyConverted: existingConversionResult.alreadyConverted,
+          contactId: existingConversionResult.contactId,
+          contactReused: existingConversionResult.contactReused,
+          customerId: existingConversionResult.customerId,
+          customerReused: existingConversionResult.customerReused,
+          leadId,
+          ownerId:
+            existingConversionResult.ownerId ??
+            normalizeString(lead.assignedToId) ??
+            workspaceMemberId ??
+            null,
+        };
+      }
+
       const now = new Date().toISOString();
-      const customerId = await this.createCustomerFromLead({
+      const contactEmail = normalizeString(lead.email);
+      const existingContact = await this.findPersonByPrimaryEmail({
+        email: contactEmail,
+        workspaceId,
+      });
+      const customerConversionResult = await this.createOrReuseCustomerFromLead({
         workspaceId,
         workspaceMemberId,
+        existingCompanyId: normalizeString(existingContact?.companyId),
         lead,
         now,
       });
-      const contactId = await this.createContactFromLead({
+      const contactConversionResult = await this.createOrReuseContactFromLead({
         workspaceId,
+        existingContactId: existingContact?.id ?? null,
         lead,
-        customerId,
+        customerId: customerConversionResult.customerId,
         now,
       });
 
@@ -162,22 +211,25 @@ export class CustomerLeadConversionService {
           workspaceId,
           workspaceMemberId,
           lead,
-          customerId,
-          contactId,
+          customerId: customerConversionResult.customerId,
+          contactId: contactConversionResult.contactId,
           now,
         }),
         this.createOperationLog({
           workspaceId,
           workspaceMemberId,
-          customerId,
+          customerId: customerConversionResult.customerId,
           leadId,
           now,
         }),
       ]);
 
       return {
-        contactId,
-        customerId,
+        alreadyConverted: false,
+        contactId: contactConversionResult.contactId,
+        contactReused: contactConversionResult.contactReused,
+        customerId: customerConversionResult.customerId,
+        customerReused: customerConversionResult.customerReused,
         leadId,
         ownerId:
           normalizeString(lead.assignedToId) ?? workspaceMemberId ?? null,
@@ -185,23 +237,48 @@ export class CustomerLeadConversionService {
     }, authContext);
   }
 
-  private async createCustomerFromLead({
+  private async createOrReuseCustomerFromLead({
     workspaceId,
     workspaceMemberId,
+    existingCompanyId,
     lead,
     now,
   }: {
     workspaceId: string;
     workspaceMemberId: string | undefined;
+    existingCompanyId: string | null;
     lead: WorkspaceLeadRecord;
     now: string;
-  }) {
+  }): Promise<{
+    customerId: string;
+    customerReused: boolean;
+  }> {
     const companyRepository =
       await this.globalWorkspaceOrmManager.getRepository<WorkspaceCompanyRecord>(
         workspaceId,
         'company',
         { shouldBypassPermissionChecks: true },
       );
+
+    if (existingCompanyId) {
+      return {
+        customerId: existingCompanyId,
+        customerReused: true,
+      };
+    }
+
+    const existingCompany = await this.findCompanyByName({
+      companyName: normalizeString(lead.leadName),
+      workspaceId,
+    });
+
+    if (existingCompany) {
+      return {
+        customerId: existingCompany.id,
+        customerReused: true,
+      };
+    }
+
     const country = normalizeString(lead.country);
     const address = buildAddressValue(country);
     const customerId = v4();
@@ -220,24 +297,35 @@ export class CustomerLeadConversionService {
       updatedAt: now,
     });
 
-    return customerId;
+    return {
+      customerId,
+      customerReused: false,
+    };
   }
 
-  private async createContactFromLead({
+  private async createOrReuseContactFromLead({
     workspaceId,
+    existingContactId,
     lead,
     customerId,
     now,
   }: {
     workspaceId: string;
+    existingContactId: string | null;
     lead: WorkspaceLeadRecord;
     customerId: string;
     now: string;
-  }) {
+  }): Promise<{
+    contactId: string | null;
+    contactReused: boolean;
+  }> {
     const hasPersonObject = await this.hasWorkspaceObject(workspaceId, 'person');
 
     if (!hasPersonObject) {
-      return null;
+      return {
+        contactId: null,
+        contactReused: false,
+      };
     }
 
     const contactName = normalizeString(lead.contactName);
@@ -245,7 +333,10 @@ export class CustomerLeadConversionService {
     const phone = normalizeString(lead.phone);
 
     if (!contactName && !email && !phone) {
-      return null;
+      return {
+        contactId: null,
+        contactReused: false,
+      };
     }
 
     const personRepository =
@@ -254,6 +345,21 @@ export class CustomerLeadConversionService {
         'person',
         { shouldBypassPermissionChecks: true },
       );
+
+    if (existingContactId) {
+      await personRepository.update(existingContactId, {
+        companyId: customerId,
+        contactNotes: normalizeString(lead.notes),
+        phones: buildPhonesValue(phone),
+        updatedAt: now,
+      } as unknown as QueryDeepPartialEntity<WorkspacePersonRecord>);
+
+      return {
+        contactId: existingContactId,
+        contactReused: true,
+      };
+    }
+
     const contactId = v4();
 
     await personRepository.insert({
@@ -268,7 +374,137 @@ export class CustomerLeadConversionService {
       updatedAt: now,
     });
 
-    return contactId;
+    return {
+      contactId,
+      contactReused: false,
+    };
+  }
+
+  private async findExistingLeadConversionResult({
+    leadId,
+    workspaceId,
+  }: {
+    leadId: string;
+    workspaceId: string;
+  }): Promise<ExistingLeadConversionResult | null> {
+    const hasTimelineObject = await this.hasWorkspaceObject(
+      workspaceId,
+      'timelineActivity',
+    );
+
+    if (!hasTimelineObject) {
+      return null;
+    }
+
+    const timelineRepository =
+      await this.globalWorkspaceOrmManager.getRepository<WorkspaceTimelineActivityRecord>(
+        workspaceId,
+        'timelineActivity',
+        { shouldBypassPermissionChecks: true },
+      );
+
+    const existingTimelineEvent = await timelineRepository
+      .createQueryBuilder('timelineActivity')
+      .where('timelineActivity.name = :name', {
+        name: 'lead.converted_to_customer',
+      })
+      .andWhere(`timelineActivity.properties ->> 'leadId' = :leadId`, {
+        leadId,
+      })
+      .orderBy('timelineActivity.happensAt', 'DESC')
+      .getOne();
+
+    const customerId =
+      normalizeString(existingTimelineEvent?.targetCompanyId) ??
+      normalizeString(existingTimelineEvent?.properties?.customerId);
+
+    if (!customerId) {
+      return null;
+    }
+
+    const companyRepository =
+      await this.globalWorkspaceOrmManager.getRepository<WorkspaceCompanyRecord>(
+        workspaceId,
+        'company',
+        { shouldBypassPermissionChecks: true },
+      );
+    const existingCompany = await companyRepository.findOne({
+      where: {
+        id: customerId,
+      },
+    });
+
+    if (!existingCompany) {
+      return null;
+    }
+
+    return {
+      alreadyConverted: true,
+      contactId:
+        normalizeString(existingTimelineEvent?.properties?.contactId) ?? null,
+      contactReused: true,
+      customerId,
+      customerReused: true,
+      ownerId: normalizeString(existingCompany.accountOwnerId) ?? null,
+    };
+  }
+
+  private async findPersonByPrimaryEmail({
+    email,
+    workspaceId,
+  }: {
+    email: string | null;
+    workspaceId: string;
+  }): Promise<WorkspacePersonRecord | null> {
+    if (!email) {
+      return null;
+    }
+
+    const hasPersonObject = await this.hasWorkspaceObject(workspaceId, 'person');
+
+    if (!hasPersonObject) {
+      return null;
+    }
+
+    const personRepository =
+      await this.globalWorkspaceOrmManager.getRepository<WorkspacePersonRecord>(
+        workspaceId,
+        'person',
+        { shouldBypassPermissionChecks: true },
+      );
+
+    return personRepository
+      .createQueryBuilder('person')
+      .where(`LOWER(person.emails ->> 'primaryEmail') = LOWER(:email)`, {
+        email,
+      })
+      .getOne();
+  }
+
+  private async findCompanyByName({
+    companyName,
+    workspaceId,
+  }: {
+    companyName: string | null;
+    workspaceId: string;
+  }): Promise<WorkspaceCompanyRecord | null> {
+    if (!companyName) {
+      return null;
+    }
+
+    const companyRepository =
+      await this.globalWorkspaceOrmManager.getRepository<WorkspaceCompanyRecord>(
+        workspaceId,
+        'company',
+        { shouldBypassPermissionChecks: true },
+      );
+
+    return companyRepository
+      .createQueryBuilder('company')
+      .where('LOWER(company.name) = LOWER(:companyName)', {
+        companyName,
+      })
+      .getOne();
   }
 
   private async createTimelineEvent({

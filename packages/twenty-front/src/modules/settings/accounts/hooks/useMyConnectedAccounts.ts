@@ -42,13 +42,8 @@ export const useMyConnectedAccounts = () => {
   const { records: workspaceAccounts, loading: workspaceLoading } =
     useFindManyRecords<ConnectedAccount>({
       objectNameSingular: CoreObjectNameSingular.ConnectedAccount,
-      filter: {
-        accountOwnerId: {
-          eq: currentWorkspaceMember?.id,
-        },
-      },
       recordGqlFields,
-      skip: isMigrated,
+      skip: isMigrated || !currentWorkspaceMember?.id,
     });
 
   const { data: metadataData, loading: metadataLoading } = useQuery<{
@@ -65,7 +60,9 @@ export const useMyConnectedAccounts = () => {
 
   const accounts = useMemo<ConnectedAccount[]>(() => {
     if (!isMigrated) {
-      return workspaceAccounts;
+      return workspaceAccounts.filter(
+        (account) => account.accountOwnerId === currentWorkspaceMember?.id,
+      );
     }
 
     if (!metadataData?.myConnectedAccounts) {
@@ -111,6 +108,7 @@ export const useMyConnectedAccounts = () => {
     metadataData,
     messageChannels,
     calendarChannels,
+    currentWorkspaceMember?.id,
   ]);
 
   return {

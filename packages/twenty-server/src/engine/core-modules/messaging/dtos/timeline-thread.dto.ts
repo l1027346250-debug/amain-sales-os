@@ -12,6 +12,15 @@ export class TimelineThreadDTO {
   @Field()
   read: boolean;
 
+  @Field()
+  isPending: boolean;
+
+  @Field(() => String, { nullable: true })
+  pendingReason: string | null;
+
+  @Field(() => Date, { nullable: true })
+  pendingUpdatedAt: Date | null;
+
   @Field(() => MessageChannelVisibility)
   visibility: MessageChannelVisibility;
 

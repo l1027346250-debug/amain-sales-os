@@ -272,9 +272,19 @@ export const tradeCrmMenuConfig: TradeCrmMenuItemConfig[] = [
         to: getTradeCrmMailPath({ scope: 'customer', view: 'recent' }),
       },
       {
+        key: 'mail.subordinate-view',
+        label: 'Subordinate View',
+        to: getTradeCrmMailPath({ scope: 'subordinate', view: 'recent' }),
+      },
+      {
         key: 'mail.development-mail',
         label: 'Development Mail',
         to: getTradeCrmMailPath({ scope: 'campaign', view: 'overview' }),
+      },
+      {
+        key: 'mail.folders-tags',
+        label: 'Folders & Tags',
+        to: getTradeCrmMailPath({ scope: 'mail', view: 'folders' }),
       },
       {
         key: 'mail.tracking',

@@ -54,6 +54,9 @@ export const ConvertLeadsToCustomersMultipleRecordsCommand = () => {
     try {
       let successfulLeadCount = 0;
       let failedLeadCount = 0;
+      let alreadyConvertedLeadCount = 0;
+      let reusedCustomerCount = 0;
+      let reusedContactCount = 0;
 
       for (const leadId of selectedLeadIds) {
         try {
@@ -61,6 +64,15 @@ export const ConvertLeadsToCustomersMultipleRecordsCommand = () => {
 
           if (result?.customerId) {
             successfulLeadCount += 1;
+            if (result.alreadyConverted) {
+              alreadyConvertedLeadCount += 1;
+            }
+            if (result.customerReused) {
+              reusedCustomerCount += 1;
+            }
+            if (result.contactReused) {
+              reusedContactCount += 1;
+            }
           } else {
             failedLeadCount += 1;
           }
@@ -75,13 +87,13 @@ export const ConvertLeadsToCustomersMultipleRecordsCommand = () => {
 
       if (successfulLeadCount > 0 && failedLeadCount === 0) {
         enqueueSuccessSnackBar({
-          message: t`${successfulLeadCount} leads converted to customers`,
+          message: `${successfulLeadCount} leads processed. ${alreadyConvertedLeadCount} already converted, ${reusedCustomerCount} customer reused, ${reusedContactCount} contact reused.`,
         });
       }
 
       if (successfulLeadCount > 0 && failedLeadCount > 0) {
         enqueueWarningSnackBar({
-          message: `${successfulLeadCount} leads converted, ${failedLeadCount} skipped`,
+          message: `${successfulLeadCount} leads processed, ${failedLeadCount} failed. ${alreadyConvertedLeadCount} already converted, ${reusedCustomerCount} customer reused, ${reusedContactCount} contact reused.`,
         });
       }
 

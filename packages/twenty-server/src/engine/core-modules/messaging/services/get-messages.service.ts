@@ -6,6 +6,7 @@ import { TIMELINE_THREADS_DEFAULT_PAGE_SIZE } from 'src/engine/core-modules/mess
 import { type TimelineCompanyThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-company-threads-with-total.dto';
 import { type TimelineThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-threads-with-total.dto';
 import { TradeCrmMailThreadTagEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-tag.entity';
+import { TradeCrmMailThreadTaskLinkEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-task-link.entity';
 import { TradeCrmMailThreadStateEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-state.entity';
 import { TimelineMessagingService } from 'src/engine/core-modules/messaging/services/timeline-messaging.service';
 import { formatThreads } from 'src/engine/core-modules/messaging/utils/format-threads.util';
@@ -24,6 +25,8 @@ export class GetMessagesService {
     private readonly tradeCrmMailThreadStateRepository: Repository<TradeCrmMailThreadStateEntity>,
     @InjectRepository(TradeCrmMailThreadTagEntity)
     private readonly tradeCrmMailThreadTagRepository: Repository<TradeCrmMailThreadTagEntity>,
+    @InjectRepository(TradeCrmMailThreadTaskLinkEntity)
+    private readonly tradeCrmMailThreadTaskLinkRepository: Repository<TradeCrmMailThreadTaskLinkEntity>,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
     private readonly timelineMessagingService: TimelineMessagingService,
   ) {}
@@ -101,6 +104,70 @@ export class GetMessagesService {
     }
 
     return true;
+  }
+
+  async upsertTradeCrmMailThreadTaskLink(
+    workspaceId: string,
+    threadId: string,
+    taskId: string,
+  ): Promise<TradeCrmMailThreadTaskLinkEntity> {
+    const existingThreadTaskLink =
+      await this.tradeCrmMailThreadTaskLinkRepository.findOneBy({
+        workspaceId,
+        threadId,
+      });
+
+    if (existingThreadTaskLink) {
+      existingThreadTaskLink.taskId = taskId;
+
+      return this.tradeCrmMailThreadTaskLinkRepository.save(
+        existingThreadTaskLink,
+      );
+    }
+
+    return this.tradeCrmMailThreadTaskLinkRepository.save({
+      workspaceId,
+      threadId,
+      taskId,
+    });
+  }
+
+  async getTradeCrmMailThreadTaskLinks(
+    workspaceId: string,
+    threadIds: string[],
+  ): Promise<TradeCrmMailThreadTaskLinkEntity[]> {
+    if (threadIds.length === 0) {
+      return [];
+    }
+
+    return this.tradeCrmMailThreadTaskLinkRepository.find({
+      where: {
+        workspaceId,
+        threadId: In(threadIds),
+      },
+      order: {
+        updatedAt: 'DESC',
+      },
+    });
+  }
+
+  async getThreadTaskLinksByThreadId(
+    workspaceId: string,
+    threadIds: string[],
+  ): Promise<Record<string, string>> {
+    const threadTaskLinks = await this.getTradeCrmMailThreadTaskLinks(
+      workspaceId,
+      threadIds,
+    );
+
+    return threadTaskLinks.reduce<Record<string, string>>(
+      (accumulator, threadTaskLink) => {
+        accumulator[threadTaskLink.threadId] = threadTaskLink.taskId;
+
+        return accumulator;
+      },
+      {},
+    );
   }
 
   private async getThreadTagsByThreadId(
@@ -339,31 +406,27 @@ export class GetMessagesService {
         workspaceId,
       );
 
-    const pendingThreadStatesByThreadId =
-      filter === 'PENDING'
-        ? (
-            await this.tradeCrmMailThreadStateRepository.find({
-              where: {
-                workspaceId,
-                threadId: In(messageThreadIds),
-                isPending: true,
-              },
-              order: {
-                updatedAt: 'DESC',
-              },
-            })
-          ).reduce<Record<string, TradeCrmMailThreadStateEntity>>(
-            (
-              accumulator: Record<string, TradeCrmMailThreadStateEntity>,
-              threadState: TradeCrmMailThreadStateEntity,
-            ) => {
-              accumulator[threadState.threadId] = threadState;
+    const pendingThreadStatesByThreadId = (
+      await this.tradeCrmMailThreadStateRepository.find({
+        where: {
+          workspaceId,
+          threadId: In(messageThreadIds),
+        },
+        order: {
+          updatedAt: 'DESC',
+        },
+      })
+    ).reduce<Record<string, TradeCrmMailThreadStateEntity>>(
+      (
+        accumulator: Record<string, TradeCrmMailThreadStateEntity>,
+        threadState: TradeCrmMailThreadStateEntity,
+      ) => {
+        accumulator[threadState.threadId] = threadState;
 
-              return accumulator;
-            },
-            {},
-          )
-        : {};
+        return accumulator;
+      },
+      {},
+    );
     const threadTagsByThreadId = await this.getThreadTagsByThreadId(
       workspaceId,
       messageThreadIds,
@@ -375,6 +438,7 @@ export class GetMessagesService {
       threadVisibilityByThreadId,
       threadReadByThreadId,
       threadTagsByThreadId,
+      pendingThreadStatesByThreadId,
     );
 
     const filteredThreads = formattedThreads.filter((thread) => {

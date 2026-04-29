@@ -118,15 +118,24 @@ export class ApolloFactory implements ApolloManager {
           hostname === '127.0.0.1' ||
           hostname === '::1';
 
+        if (isLocalDevelopmentAuthBypass) {
+          return {
+            headers: {
+              ...headers,
+              ...optionHeaders,
+              'x-locale': locale,
+              'x-dev-bypass-auth': 'true',
+              ...(this.appVersion && { 'X-App-Version': this.appVersion }),
+            },
+          };
+        }
+
         if (isUndefinedOrNull(tokenPair)) {
           return {
             headers: {
               ...headers,
               ...optionHeaders,
               'x-locale': locale,
-              ...(isLocalDevelopmentAuthBypass && {
-                'x-dev-bypass-auth': 'true',
-              }),
             },
           };
         }

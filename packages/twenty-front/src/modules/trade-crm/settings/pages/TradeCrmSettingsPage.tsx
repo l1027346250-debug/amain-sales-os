@@ -518,17 +518,17 @@ export const TradeCrmSettingsPage = () => {
 
   return (
     <AdminWorkspaceLayout
-      title="Trade CRM Settings"
+      title="Settings Control"
       heroTitle={currentView.heroTitle}
       heroDescription={currentView.heroDescription}
       tabs={tabs}
       cards={currentCards}
       workspaceContext={{
-        workspace: 'Trade CRM Settings',
+        workspace: 'Settings Control',
         channel: 'governance-and-configuration',
         stage: currentView.title,
         summaryText: [
-          'Workspace: Trade CRM Settings',
+          'Workspace: Settings Control',
           `Current view: ${currentView.title}`,
           'Scope: fields, stages, routing, sources, automation, AI, integrations.',
           `Today New Leads: ${totalTodayNewLeadsCount}`,

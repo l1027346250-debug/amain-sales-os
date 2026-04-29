@@ -1,10 +1,15 @@
 import { tradeCrmRouteMap } from '@/trade-crm/navigation/tradeCrmRouteMap';
 
-export type TradeCrmMailScopeKey = 'mail' | 'customer' | 'campaign';
+export type TradeCrmMailScopeKey =
+  | 'mail'
+  | 'customer'
+  | 'subordinate'
+  | 'campaign';
 
 export const TRADE_CRM_MAIL_SCOPE_ORDER: TradeCrmMailScopeKey[] = [
   'mail',
   'customer',
+  'subordinate',
   'campaign',
 ];
 

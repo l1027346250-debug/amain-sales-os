@@ -214,49 +214,49 @@ export const TradeCrmAnalyticsPage = () => {
   const leadConversionSource = createTradeCrmRecordSource({
     href: getTradeCrmScopedViewPath(tradeCrmRouteMap.workbench, 'first-response'),
     workspaceKey: 'analytics',
-    workspaceLabel: 'Team Data',
+    workspaceLabel: 'Team',
     viewKey: 'lead-conversion',
     viewLabel: 'Lead Conversion',
   });
   const todayNewLeadsSource = createTradeCrmRecordSource({
     href: todayNewLeadsLink,
     workspaceKey: 'analytics',
-    workspaceLabel: 'Team Data',
+    workspaceLabel: 'Team',
     viewKey: 'lead-conversion',
     viewLabel: 'Today New Leads',
   });
   const tasksDueTodaySource = createTradeCrmRecordSource({
     href: tasksDueTodayLink,
     workspaceKey: 'analytics',
-    workspaceLabel: 'Team Data',
+    workspaceLabel: 'Team',
     viewKey: 'mail-efficiency',
     viewLabel: 'Tasks Due Today',
   });
   const overdueTasksSource = createTradeCrmRecordSource({
     href: taskBaseLink,
     workspaceKey: 'analytics',
-    workspaceLabel: 'Team Data',
+    workspaceLabel: 'Team',
     viewKey: 'team-performance',
     viewLabel: 'Overdue Tasks',
   });
   const pipelineFunnelSource = createTradeCrmRecordSource({
     href: pipelineNeedsNextActionLink,
     workspaceKey: 'analytics',
-    workspaceLabel: 'Team Data',
+    workspaceLabel: 'Team',
     viewKey: 'pipeline-funnel',
     viewLabel: 'Pipeline Funnel',
   });
   const quoteFollowUpSource = createTradeCrmRecordSource({
     href: quoteFollowUpWorkspaceLink,
     workspaceKey: 'analytics',
-    workspaceLabel: 'Team Data',
+    workspaceLabel: 'Team',
     viewKey: 'mail-efficiency',
     viewLabel: 'Quote Follow-up',
   });
   const stalledRecoverySource = createTradeCrmRecordSource({
     href: stalledWorkspaceLink,
     workspaceKey: 'analytics',
-    workspaceLabel: 'Team Data',
+    workspaceLabel: 'Team',
     viewKey: 'pipeline-funnel',
     viewLabel: 'Stalled Recovery',
   });
@@ -797,25 +797,25 @@ export const TradeCrmAnalyticsPage = () => {
                   {
                     title: 'Routing And Source Rules',
                     description:
-                      'Use the Trade CRM settings layer to review source attribution, product-category routing, and AI or integration assumptions when queue behavior looks wrong.',
+                      'Use the settings control layer to review source attribution, product-category routing, and AI or integration assumptions when queue behavior looks wrong.',
                     href: getSettingsPath(SettingsPath.TradeCrm),
-                    actionLabel: 'Open Trade CRM settings',
+                    actionLabel: 'Open settings control',
                   },
                   {
                     title: 'Current Team Priority',
-                    description: `Current team data priority: ${managerPriorityLabel}. This page should tell a manager which queue needs intervention first before they drill into detailed lists.`,
+                    description: `Current team priority: ${managerPriorityLabel}. This page should tell a manager which queue needs intervention first before they drill into detailed lists.`,
                   },
                 ];
 
   return (
     <AdminWorkspaceLayout
-      title="Team Data"
+      title="Team"
       heroTitle={currentView.heroTitle}
       heroDescription={currentView.heroDescription}
       tabs={tabs}
       cards={cards}
       workspaceContext={{
-        workspace: 'Team Data',
+        workspace: 'Team',
         entityType: 'team-analytics',
         stage: currentView.title,
         channel: 'team-execution-review',

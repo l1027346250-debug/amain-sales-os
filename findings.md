@@ -57,3 +57,35 @@
 - 已修正缺口：企业字段过滤条件在预估数量和实际导出中共用，降低运营侧“预估与文件不一致”的风险。
 - 剩余缺口：客户列表页仍然是前端可见集合过滤，尚未复用这套后端企业字段过滤能力。
 - 剩余缺口：导出页面企业字段 select/multiSelect 仍是通用输入，没有读取选项做下拉/多选控件。
+# 2026-04-28 当前主线发现
+
+- AMAIN CRM 的表层信息架构已经从 Twenty 默认菜单抽离，`Sales Desk / Leads / Customers / Opportunities` 已完成第一轮重置。
+- 当前最接近日常可用性的阻塞不在导航，而在 `lead -> customer` 的幂等性和批量转换稳定性。
+- `customer-lead-conversion.service.ts` 之前是盲插 company/person，重复邮箱 contact 会命中唯一约束。
+- 当前已加入三层复用逻辑：
+  - 先按 timeline 判断这条 lead 是否已经转过
+  - 再按联系人主邮箱复用 person
+  - 再按 company 名精确复用 customer
+- 直接通过浏览器向 `http://localhost:3000/graphql` 打 raw mutation 目前返回 `403 Forbidden resource`，这轮更可靠的回归方式应是服务单测或应用内实际触发。
+
+# 2026-04-29 Mail 模块当前发现
+
+- Xiaoman/OKKI 的邮件模块是高密度操作工作面，不是 dashboard；AMAIN Mail 需要继续压缩指标卡和解释性文案。
+- 当前 Mail 第一轮重构已把 inbox / customer / subordinate 调整为更接近 Xiaoman 的三栏工作面。
+- 真实浏览器回归中，右下角错误提示的直接根因是 `connectedAccounts` GraphQL 过滤器报错：`Filter for field "accountOwnerId" must have exactly one operator`。
+- 当前修复策略是先取 workspace connected accounts，再在前端按当前 workspace member 收口，绕开这条 schema 兼容问题。
+- 待处理邮件的 `任务交接` 已从 `AppPath.TasksPage` 工作区跳转升级为真实 Task drawer 创建；目标优先挂到 opportunity，其次 company/customer，再其次 person。
+
+## 2026-04-29 Mail customer / subordinate 回归补充
+- `useTradeCrmMailWorkspaceData` 之前复用了根 Apollo provider，导致 customer 视角业务查询错误打到 `/metadata`，并出现 `Cannot query field "getMyCustomerMailCompanies" on type "Query"`。
+- 当前已把 Mail 工作区业务查询切到 `useApolloCoreClient()`，customer 视角浏览器回归中 `/metadata` 已恢复为 200，客户工作面可正常渲染。
+- subordinate 视图回归中发现一个表单 warning：`value` 传给 `select` 但没有 `onChange`，根因是“所有下属”占位下拉只有固定值没有事件处理。
+- 继续追查后确认剩余权限错误来自 `GetMyCustomerMailCompanies`；当前已把 `TimelineMessagingService.getAndCountCompanyThreads()` 的 company repository 明确切到 `shouldBypassPermissionChecks: true`，浏览器回归里这条错误已经消失。
+- customer 视角后续追查发现，页面仍会在 `recentThreads.length === 0` 时回退到静态 `workspace.listItems`，把“没有 CRM-linked customer mail”伪装成一组假客户卡。
+- 当前已去掉 customer 视角这层回退；没有真实 customer mail 数据时，页面进入明确空状态，并提供“去邮件搜索补关联 / 打开客户工作台”两个动作入口。
+- pending-replies 之前虽然能创建 Task，但没有真实 Task record 入口，用户只能新建任务或退回任务工作区。
+- 当前已在 Mail 页面直接查询 Task，并按 `opportunity -> customer/company -> person` 目标关系匹配当前待处理线程；命中后优先展示“打开跟进任务”深链接，并保留 Mail source trail。
+- 当前已补 core `tradeCrmMailThreadTaskLink` 绑定表，前端在新建跟进任务后会把 `threadId -> taskId` 立即回写，pending-replies 读取时优先走精确绑定。
+- 当前这条链的真实阻塞不是 schema、migration 或绑定表缺失，而是 `TradeCrmMailPage` 的 thread-task query/mutation 之前还在走默认 Apollo client，dev runtime 下没有和 Mail 其他业务查询一样统一走 core client。
+- 当前已把 `GET_TRADE_CRM_MAIL_THREAD_TASK_LINKS` 和 `UPSERT_TRADE_CRM_MAIL_THREAD_TASK_LINK` 都切到 `useApolloCoreClient()`，并在本地插入 thread-task 样本后完成浏览器回归；pending-replies 现在已经能显示“打开跟进任务”。
+- 后续剩余点：把 target-based `opportunity/company/person` 近似匹配继续降为纯兜底，并在 Task 详情页补可见的 Mail thread 来源上下文。

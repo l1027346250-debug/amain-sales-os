@@ -6,9 +6,12 @@ import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient
 
 type ConvertLeadToCustomerMutation = {
   convertLeadToCustomer: {
+    alreadyConverted: boolean;
     leadId: string;
     customerId: string;
+    customerReused: boolean;
     contactId: string | null;
+    contactReused: boolean;
     ownerId: string | null;
   };
 };
@@ -26,6 +29,9 @@ const CONVERT_LEAD_TO_CUSTOMER = gql`
       customerId
       contactId
       ownerId
+      alreadyConverted
+      customerReused
+      contactReused
     }
   }
 `;

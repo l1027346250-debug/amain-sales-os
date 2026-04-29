@@ -11,6 +11,9 @@ export const formatThreads = (
     TimelineThreadDTO,
     | 'firstParticipant'
     | 'lastTwoParticipants'
+    | 'isPending'
+    | 'pendingReason'
+    | 'pendingUpdatedAt'
     | 'participantCount'
     | 'read'
     | 'visibility'
@@ -23,6 +26,14 @@ export const formatThreads = (
   },
   threadReadByThreadId?: Record<string, boolean>,
   threadTagsByThreadId?: Record<string, string[]>,
+  pendingThreadStatesByThreadId?: Record<
+    string,
+    {
+      isPending: boolean;
+      pendingReason: string | null;
+      updatedAt: Date;
+    }
+  >,
 ): TimelineThreadDTO[] => {
   return threads
     .filter((thread) => isDefined(threadParticipantsByThreadId[thread.id]))
@@ -44,6 +55,11 @@ export const formatThreads = (
         visibility,
         read: threadReadByThreadId?.[thread.id] ?? true,
         tags: threadTagsByThreadId?.[thread.id] ?? [],
+        isPending: pendingThreadStatesByThreadId?.[thread.id]?.isPending ?? false,
+        pendingReason:
+          pendingThreadStatesByThreadId?.[thread.id]?.pendingReason ?? null,
+        pendingUpdatedAt:
+          pendingThreadStatesByThreadId?.[thread.id]?.updatedAt ?? null,
       };
     });
 };

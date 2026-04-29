@@ -61,7 +61,7 @@ export const useOpenCreateActivityDrawer = ({
   }: {
     targetableObjects: ActivityTargetableObject[];
     customAssignee?: WorkspaceMember;
-  }) => {
+  }): Promise<string> => {
     setViewableRecordId(null);
     setViewableRecordNameSingular(activityObjectNameSingular);
 
@@ -134,6 +134,8 @@ export const useOpenCreateActivityDrawer = ({
     setViewableRecordId(activity.id);
 
     setIsUpsertingActivityInDB(false);
+
+    return activity.id;
   };
 
   return openCreateActivityDrawer;

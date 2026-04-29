@@ -168,3 +168,47 @@
 - 试运行通过：`nx lint:diff-with-main twenty-front`、客户模块 15 个测试文件共 32 个测试、`nx typecheck twenty-front`。
 - 构建试运行：`nx build twenty-front` 中 Vite 已完成生产打包，输出 `TradeCrmCustomersPage` chunk；Nx 最终失败在 Windows 环境缺少 `sh` 的后置步骤，非客户模块编译错误。
 - 下一步推荐：优先抽 `useTradeCrmCustomerCreateCustomerForm`，将客户新建表单状态、企业字段校验和保存逻辑从 `TradeCrmCustomersPage.tsx` 下沉。
+## 2026-04-28 AMAIN CRM Xiaoman 对齐开发 TODO
+
+### 目标
+- 用明确的 TODO 板约束开发方向
+- 优先解决影响试运行的核心业务问题
+- 逐项收口，不再零散修补
+
+### 当前任务状态
+1. `completed` 修复 `lead -> customer` 幂等性
+2. `completed` 为 lead conversion 增加最小单测
+3. `completed` 为批量 lead 转化增加结果摘要
+4. `completed` 收口 `Team` 的 Xiaoman 语义
+5. `completed` 按 Xiaoman Page Contract 重构 Mail 工作面
+6. `pending` 收口 `Automation / Settings / Admin` 的 Xiaoman 语义
+7. `in_progress` 补 Mail / Customer / Opportunity 的上下文联动
+8. `completed` 把待处理邮件动作联动到真实 Tasks，而不是只停留在工作区跳转
+9. `completed` 修复 Mail `connectedAccounts` 查询过滤兼容问题，清掉 inbox 右下角错误提示
+10. `completed` 修复 Mail customer 视角错误走 `/metadata` 的 GraphQL client 绑定问题
+11. `completed` 将 Mail customer / subordinate 工作面比例压到更接近 Xiaoman 的三栏密度
+12. `completed` 清理 Mail customer / subordinate 视角的主要运行态错误
+13. `in_progress` 继续深链 Mail -> Customer / Opportunity / Task 的真实业务动作
+    - 已完成：customer 视角去掉静态 workspace list 回退，避免把无数据状态伪装成假客户卡
+    - 已完成：customer 视角空状态补可操作入口，直接给出“去邮件搜索补关联 / 打开客户工作台”
+    - 已完成：pending-replies 视图现在会查询并匹配已存在 Task，优先给出“打开跟进任务”深链接
+    - 已完成：Task 深链接保留 Mail source trail，打开真实任务记录时能回到 pending queue 上下文
+    - 已完成：新增 core `tradeCrmMailThreadTaskLink` 绑定表与 GraphQL 读写口，pending-replies 现在优先按 `threadId -> taskId` 精确命中 Task
+    - 已完成：`useOpenCreateActivityDrawer` 现在返回新建 activity id，Mail 在“创建跟进任务”后会立刻回写线程绑定
+    - 已完成：`TradeCrmMailPage` 里的 thread-task query/mutation 明确切到 `useApolloCoreClient()`，dev runtime 现在能稳定读到 thread-task 精确绑定
+    - 已完成：浏览器回归里 `pending-replies` 已出现“打开跟进任务”，不再只停留在“创建跟进任务”
+    - 下一步：把 Task 详情页补 Mail thread 来源上下文，并逐步把 `opportunity/company/person` 的近似匹配降为纯兜底
+
+### 当前验收标准
+- 同一条 lead 重复转换不会重复创建 customer / contact
+- 同邮箱 contact 再次转换不会触发唯一约束失败
+- 批量转换遇到历史重复数据不会整批中断
+- Mail customer / subordinate 视角不再把业务查询错误打到 `/metadata`
+- Mail customer / subordinate 视角需要稳定通过浏览器回归，且不再出现表单只读 warning
+- 每完成一项都同步写入 `progress.md`
+
+### 当前阻塞
+- `twenty-server` 全量 typecheck 有仓库既有错误，不能作为本任务唯一收口标准
+- 本地 raw GraphQL mutation 直连 `convertLeadToCustomer` 当前返回 403，运行回归需改用更稳定入口或单测
+- 待处理邮件和客户视角已经完成浏览器级回归，但本地部分线程缺少 CRM 关联数据，深链接会按设计回退到工作区
+- 外网字体请求在本地回归中会出现 `ERR_CONNECTION_CLOSED`，不影响主流程，但属于运行态噪音

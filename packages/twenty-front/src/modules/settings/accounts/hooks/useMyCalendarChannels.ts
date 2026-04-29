@@ -37,13 +37,16 @@ export const useMyCalendarChannels = () => {
 
   const { records: workspaceAccounts } = useFindManyRecords<ConnectedAccount>({
     objectNameSingular: CoreObjectNameSingular.ConnectedAccount,
-    filter: {
-      accountOwnerId: {
-        eq: currentWorkspaceMember?.id,
-      },
-    },
-    skip: isMigrated,
+    skip: isMigrated || !currentWorkspaceMember?.id,
   });
+
+  const ownedWorkspaceAccounts = useMemo(
+    () =>
+      workspaceAccounts.filter(
+        (account) => account.accountOwnerId === currentWorkspaceMember?.id,
+      ),
+    [workspaceAccounts, currentWorkspaceMember?.id],
+  );
 
   const { records: workspaceChannels, loading: workspaceLoading } =
     useFindManyRecords<
@@ -52,13 +55,13 @@ export const useMyCalendarChannels = () => {
       objectNameSingular: CoreObjectNameSingular.CalendarChannel,
       filter: {
         connectedAccountId: {
-          in: workspaceAccounts.map((account) => account.id),
+          in: ownedWorkspaceAccounts.map((account) => account.id),
         },
         syncStage: {
           neq: CalendarChannelSyncStage.PENDING_CONFIGURATION,
         },
       },
-      skip: isMigrated || !workspaceAccounts.length,
+      skip: isMigrated || !ownedWorkspaceAccounts.length,
     });
 
   const { data: metadataData, loading: metadataLoading } = useQuery<{

@@ -55,11 +55,15 @@ describe('useOpenCreateActivityDrawer', () => {
       { wrapper: Wrapper },
     );
 
+    let createdNoteId: string | undefined;
+
     await act(async () => {
-      await result.current({
+      createdNoteId = await result.current({
         targetableObjects: [],
       });
     });
+
+    expect(createdNoteId).toBe(fakeNoteId);
 
     expect(mockCreateOneNote).toHaveBeenCalledWith({
       position: 'last',
@@ -118,5 +122,25 @@ describe('useOpenCreateActivityDrawer', () => {
     expect(jotaiStore.get(activityTargetableEntityArrayState.atom)).toEqual(
       targetableObjects,
     );
+  });
+
+  it('should return the created activity id when opening the drawer', async () => {
+    const { result } = renderHook(
+      () =>
+        useOpenCreateActivityDrawer({
+          activityObjectNameSingular: CoreObjectNameSingular.Note,
+        }),
+      { wrapper: Wrapper },
+    );
+
+    let createdNoteId: string | undefined;
+
+    await act(async () => {
+      createdNoteId = await result.current({
+        targetableObjects: [],
+      });
+    });
+
+    expect(createdNoteId).toBe(fakeNoteId);
   });
 });
