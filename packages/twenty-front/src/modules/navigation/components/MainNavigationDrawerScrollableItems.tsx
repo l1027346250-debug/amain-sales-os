@@ -34,9 +34,26 @@ const StyledScrollableItemsContainer = styled.div`
 
 export const MainNavigationDrawerScrollableItems = () => {
   const location = useLocation();
+  const searchParameters = new URLSearchParams(location.search);
+  const sourceWorkspace = searchParameters.get('sourceWorkspace')?.trim();
+  const sourceHref = searchParameters.get('sourceHref')?.trim();
+  const hasAmainCrmSourceContext =
+    sourceWorkspace === 'workbench' ||
+    sourceWorkspace === 'prospecting' ||
+    sourceWorkspace === 'customers' ||
+    sourceWorkspace === 'opportunities' ||
+    sourceWorkspace === 'mail' ||
+    sourceWorkspace === 'collaboration' ||
+    sourceWorkspace === 'analytics' ||
+    sourceWorkspace === 'settings' ||
+    sourceWorkspace === 'enterprise' ||
+    sourceWorkspace === 'admin' ||
+    sourceHref?.startsWith('/trade-crm/') === true ||
+    sourceHref?.startsWith('/enterprise') === true;
   const isAmainCrmSurface =
     isTradeCrmPath(location.pathname) ||
-    location.pathname.startsWith('/enterprise');
+    location.pathname.startsWith('/enterprise') ||
+    hasAmainCrmSourceContext;
 
   return (
     <StyledScrollableItemsContainer>

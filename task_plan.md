@@ -197,7 +197,9 @@
     - 已完成：`useOpenCreateActivityDrawer` 现在返回新建 activity id，Mail 在“创建跟进任务”后会立刻回写线程绑定
     - 已完成：`TradeCrmMailPage` 里的 thread-task query/mutation 明确切到 `useApolloCoreClient()`，dev runtime 现在能稳定读到 thread-task 精确绑定
     - 已完成：浏览器回归里 `pending-replies` 已出现“打开跟进任务”，不再只停留在“创建跟进任务”
-    - 下一步：把 Task 详情页补 Mail thread 来源上下文，并逐步把 `opportunity/company/person` 的近似匹配降为纯兜底
+    - 已完成：Task 详情页已经补上 Mail 来源横幅，能直接显示 `Mail / 待处理邮件`、`threadId` 和返回 pending queue 的入口
+    - 已完成：从 Mail 打开的 `/object/task/...` 记录页已隐藏 Twenty 的 `工作区 / favorites` 导航壳，不再混回 `Sales Workbench`
+    - 下一步：逐步把 `opportunity/company/person` 的近似匹配降为纯兜底，并考虑在 Task 页横幅里补 thread 摘要 / 发件人摘要
 
 ### 当前验收标准
 - 同一条 lead 重复转换不会重复创建 customer / contact

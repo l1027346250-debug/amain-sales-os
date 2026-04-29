@@ -363,3 +363,7 @@
 - Verified with targeted tests: `useOpenCreateActivityDrawer.test.tsx` and `get-messages.service.spec.ts`, plus `npx nx typecheck twenty-front`, `corepack yarn nx build twenty-front`, and `npx nx build twenty-server`.
 - Added fallback pending thread ids and switched the pending thread-link query/mutation to `useApolloCoreClient()` so dev runtime now reads the exact thread-task binding through the same core GraphQL path as the rest of Mail.
 - Browser regression on `http://localhost:3001/trade-crm/mail?scope=mail&view=pending` now shows `打开跟进任务`; the pending queue is reading a real `threadId -> taskId` binding instead of falling back to task creation only.
+- Added a Task-specific Mail context banner in `RecordShowPage`, so a task opened from pending replies now visibly shows `Mail / 待处理邮件`, the `threadId`, and a direct return link back to the pending queue.
+- Browser regression on `/object/task/ae203ca0-75d1-48bd-a9ef-206015b37a3e?...sourceWorkspace=mail...` confirms the task page renders the new Mail follow-up context instead of hiding that information in URL params only.
+- Extended `MainNavigationDrawerScrollableItems` to treat `sourceWorkspace/sourceHref` from AMAIN CRM as first-class surface context, so `/object/task/...` opened from Mail no longer shows the legacy workspace/favorites navigation block.
+- Browser regression on the task record page now confirms `工作区` and `Sales Workbench` are gone while the Mail follow-up context banner remains visible.

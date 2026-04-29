@@ -88,4 +88,8 @@
 - 当前已补 core `tradeCrmMailThreadTaskLink` 绑定表，前端在新建跟进任务后会把 `threadId -> taskId` 立即回写，pending-replies 读取时优先走精确绑定。
 - 当前这条链的真实阻塞不是 schema、migration 或绑定表缺失，而是 `TradeCrmMailPage` 的 thread-task query/mutation 之前还在走默认 Apollo client，dev runtime 下没有和 Mail 其他业务查询一样统一走 core client。
 - 当前已把 `GET_TRADE_CRM_MAIL_THREAD_TASK_LINKS` 和 `UPSERT_TRADE_CRM_MAIL_THREAD_TASK_LINK` 都切到 `useApolloCoreClient()`，并在本地插入 thread-task 样本后完成浏览器回归；pending-replies 现在已经能显示“打开跟进任务”。
-- 后续剩余点：把 target-based `opportunity/company/person` 近似匹配继续降为纯兜底，并在 Task 详情页补可见的 Mail thread 来源上下文。
+- Task 详情页之前虽然 URL 已经带了 `sourceWorkspace/sourceLabel/sourceTrail`，但页面本身没有把这组 Mail 来源上下文显式渲染出来，销售打开任务后看不出这条任务来自哪封待处理邮件。
+- 当前已在 `RecordShowPage` 为 Task 记录补了一条 Mail 来源横幅，直接显示来源工作面、thread id 和返回 pending queue 的入口；任务详情现在能看出这是从 `Mail / 待处理邮件` 打开的跟进任务。
+- 左侧重新出现 `工作区 / Sales Workbench` 的根因不是 Mail 上下文丢失，而是主导航隐藏逻辑只覆盖了 `trade-crm/*` 和 `enterprise/*` pathname，没有覆盖 `/object/task/...` 这类通用记录页上的 `sourceWorkspace=mail` 来源上下文。
+- 当前已把 `MainNavigationDrawerScrollableItems` 的 AMAIN surface 判断扩展到 `sourceWorkspace/sourceHref`，从 Mail 打开的 Task 记录页不再回落到 Twenty 的 workspace/favorites 导航壳。
+- 后续剩余点：把 target-based `opportunity/company/person` 近似匹配继续降为纯兜底，并考虑把 thread 摘要或发件人摘要也带到 Task 页横幅里。
