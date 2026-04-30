@@ -93,3 +93,10 @@
 - 左侧重新出现 `工作区 / Sales Workbench` 的根因不是 Mail 上下文丢失，而是主导航隐藏逻辑只覆盖了 `trade-crm/*` 和 `enterprise/*` pathname，没有覆盖 `/object/task/...` 这类通用记录页上的 `sourceWorkspace=mail` 来源上下文。
 - 当前已把 `MainNavigationDrawerScrollableItems` 的 AMAIN surface 判断扩展到 `sourceWorkspace/sourceHref`，从 Mail 打开的 Task 记录页不再回落到 Twenty 的 workspace/favorites 导航壳。
 - 后续剩余点：把 target-based `opportunity/company/person` 近似匹配继续降为纯兜底，并考虑把 thread 摘要或发件人摘要也带到 Task 页横幅里。
+## 2026-04-30 AMAIN Mailbox Phase 1 设计发现
+
+- 现有仓库已经具备 `connected account / message channel / IMAP-SMTP-CALDAV / folder sync` 底层能力，适合复用，不需要从零重建邮件同步层。
+- 现有设置页和连接模型偏向“个人邮箱连接”，不适合作为最终产品形态直接暴露给 AMAIN 用户。
+- 如果继续沿用 Twenty 原生 connected-account 作为产品壳，邮件模块会继续背离 Xiaoman/OKKI 的企业邮箱工作台目标。
+- 正确方向是双层结构：底层复用 Twenty，产品层新增 AMAIN mailbox profile / assignment / permission / rule / CRM link。
+- Phase 1 的最小正确边界不是“把邮件页修得更像邮箱”，而是“管理员可以代绑阿里邮箱并把邮箱工作台分配给用户使用”。

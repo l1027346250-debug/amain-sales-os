@@ -214,3 +214,25 @@
 - 本地 raw GraphQL mutation 直连 `convertLeadToCustomer` 当前返回 403，运行回归需改用更稳定入口或单测
 - 待处理邮件和客户视角已经完成浏览器级回归，但本地部分线程缺少 CRM 关联数据，深链接会按设计回退到工作区
 - 外网字体请求在本地回归中会出现 `ERR_CONNECTION_CLOSED`，不影响主流程，但属于运行态噪音
+
+## 2026-04-30 AMAIN Mailbox Phase 1 设计门槛
+
+### 目标
+- 将 Mail 模块从 CRM 邮件视图推进为企业邮箱工作台
+- 采用管理员代绑阿里邮箱的模式
+- 使用 IMAP + SMTP 作为主协议
+- 保留 Twenty 的连接与同步底座，但由 AMAIN 接管产品层语义
+
+### 当前任务状态
+1. `completed` 明确 Phase 1 目标为完整邮箱台，而不是只做收件箱
+2. `completed` 锁定管理员代绑模式，不走用户自绑主链
+3. `completed` 锁定协议主链为 IMAP + SMTP，不以 POP3 为主
+4. `completed` 确认实现策略为“复用 Twenty substrate + 新增 AMAIN mailbox domain + 重建 AMAIN mail workbench”
+5. `completed` 输出正式设计文档 `docs/superpowers/specs/2026-04-30-amain-mailbox-phase1-design.md`
+6. `pending` 等待用户审阅并确认设计文档
+7. `pending` 用户确认后进入实现计划编写
+
+### 当前验收标准
+- 设计文档必须覆盖信息架构、数据模型、管理员分配流程、协议方案、权限模型、邮件工作台契约与验收标准
+- 设计文档不得再以 Twenty 原生 connected-account 菜单为最终产品形态
+- 后续实现必须围绕“管理员代绑 + 阿里邮箱 + IMAP/SMTP + 完整邮箱台”

@@ -367,3 +367,10 @@
 - Browser regression on `/object/task/ae203ca0-75d1-48bd-a9ef-206015b37a3e?...sourceWorkspace=mail...` confirms the task page renders the new Mail follow-up context instead of hiding that information in URL params only.
 - Extended `MainNavigationDrawerScrollableItems` to treat `sourceWorkspace/sourceHref` from AMAIN CRM as first-class surface context, so `/object/task/...` opened from Mail no longer shows the legacy workspace/favorites navigation block.
 - Browser regression on the task record page now confirms `工作区` and `Sales Workbench` are gone while the Mail follow-up context banner remains visible.
+## 2026-04-30 AMAIN Mailbox Phase 1 design progress
+
+- Locked the mailbox strategy to admin-managed Alibaba mailboxes instead of end-user self-binding.
+- Locked the transport strategy to IMAP + SMTP as the primary path for receive, folders, send, reply, and forward.
+- Chose the layered implementation path: reuse Twenty substrate, add AMAIN mailbox domain, rebuild the AMAIN mail workbench and admin control surface.
+- Wrote the formal design spec to `docs/superpowers/specs/2026-04-30-amain-mailbox-phase1-design.md`.
+- The current stop gate is design review. No implementation work should start until the user approves the written spec.
