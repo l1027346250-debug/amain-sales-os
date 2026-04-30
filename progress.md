@@ -374,3 +374,22 @@
 - Chose the layered implementation path: reuse Twenty substrate, add AMAIN mailbox domain, rebuild the AMAIN mail workbench and admin control surface.
 - Wrote the formal design spec to `docs/superpowers/specs/2026-04-30-amain-mailbox-phase1-design.md`.
 - The current stop gate is design review. No implementation work should start until the user approves the written spec.
+
+## 2026-04-30 AMAIN Mailbox backend progress
+
+- Added the first AMAIN mailbox core tables and entities:
+  - `enterpriseMailboxProfile`
+  - `enterpriseMailboxAssignment`
+  - `enterpriseMailboxPermission`
+  - `enterpriseMailboxRule`
+  - `enterpriseMailThreadCrmLink`
+- Added migration `1774900000000-add-enterprise-mailbox-control.ts`.
+- Added `EnterpriseMailboxProfileService` with the first mailbox profile creation path and audit logging.
+- Added `EnterpriseMailboxAssignmentService` with mailbox-to-user assignment and permission row creation.
+- Added `EnterpriseMailboxHealthService` for admin mailbox health listing.
+- Added enterprise mailbox REST controllers for profile list/create/validate, assignment create, and health list.
+- Registered the new entities, services, and controllers in `EnterpriseManagementModule`.
+- Added and passed targeted tests:
+  - `enterprise-mailbox-profile.service.spec.ts`
+  - `enterprise-mailbox-assignment.service.spec.ts`
+- Verified `npx nx build twenty-server` passes after the backend mailbox additions.

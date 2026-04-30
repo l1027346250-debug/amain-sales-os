@@ -45,6 +45,18 @@ import { EnterpriseInquiryFormMappingEntity } from 'src/modules/enterprise/indep
 import { EnterpriseWebsiteBindingEntity } from 'src/modules/enterprise/independent-station/enterprise-website-binding.entity';
 import { EnterpriseWebsiteInquiryEntity } from 'src/modules/enterprise/independent-station/enterprise-website-inquiry.entity';
 import { EnterpriseIndependentStationService } from 'src/modules/enterprise/independent-station/services/enterprise-independent-station.service';
+import { EnterpriseMailboxAssignmentsController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-assignments.controller';
+import { EnterpriseMailboxHealthController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-health.controller';
+import { EnterpriseMailboxProfilesController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-profiles.controller';
+import { EnterpriseMailThreadCrmLinkEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mail-thread-crm-link.entity';
+import { EnterpriseMailboxAssignmentEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-assignment.entity';
+import { EnterpriseMailboxPermissionEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-permission.entity';
+import { EnterpriseMailboxProfileEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-profile.entity';
+import { EnterpriseMailboxRuleEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-rule.entity';
+import { EnterpriseMailboxAssignmentService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-assignment.service';
+import { EnterpriseMailboxCredentialService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-credential.service';
+import { EnterpriseMailboxHealthService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-health.service';
+import { EnterpriseMailboxProfileService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-profile.service';
 import { EnterprisePermissionController } from 'src/modules/enterprise/permissions/controllers/enterprise-permission.controller';
 import { EnterpriseRolePermissionEntity } from 'src/modules/enterprise/permissions/enterprise-role-permission.entity';
 import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
@@ -102,6 +114,11 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
       EnterpriseSalesPlaybookStageEntity,
       EnterpriseSalesPlaybookItemEntity,
       EnterpriseRolePermissionEntity,
+      EnterpriseMailboxProfileEntity,
+      EnterpriseMailboxAssignmentEntity,
+      EnterpriseMailboxPermissionEntity,
+      EnterpriseMailboxRuleEntity,
+      EnterpriseMailThreadCrmLinkEntity,
       EnterpriseConfigAuditLogEntity,
     ]),
   ],
@@ -118,6 +135,9 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     EnterpriseIndependentStationWebhookController,
     EnterpriseSalesPlaybookController,
     EnterprisePermissionController,
+    EnterpriseMailboxProfilesController,
+    EnterpriseMailboxAssignmentsController,
+    EnterpriseMailboxHealthController,
   ],
   providers: [
     EnterpriseEntityBindingService,
@@ -138,6 +158,10 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     EnterpriseSourceConvertService,
     EnterpriseIndependentStationService,
     EnterpriseSalesPlaybookService,
+    EnterpriseMailboxCredentialService,
+    EnterpriseMailboxProfileService,
+    EnterpriseMailboxAssignmentService,
+    EnterpriseMailboxHealthService,
   ],
 })
 export class EnterpriseManagementModule {}

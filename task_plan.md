@@ -236,3 +236,29 @@
 - 设计文档必须覆盖信息架构、数据模型、管理员分配流程、协议方案、权限模型、邮件工作台契约与验收标准
 - 设计文档不得再以 Twenty 原生 connected-account 菜单为最终产品形态
 - 后续实现必须围绕“管理员代绑 + 阿里邮箱 + IMAP/SMTP + 完整邮箱台”
+
+## 2026-04-30 AMAIN Mailbox Phase 1 执行状态
+
+### 当前任务状态
+1. `completed` 落地 enterprise mailbox domain 实体：
+   - `enterpriseMailboxProfile`
+   - `enterpriseMailboxAssignment`
+   - `enterpriseMailboxPermission`
+   - `enterpriseMailboxRule`
+   - `enterpriseMailThreadCrmLink`
+2. `completed` 落地迁移 `1774900000000-add-enterprise-mailbox-control.ts`
+3. `completed` 新增 profile service 与 assignment service 的最小单测
+4. `completed` 新增后台 REST 入口：
+   - `POST /api/enterprise/mailbox-profiles`
+   - `GET /api/enterprise/mailbox-profiles`
+   - `POST /api/enterprise/mailbox-profiles/:id/validate`
+   - `POST /api/enterprise/mailbox-assignments`
+   - `GET /api/enterprise/mailbox-health`
+5. `completed` 把 mailbox backend 注册进 `EnterpriseManagementModule`
+6. `in_progress` Admin 前端 Mailbox Control 路由与页面
+7. `pending` Mail 工作台完整邮箱行为
+
+### 当前验收结果
+- `enterprise-mailbox-profile.service.spec.ts` 通过
+- `enterprise-mailbox-assignment.service.spec.ts` 通过
+- `npx nx build twenty-server` 通过

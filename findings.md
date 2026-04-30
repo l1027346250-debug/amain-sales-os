@@ -100,3 +100,10 @@
 - 如果继续沿用 Twenty 原生 connected-account 作为产品壳，邮件模块会继续背离 Xiaoman/OKKI 的企业邮箱工作台目标。
 - 正确方向是双层结构：底层复用 Twenty，产品层新增 AMAIN mailbox profile / assignment / permission / rule / CRM link。
 - Phase 1 的最小正确边界不是“把邮件页修得更像邮箱”，而是“管理员可以代绑阿里邮箱并把邮箱工作台分配给用户使用”。
+
+## 2026-04-30 AMAIN Mailbox backend 实现发现
+
+- `EnterpriseManagementModule` 已经是最合适的挂载点，新的 mailbox backend 不需要另起独立 enterprise root module。
+- Twenty 现有 IMAP/SMTP validator 可以直接复用，但当前缺一层“企业托管凭证”的正式安全实现。
+- 这轮为了打通运行链，`EnterpriseMailboxCredentialService` 先做了可回读的过渡实现；它解决了 validate endpoint 不能拿空密码的问题，但还不是最终安全方案。
+- 下一步前端 Admin 页面接入前，后端已经具备最小 REST 面：profile create/list/validate、assignment create、health list。

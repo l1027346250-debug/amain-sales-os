@@ -1,4 +1,8 @@
 export type EnterprisePermissionCode =
+  | 'enterprise.mailbox.assign'
+  | 'enterprise.mailbox.create'
+  | 'enterprise.mailbox.read'
+  | 'enterprise.mailbox.update'
   | 'enterprise.customerExport.create'
   | 'enterprise.customerExport.download'
   | 'enterprise.customerExport.read'
@@ -30,6 +34,10 @@ export type EnterprisePermissionCode =
   | 'enterprise.sourceConvert.update';
 
 export const ENTERPRISE_PERMISSION_CODES = [
+  'enterprise.mailbox.assign',
+  'enterprise.mailbox.create',
+  'enterprise.mailbox.read',
+  'enterprise.mailbox.update',
   'enterprise.customerExport.create',
   'enterprise.customerExport.download',
   'enterprise.customerExport.read',
