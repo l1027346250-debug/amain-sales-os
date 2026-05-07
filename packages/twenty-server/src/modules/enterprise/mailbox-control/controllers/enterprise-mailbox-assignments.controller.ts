@@ -1,6 +1,9 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
+  Patch,
   Post,
   Req,
   UseFilters,
@@ -17,6 +20,7 @@ import { JwtAuthGuard } from 'src/engine/guards/jwt-auth.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { AssignEnterpriseMailboxDto } from 'src/modules/enterprise/mailbox-control/dtos/assign-enterprise-mailbox.dto';
+import { UpdateEnterpriseMailboxAssignmentDto } from 'src/modules/enterprise/mailbox-control/dtos/update-enterprise-mailbox-assignment.dto';
 import { EnterpriseMailboxAssignmentService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-assignment.service';
 import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
 import { type EnterprisePermissionCode } from 'src/modules/enterprise/permissions/types/enterprise-permission-code';
@@ -29,6 +33,16 @@ export class EnterpriseMailboxAssignmentsController {
     private readonly enterpriseMailboxAssignmentService: EnterpriseMailboxAssignmentService,
     private readonly enterprisePermissionService: EnterprisePermissionService,
   ) {}
+
+  @Get()
+  async findMany(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(workspace.id, request, 'enterprise.mailbox.read');
+
+    return this.enterpriseMailboxAssignmentService.findMany(workspace.id);
+  }
 
   @Post()
   async assignMailbox(
@@ -48,6 +62,29 @@ export class EnterpriseMailboxAssignmentsController {
       ...dto,
       workspaceId: workspace.id,
       assignedByWorkspaceMemberId: authenticatedRequest.workspaceMember?.id ?? null,
+    });
+  }
+
+  @Patch(':id')
+  async updateMailboxAssignment(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Param('id') id: string,
+    @Body() dto: UpdateEnterpriseMailboxAssignmentDto,
+    @Req() request: Request,
+  ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    await this.assertPermission(
+      workspace.id,
+      request,
+      'enterprise.mailbox.assign',
+    );
+
+    return this.enterpriseMailboxAssignmentService.updateMailboxAssignment({
+      ...dto,
+      id,
+      workspaceId: workspace.id,
+      updatedByWorkspaceMemberId: authenticatedRequest.workspaceMember?.id ?? null,
     });
   }
 

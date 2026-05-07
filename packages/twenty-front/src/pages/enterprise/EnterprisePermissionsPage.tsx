@@ -59,6 +59,16 @@ const GET_ENTERPRISE_ROLES = gql`
 
 const permissionGroups: PermissionGroup[] = [
   {
+    title: '邮箱中台',
+    description: '控制企业邮箱账号、分配、规则和健康检查。 ',
+    permissionCodes: [
+      enterprisePermissionCodes.mailboxRead,
+      enterprisePermissionCodes.mailboxCreate,
+      enterprisePermissionCodes.mailboxUpdate,
+      enterprisePermissionCodes.mailboxAssign,
+    ],
+  },
+  {
     title: '字段与布局',
     description: '控制自定义字段、字段选项、字段显示布局的读取和维护。',
     permissionCodes: [
@@ -126,6 +136,10 @@ const permissionGroups: PermissionGroup[] = [
 ];
 
 const permissionLabels: Record<EnterprisePermissionCode, string> = {
+  [enterprisePermissionCodes.mailboxAssign]: '分配企业邮箱',
+  [enterprisePermissionCodes.mailboxCreate]: '创建企业邮箱账号',
+  [enterprisePermissionCodes.mailboxRead]: '查看邮箱中台',
+  [enterprisePermissionCodes.mailboxUpdate]: '更新邮箱中台',
   [enterprisePermissionCodes.customerExportCreate]: '创建客户导出任务',
   [enterprisePermissionCodes.customerExportDownload]: '下载客户导出文件',
   [enterprisePermissionCodes.customerExportRead]: '查看客户导出',

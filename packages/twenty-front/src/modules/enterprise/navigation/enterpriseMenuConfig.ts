@@ -68,6 +68,30 @@ export const enterpriseMenuConfig: EnterpriseMenuItem[] = [
         to: AppPath.EnterpriseSalesPlaybook,
       },
       {
+        key: 'mailbox-accounts',
+        label: 'Mailbox Accounts',
+        requiredPermission: enterprisePermissionCodes.mailboxRead,
+        to: AppPath.EnterpriseMailboxAccounts,
+      },
+      {
+        key: 'mailbox-assignments',
+        label: 'Mailbox Assignments',
+        requiredPermission: enterprisePermissionCodes.mailboxAssign,
+        to: AppPath.EnterpriseMailboxAssignments,
+      },
+      {
+        key: 'mailbox-rules',
+        label: 'Mailbox Rules',
+        requiredPermission: enterprisePermissionCodes.mailboxUpdate,
+        to: AppPath.EnterpriseMailboxRules,
+      },
+      {
+        key: 'mailbox-health',
+        label: 'Mailbox Health',
+        requiredPermission: enterprisePermissionCodes.mailboxRead,
+        to: AppPath.EnterpriseMailboxHealth,
+      },
+      {
         key: 'enterprise-permissions',
         label: 'Permissions',
         requiredPermission: enterprisePermissionCodes.permissionsRead,

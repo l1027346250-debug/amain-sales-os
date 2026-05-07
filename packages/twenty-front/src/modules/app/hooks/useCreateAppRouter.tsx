@@ -140,6 +140,30 @@ const EnterprisePermissionsPage = lazy(() =>
   })),
 );
 
+const EnterpriseMailboxAccountsPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseMailboxAccountsPage').then((module) => ({
+    default: module.EnterpriseMailboxAccountsPage,
+  })),
+);
+
+const EnterpriseMailboxAssignmentsPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseMailboxAssignmentsPage').then((module) => ({
+    default: module.EnterpriseMailboxAssignmentsPage,
+  })),
+);
+
+const EnterpriseMailboxRulesPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseMailboxRulesPage').then((module) => ({
+    default: module.EnterpriseMailboxRulesPage,
+  })),
+);
+
+const EnterpriseMailboxHealthPage = lazy(() =>
+  import('~/pages/enterprise/EnterpriseMailboxHealthPage').then((module) => ({
+    default: module.EnterpriseMailboxHealthPage,
+  })),
+);
+
 const RecordShowPage = lazy(() =>
   import('~/pages/object-record/RecordShowPage').then((module) => ({
     default: module.RecordShowPage,
@@ -471,6 +495,38 @@ export const useCreateAppRouter = (
             element={
               <LazyRoute>
                 <EnterprisePermissionsPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseMailboxAccounts}
+            element={
+              <LazyRoute>
+                <EnterpriseMailboxAccountsPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseMailboxAssignments}
+            element={
+              <LazyRoute>
+                <EnterpriseMailboxAssignmentsPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseMailboxRules}
+            element={
+              <LazyRoute>
+                <EnterpriseMailboxRulesPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path={AppPath.EnterpriseMailboxHealth}
+            element={
+              <LazyRoute>
+                <EnterpriseMailboxHealthPage />
               </LazyRoute>
             }
           />

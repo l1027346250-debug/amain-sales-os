@@ -393,3 +393,382 @@
   - `enterprise-mailbox-profile.service.spec.ts`
   - `enterprise-mailbox-assignment.service.spec.ts`
 - Verified `npx nx build twenty-server` passes after the backend mailbox additions.
+
+## 2026-04-30 AMAIN Mailbox admin control progress
+
+- Added `Mailbox Accounts`, `Mailbox Assignments`, `Mailbox Rules`, and `Mailbox Health` pages under Admin.
+- Added new Admin paths:
+  - `/enterprise/mailbox/accounts`
+  - `/enterprise/mailbox/assignments`
+  - `/enterprise/mailbox/rules`
+  - `/enterprise/mailbox/health`
+- Added the new Mailbox Control items into:
+  - `AppPath`
+  - enterprise navigation groups
+  - enterprise menu config
+  - app router lazy routes
+- Rebuilt the frontend enterprise permission catalog to include mailbox permissions cleanly instead of extending the previous mojibake file.
+- Added frontend hooks for mailbox profiles, mailbox health, and mailbox assignments.
+- Added a targeted frontend test suite:
+  - `packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx`
+- Added backend read support for assignments:
+  - `GET /api/enterprise/mailbox-assignments`
+  - service now returns assignment snapshots with `emailAddress` and `permissionCodes`
+- Verified:
+  - `EnterpriseMailboxControlPages.test.tsx` passes
+  - `enterprise-mailbox-assignment.service.spec.ts` passes
+  - `npx nx build twenty-server` passes
+  - `corepack yarn nx build twenty-front` passes
+- Browser regression passed after restarting the stale 3001 frontend instance:
+  - `Mailbox Accounts`
+  - `Mailbox Assignments`
+  - `Mailbox Health`
+
+## 2026-05-05 AMAIN Mailbox admin runtime progress
+
+- Found the correct forced migration path for local mailbox rollout:
+  - `node dist/command/command.js run-typeorm-migration --force`
+- Successfully executed mailbox migration:
+  - `AddEnterpriseMailboxControl1774900000000`
+- Confirmed mailbox control tables now exist in the core database.
+- Created live local mailbox sample data through the real enterprise REST API:
+  - mailbox profile: `sales.alibaba.demo@amaincrm.local`
+  - mailbox assignment: bound to `Tim Apple`
+  - mailbox rule: `Pending reply triage`
+- Confirmed live runtime endpoints now return real data instead of empty responses:
+  - `/api/enterprise/mailbox-profiles`
+  - `/api/enterprise/mailbox-assignments`
+  - `/api/enterprise/mailbox-rules`
+- Cleaned the current mailbox admin pages/hooks away from older mojibake and request inconsistencies:
+  - `EnterpriseMailboxAccountsPage`
+  - `EnterpriseMailboxHealthPage`
+  - `useEnterpriseMailboxProfiles`
+  - `useEnterpriseMailboxAssignments`
+  - `useEnterpriseMailboxHealth`
+- Fixed the targeted mailbox admin page test blocker by mocking `Button` from `twenty-ui/input` in `EnterpriseMailboxControlPages.test.tsx`.
+- Re-verified:
+  - mailbox admin page test suite passes
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-05 AMAIN Mailbox rules operations progress
+
+- Added `PATCH /api/enterprise/mailbox-rules/:id` so mailbox rules are no longer create-only.
+- Added `UpdateEnterpriseMailboxRuleDto` and backend `updateRule()` flow with audit logging.
+- Enriched mailbox rule snapshots with `emailAddress`, so Admin sees the mailbox account directly in the rule list instead of only `mailboxProfileId`.
+- Updated `useEnterpriseMailboxRules` with `updateMailboxRule()`.
+- Updated `EnterpriseMailboxRulesPage` so each rule now has an operational action:
+  - `Disable rule`
+  - `Enable rule`
+- Added targeted backend verification:
+  - `enterprise-mailbox-rule.service.spec.ts`
+- Re-verified:
+  - `EnterpriseMailboxControlPages.test.tsx` passes
+  - `enterprise-mailbox-rule.service.spec.ts` passes
+  - `npx nx build twenty-server` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-06 AMAIN Mailbox rules inline editing progress
+
+- Extended `EnterpriseMailboxRulesPage` from toggle-only controls to inline editing for:
+  - `name`
+  - `priority`
+- Rules now support the minimal Phase 1 operational loop:
+  - create
+  - enable / disable
+  - rename
+  - reprioritize
+- Added a targeted frontend behavior test that clicks `Edit rule`, changes values, and verifies the page sends:
+  - `PATCH /api/enterprise/mailbox-rules/:id`
+- Re-verified:
+  - `EnterpriseMailboxControlPages.test.tsx` passes with 6 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-06 AMAIN Mailbox assignments permissions progress
+
+- Added `PATCH /api/enterprise/mailbox-assignments/:id` so mailbox assignments are no longer create-only snapshots.
+- Added `UpdateEnterpriseMailboxAssignmentDto` and backend `updateMailboxAssignment()` flow.
+- `EnterpriseMailboxAssignmentService` now updates:
+  - `permissionCodes`
+  - `canManageRules`
+  - `canViewSubordinates`
+  - `canHandleSubordinates`
+- Assignment updates now rewrite permission rows and emit `enterprise_mailbox_assignment.update` audit logs.
+- Updated `useEnterpriseMailboxAssignments` with `updateMailboxAssignment()`.
+- Updated `EnterpriseMailboxAssignmentsPage` so Admin can edit:
+  - permission bundle checkboxes
+  - subordinate visibility/handling controls
+  - rule-management control
+- Added targeted backend verification:
+  - `enterprise-mailbox-assignment.service.spec.ts`
+- Added targeted frontend behavior coverage that edits an assignment row and verifies:
+  - `PATCH /api/enterprise/mailbox-assignments/:id`
+- Re-verified:
+  - backend assignment service test passes
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+- Re-ran the targeted frontend mailbox control suite and confirmed the assignment edit path passes cleanly.
+- The real frontend test issue was not module resolution. It was selector ambiguity inside the new assignments UI:
+  - `mail.forward` existed in both the create form and the editable assignment row
+  - `sales@acme.test` existed in both the mailbox selector and the assignment table
+- Fixed the test by scoping interaction to the editable assignment row with `within(...)`.
+- Browser/runtime regression on `/enterprise/mailbox/assignments` confirmed:
+  - the page opens on the AMAIN Admin surface
+  - the current assignment row can enter edit mode
+  - permission checkboxes and subordinate controls render in-place
+
+## 2026-05-06 AMAIN Mailbox assignment status toggle progress
+
+- Extended mailbox assignment updates to support `assignmentStatus` through the existing:
+  - `PATCH /api/enterprise/mailbox-assignments/:id`
+- Added backend coverage proving `active -> suspended` updates persist and audit correctly:
+  - `enterprise-mailbox-assignment.service.spec.ts`
+- Added frontend behavior coverage proving the Admin page sends:
+  - `assignmentStatus: 'suspended'`
+  when `Suspend assignment` is clicked.
+- Updated the Admin assignments page so each non-editing row now exposes:
+  - `Edit assignment`
+  - `Suspend assignment` when active
+  - `Reactivate assignment` when suspended
+- Hardened the front-end mailbox control Jest environment by mapping:
+  - `twenty-shared/translations`
+  to:
+  - `../twenty-shared/dist/translations.cjs`
+  in `packages/twenty-front/jest.config.mjs`
+- Re-verified:
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-assignment.service.spec.ts --config=jest.config.mjs --runInBand` passes
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 8 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - `npx nx build twenty-server` passes
+- Browser re-open of `/enterprise/mailbox/assignments` hit a blank-shell state once after reload; that looks like local runtime instability and still needs a clean follow-up regression before claiming the new buttons were visually confirmed in-browser.
+
+## 2026-05-06 AMAIN Mailbox assignment creation surface progress
+
+- Upgraded the assignment creation area from a minimal two-select form into an operator-facing assignment surface.
+- Admin can now set these controls during creation instead of only after the fact:
+  - `primary mailbox`
+  - `canManageRules`
+  - `canViewSubordinates`
+  - `canHandleSubordinates`
+- Added live operational summaries under the create form:
+  - seller coverage
+  - mailbox readiness
+  - mailbox occupancy / duplicate check
+- Assignment creation is now blocked when:
+  - the selected mailbox is not `validated` and `active`
+  - the selected mailbox is already assigned to the selected workspace member
+- Added targeted frontend coverage proving:
+  - the POST create request includes the new control flags
+  - duplicate member/mailbox pairs keep the create button disabled
+- Re-verified:
+  - `EnterpriseMailboxControlPages.test.tsx` passes with 10 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-07 AMAIN Mailbox primary mailbox conflict protection progress
+
+- Added backend protection so one workspace member cannot hold two `active primary mailbox` assignments at the same time.
+- The guard now applies to both:
+  - creating a new primary mailbox assignment
+  - reactivating an existing suspended primary mailbox
+- The Admin assignment surface now shows the current `Primary sender` for the selected workspace member.
+- When Admin selects `primary mailbox` for a member that already has an active primary mailbox:
+  - the create action is disabled
+  - the page explains why the switch is blocked
+- Updated frontend error handling so mailbox assignment update failures can surface server messages instead of collapsing into a generic snackbar.
+- Re-verified:
+  - `enterprise-mailbox-assignment.service.spec.ts` passes with 6 tests
+  - `EnterpriseMailboxControlPages.test.tsx` passes with 11 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-07 AMAIN Mailbox sender routing guidance progress
+
+- Extended the assignment creation surface so shared-mailbox routing is explicit instead of implicit.
+- When a selected mailbox already has active assignees, the form now shows:
+  - active assignee labels
+  - whether the mailbox already has a primary sender route
+  - who currently owns that primary route
+- This closes the main operator ambiguity for “same mailbox -> multiple members”:
+  Admin can now tell whether they are creating:
+  - a shared receive-only assignment under an existing primary sender
+  - or a new primary sender route for the selected member
+- Added targeted frontend coverage proving the shared mailbox message renders when another member already owns the mailbox primary route.
+- Re-verified:
+  - `EnterpriseMailboxControlPages.test.tsx` passes with 12 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+
+## 2026-05-07 AMAIN Mailbox pending-reply rule structured editor progress
+
+- Replaced the most brittle part of `Mailbox Rules`: pending-reply rules no longer depend on raw JSON textareas for day-to-day operations.
+- The create surface now builds structured `conditionsJson / actionsJson` from explicit controls:
+  - folder
+  - reply delay threshold
+  - only unread
+  - create follow-up task
+  - escalate to manager
+  - apply pending tag
+- The row edit surface for `pending-reply` rules now uses the same structured controls instead of requiring operators to hand-edit JSON.
+- Kept JSON textarea fallback for non-`pending-reply` rule types, so this round improves the most important rule path without blocking future rule families.
+- Stabilized the mailbox control Jest environment by mapping `twenty-shared/translations` to a local front-end mock instead of relying on the flaky package export resolution.
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 13 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-07 AMAIN Mailbox folder-routing structured editor progress
+
+- Extended the same structured-rules approach from `pending-reply` into `folder-routing`.
+- The create surface for folder routing now uses explicit controls instead of raw JSON:
+  - source folder
+  - target folder
+  - sender domain match
+  - subject keyword match
+  - mark as read after routing
+  - stop further rule evaluation
+- The row edit surface for `folder-routing` rules now uses the same structured controls, so operators can adjust routing behavior without hand-editing JSON blobs.
+- Kept JSON textarea fallback for the remaining rule families, so this round improves another real operator workflow without forcing a big-bang rewrite.
+- Hardened the front-end Jest environment one step further by mapping `twenty-ui/input` to a local mock, eliminating a flaky module-resolution failure in mailbox admin tests.
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 15 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-07 AMAIN Mailbox customer-auto-link and subordinate-escalation progress
+
+- Extended the structured-rules approach from `pending-reply` and `folder-routing` into the remaining high-value rule families:
+  - `customer-auto-link`
+  - `subordinate-escalation`
+- `customer-auto-link` now has structured create/edit controls instead of raw JSON:
+  - sender domain
+  - only unlinked threads
+  - require known contact
+  - link to person
+  - link to company
+  - attach to latest open opportunity
+  - create lead when unmatched
+- `subordinate-escalation` now has structured create/edit controls instead of raw JSON:
+  - source folder
+  - escalation threshold
+  - only assigned threads
+  - create escalation task
+  - notify current owner
+  - escalate to manager
+  - reassign to primary sender route
+- Non-structured rule families still keep the JSON fallback, so the rules page remains extensible without blocking new rule types.
+- Added targeted frontend coverage for both rule families:
+  - structured create path
+  - structured edit path
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 19 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-07 AMAIN Mailbox rule coverage and recent activity progress
+
+- Pushed `Mailbox Rules` one layer beyond structured config and into operator visibility.
+- Added backend activity support for mailbox rule configuration changes:
+  - `EnterpriseConfigAuditService.findRecentLogsByResourceType(...)`
+  - `GET /api/enterprise/mailbox-rules/activity`
+- `EnterpriseMailboxRuleService.findRecentActivity(...)` now maps recent `enterpriseMailboxRule` audit logs into rule-facing activity records with:
+  - action
+  - rule name
+  - mailbox email
+  - rule type
+  - actor workspace member id
+  - created time
+- Updated the front-end rules hook so activity loads as a tolerant secondary request instead of a hard dependency for the whole page.
+- Added a new `Rule coverage and recent activity` panel on the rules page showing:
+  - `Active rules`
+  - `Managed mailboxes`
+  - `Pending reply rules`
+  - `Routing and linking rules`
+  - recent rule activity table with `When / Action / Rule / Mailbox / Type`
+- Important semantic constraint:
+  - this panel shows configuration activity, not execution results
+  - true rule-hit summaries, dry-run previews, and failure reasons still need a runtime result model
+- Fixed the only regression introduced by this panel:
+  - frontend test originally failed because a rule name appeared in both the activity table and the main rules table
+  - adjusted the assertion to accept multiple matches instead of assuming uniqueness
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 19 tests
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 4 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox rule readiness preview progress
+
+- Extended `Mailbox Rules` from passive activity visibility into pre-runtime operational checks.
+- Added backend readiness support:
+  - `GET /api/enterprise/mailbox-rules/readiness`
+  - `EnterpriseMailboxRuleService.findReadinessPreview(...)`
+- Readiness preview now evaluates real mailbox-side prerequisites for each rule:
+  - mailbox profile `status`
+  - mailbox profile `validationStatus`
+  - active assignment count
+  - primary sender count
+  - whether a matching message channel is connected
+  - whether referenced `sourceFolder` / `targetFolder` exist on that channel
+- This is intentionally not a fake hit counter. It gives operators a clean answer to:
+  - can this rule realistically run on the current mailbox setup?
+  - what is missing before it becomes operational?
+- Added a new front-end `Rule readiness preview` table showing:
+  - status
+  - rule
+  - mailbox
+  - assignment counts
+  - folder checks
+  - warnings / blockers
+- Status semantics are now explicit:
+  - `ready`
+  - `warning`
+  - `blocked`
+- The first concrete operator value is catching misconfigured rules before runtime:
+  - missing synced folder
+  - mailbox not validated
+  - mailbox not active
+  - no active assignee
+  - no linked message channel
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 19 tests
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 5 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox rule dry-run preview progress
+
+- Pushed `Mailbox Rules` one layer beyond readiness into real thread sampling.
+- Added backend dry-run support:
+  - `GET /api/enterprise/mailbox-rules/:id/preview`
+  - `EnterpriseMailboxRuleService.findRuleDryRunPreview(...)`
+- Dry-run now uses real mailbox-side thread candidates for the structured rule families instead of fake counters:
+  - mailbox/message channel binding
+  - source folder filtering
+  - sender domain filtering
+  - subject keyword filtering
+  - optional gates such as `onlyUnlinkedThreads`
+- Preview results now surface real operator-facing thread data:
+  - `threadId / messageId`
+  - subject
+  - sender handle
+  - received time
+  - pending state
+  - task-linked state
+  - CRM-linked state
+  - matched signals
+  - planned actions
+- Added front-end per-rule preview expansion through `Preview rule`, so operators can dry-run a single rule inline from the rules table without leaving the page.
+- Important semantic constraint remains explicit:
+  - this is a candidate-thread preview
+  - not execution history
+  - not final rule-hit auditing
+- Re-verified:
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 6 tests
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 19 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - `npx nx build twenty-server` passes

@@ -35,6 +35,10 @@ export enum AppPath {
   EnterpriseIndependentStation = '/enterprise/integrations/independent-station',
   EnterpriseSalesPlaybook = '/enterprise/sales/playbook',
   EnterprisePermissions = '/enterprise/security/permissions',
+  EnterpriseMailboxAccounts = '/enterprise/mailbox/accounts',
+  EnterpriseMailboxAssignments = '/enterprise/mailbox/assignments',
+  EnterpriseMailboxRules = '/enterprise/mailbox/rules',
+  EnterpriseMailboxHealth = '/enterprise/mailbox/health',
   TasksPage = '/objects/tasks',
   OpportunitiesPage = '/objects/opportunities',
 

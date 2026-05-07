@@ -6,6 +6,10 @@ import { ApplicationEntity } from 'src/engine/core-modules/application/applicati
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { AuthModule } from 'src/engine/core-modules/auth/auth.module';
 import { FileModule } from 'src/engine/core-modules/file/file.module';
+import { ImapSmtpCaldavModule } from 'src/engine/core-modules/imap-smtp-caldav-connection/imap-smtp-caldav-connection.module';
+import { MessageChannelDataAccessModule } from 'src/engine/metadata-modules/message-channel/data-access/message-channel-data-access.module';
+import { TradeCrmMailThreadStateEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-state.entity';
+import { TradeCrmMailThreadTaskLinkEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-task-link.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
@@ -48,6 +52,8 @@ import { EnterpriseIndependentStationService } from 'src/modules/enterprise/inde
 import { EnterpriseMailboxAssignmentsController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-assignments.controller';
 import { EnterpriseMailboxHealthController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-health.controller';
 import { EnterpriseMailboxProfilesController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-profiles.controller';
+import { EnterpriseMailboxRulesController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-rules.controller';
+import { EnterpriseMailboxWorkspaceMembersController } from 'src/modules/enterprise/mailbox-control/controllers/enterprise-mailbox-workspace-members.controller';
 import { EnterpriseMailThreadCrmLinkEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mail-thread-crm-link.entity';
 import { EnterpriseMailboxAssignmentEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-assignment.entity';
 import { EnterpriseMailboxPermissionEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-permission.entity';
@@ -57,6 +63,8 @@ import { EnterpriseMailboxAssignmentService } from 'src/modules/enterprise/mailb
 import { EnterpriseMailboxCredentialService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-credential.service';
 import { EnterpriseMailboxHealthService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-health.service';
 import { EnterpriseMailboxProfileService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-profile.service';
+import { EnterpriseMailboxRuleService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-rule.service';
+import { EnterpriseMailboxWorkspaceMemberService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-workspace-member.service';
 import { EnterprisePermissionController } from 'src/modules/enterprise/permissions/controllers/enterprise-permission.controller';
 import { EnterpriseRolePermissionEntity } from 'src/modules/enterprise/permissions/enterprise-role-permission.entity';
 import { EnterprisePermissionService } from 'src/modules/enterprise/permissions/services/enterprise-permission.service';
@@ -85,6 +93,8 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     ApplicationModule,
     AuthModule,
     FileModule,
+    ImapSmtpCaldavModule,
+    MessageChannelDataAccessModule,
     PermissionsModule,
     WorkspaceCacheStorageModule,
     TypeOrmModule.forFeature([
@@ -119,6 +129,8 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
       EnterpriseMailboxPermissionEntity,
       EnterpriseMailboxRuleEntity,
       EnterpriseMailThreadCrmLinkEntity,
+      TradeCrmMailThreadStateEntity,
+      TradeCrmMailThreadTaskLinkEntity,
       EnterpriseConfigAuditLogEntity,
     ]),
   ],
@@ -138,6 +150,8 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     EnterpriseMailboxProfilesController,
     EnterpriseMailboxAssignmentsController,
     EnterpriseMailboxHealthController,
+    EnterpriseMailboxRulesController,
+    EnterpriseMailboxWorkspaceMembersController,
   ],
   providers: [
     EnterpriseEntityBindingService,
@@ -162,6 +176,8 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     EnterpriseMailboxProfileService,
     EnterpriseMailboxAssignmentService,
     EnterpriseMailboxHealthService,
+    EnterpriseMailboxRuleService,
+    EnterpriseMailboxWorkspaceMemberService,
   ],
 })
 export class EnterpriseManagementModule {}

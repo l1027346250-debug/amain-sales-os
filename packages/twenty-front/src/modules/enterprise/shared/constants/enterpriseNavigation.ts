@@ -29,6 +29,15 @@
     items: [{ label: '销售助手管理', key: 'sales-playbook' }],
   },
   {
+    label: '邮箱中台',
+    items: [
+      { label: 'Mailbox Accounts', key: 'mailbox-accounts' },
+      { label: 'Mailbox Assignments', key: 'mailbox-assignments' },
+      { label: 'Mailbox Rules', key: 'mailbox-rules' },
+      { label: 'Mailbox Health', key: 'mailbox-health' },
+    ],
+  },
+  {
     label: '安全权限',
     items: [{ label: '企业权限配置', key: 'enterprise-permissions' }],
   },

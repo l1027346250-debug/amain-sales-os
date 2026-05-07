@@ -252,13 +252,151 @@
    - `POST /api/enterprise/mailbox-profiles`
    - `GET /api/enterprise/mailbox-profiles`
    - `POST /api/enterprise/mailbox-profiles/:id/validate`
+   - `GET /api/enterprise/mailbox-assignments`
    - `POST /api/enterprise/mailbox-assignments`
    - `GET /api/enterprise/mailbox-health`
 5. `completed` 把 mailbox backend 注册进 `EnterpriseManagementModule`
-6. `in_progress` Admin 前端 Mailbox Control 路由与页面
-7. `pending` Mail 工作台完整邮箱行为
+6. `completed` Admin 前端 Mailbox Control 路由与页面
+   - 已接入 `Mailbox Accounts / Assignments / Rules / Health` 路由
+   - 已接入 Admin 菜单、权限码和企业导航分组
+   - 已通过浏览器回归确认 3 个主页面真实可打开
+7. `in_progress` Mailbox Assignments 列表继续补运营信息
+   - 已完成：后端 `GET /api/enterprise/mailbox-assignments`
+   - 已完成：Assignments 页面当前分配列表回显
+   - 下一步：补 mailbox profile 选择器与 workspace member 选择器，替换手工输入 id
+8. `pending` Mail 工作台完整邮箱行为
 
 ### 当前验收结果
 - `enterprise-mailbox-profile.service.spec.ts` 通过
 - `enterprise-mailbox-assignment.service.spec.ts` 通过
+- `EnterpriseMailboxControlPages.test.tsx` 通过
 - `npx nx build twenty-server` 通过
+- `corepack yarn nx build twenty-front` 通过
+
+## 2026-05-05 AMAIN Mailbox Admin 当前推进
+
+### 当前任务状态
+1. `completed` 找到并使用 mailbox 迁移的正确强制执行入口
+   - 命令：`node dist/command/command.js run-typeorm-migration --force`
+   - 结果：`AddEnterpriseMailboxControl1774900000000` 已实际执行
+2. `completed` 确认 mailbox core 表已落库
+   - `enterpriseMailboxProfile`
+   - `enterpriseMailboxAssignment`
+   - `enterpriseMailboxPermission`
+   - `enterpriseMailboxRule`
+3. `completed` 通过真实 REST API 创建本地 mailbox 样本数据
+   - mailbox profile：`sales.alibaba.demo@amaincrm.local`
+   - assignment：绑定到 `Tim Apple`
+   - rule：`Pending reply triage`
+4. `completed` 确认 `GET /api/enterprise/mailbox-profiles`
+   - `GET /api/enterprise/mailbox-assignments`
+   - `GET /api/enterprise/mailbox-rules`
+   在当前运行态都能返回真实数据
+5. `completed` 收口 mailbox admin 页面测试阻塞
+   - 为 `EnterpriseMailboxControlPages.test.tsx` 补 `twenty-ui/input` 的 `Button` mock
+6. `in_progress` 清理 mailbox admin 页面和 hooks 的历史乱码/过渡实现
+   - 已完成：`EnterpriseMailboxAccountsPage`
+   - 已完成：`EnterpriseMailboxHealthPage`
+   - 已完成：profiles / assignments / health hooks
+7. `pending` 把 `Mailbox Assignments` 的手工输入彻底替换为真实选择器工作流
+8. `in_progress` 把 `Mailbox Rules` 从当前基础列表推进到可编辑规则台
+   - 已完成：后端新增 `PATCH /api/enterprise/mailbox-rules/:id`
+   - 已完成：规则列表现在回显 `emailAddress`
+   - 已完成：规则页支持 `Enable rule / Disable rule`
+   - 已完成：规则页支持行内编辑 `name / priority`
+   - 下一步：补规则条件/动作 JSON 的受控编辑入口，不再只停留在基础元信息
+9. `in_progress` 把 `Mailbox Assignments` 推进成可维护的权限运营面
+   - 已完成：后端新增 `PATCH /api/enterprise/mailbox-assignments/:id`
+   - 已完成：assignment service 支持更新 `permissionCodes`
+   - 已完成：assignment service 支持更新
+     - `canManageRules`
+     - `canViewSubordinates`
+     - `canHandleSubordinates`
+   - 已完成：Assignments 页面支持行内编辑权限包和 subordinate controls
+   - 已完成：Assignments 页面支持 `Suspend assignment / Reactivate assignment`
+   - 已完成：Assignments 创建区支持真实 workspace member / mailbox account 选择器
+   - 已完成：Assignments 创建区支持 `primary mailbox / canManageRules / canViewSubordinates / canHandleSubordinates`
+   - 已完成：Assignments 创建区支持 mailbox readiness / duplicate assignment 提示，并阻止重复分配
+   - 已完成：后端阻止同一成员出现第二个 `active primary mailbox`
+   - 已完成：创建区提示当前 primary sender，并阻止主邮箱冲突分配
+   - 已完成：创建区提示 `shared mailbox mode`，展示当前 primary sender route 和 active assignees
+10. `in_progress` 把 `Mailbox Rules` 推进成轻量结构化编辑台
+   - 已完成：pending reply rule 创建区不再依赖裸 JSON，已支持结构化配置
+     - `folder`
+     - `maxReplyDelayHours`
+     - `onlyUnread`
+     - `createTask`
+     - `escalateToManager`
+     - `applyPendingTag`
+   - 已完成：pending reply rule 行内编辑不再依赖裸 JSON，已支持结构化配置
+   - 已完成：folder routing rule 创建区不再依赖裸 JSON，已支持结构化配置
+     - `sourceFolder`
+     - `targetFolder`
+     - `senderDomain`
+     - `subjectKeyword`
+     - `markAsRead`
+     - `stopFurtherRules`
+   - 已完成：folder routing rule 行内编辑不再依赖裸 JSON，已支持结构化配置
+   - 已完成：保留非 pending-reply 规则的 JSON fallback，避免挡住其他规则类型
+   - 已完成：customer auto-link 创建区不再依赖裸 JSON，已支持结构化配置
+     - `senderDomain`
+     - `onlyUnlinkedThreads`
+     - `requireKnownContact`
+     - `linkToPerson`
+     - `linkToCompany`
+     - `attachToLatestOpportunity`
+     - `createLeadWhenUnmatched`
+   - 已完成：customer auto-link 行内编辑不再依赖裸 JSON，已支持结构化配置
+   - 已完成：subordinate escalation 创建区不再依赖裸 JSON，已支持结构化配置
+     - `sourceFolder`
+     - `maxReplyDelayHours`
+     - `onlyAssignedThreads`
+     - `createTask`
+     - `notifyOwner`
+     - `escalateToManager`
+     - `reassignToPrimarySender`
+   - 已完成：subordinate escalation 行内编辑不再依赖裸 JSON，已支持结构化配置
+   - 已完成：规则页新增 `Rule coverage and recent activity` 运营摘要面板
+   - 已完成：后端新增 `GET /api/enterprise/mailbox-rules/activity`
+   - 已完成：规则页回显
+     - `Active rules`
+     - `Managed mailboxes`
+     - `Pending reply rules`
+     - `Routing and linking rules`
+   - 已完成：规则页回显最近配置活动
+     - `When`
+     - `Action`
+     - `Rule`
+     - `Mailbox`
+     - `Type`
+   - 已完成：规则页新增 `Rule readiness preview`
+   - 已完成：后端新增 `GET /api/enterprise/mailbox-rules/readiness`
+   - 已完成：readiness preview 当前检查
+     - mailbox `status / validationStatus`
+     - active assignee 数量
+     - primary sender 数量
+     - message channel 是否已接通
+     - source/target folder 是否存在于当前 channel
+   - 已完成：规则页支持逐条 `Preview rule`
+   - 已完成：后端新增 `GET /api/enterprise/mailbox-rules/:id/preview`
+   - 已完成：dry-run preview 当前返回真实线程候选样本
+     - `threadId / messageId`
+     - sender handle
+     - subject / receivedAt
+     - pending / task linked / CRM linked
+     - matched signals
+     - planned actions
+   - 当前下一步：补真正的规则执行结果和失败原因，不再停留在 readiness + dry-run
+
+### 当前验收结果
+- `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 通过
+- `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 13/13 通过
+- `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 15/15 通过
+- `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 19/19 通过
+- `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs` 通过
+- `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 6/6 通过
+- `corepack yarn nx typecheck twenty-front` 通过
+- `corepack yarn nx build twenty-front` 通过
+- `npx nx build twenty-server` 通过
+- 当前 mailbox admin 真实运行依赖已满足，后续阻塞不再是“表不存在”或“页面测试挂掉”
+- assignment 权限编辑链路已经具备前后端闭环，当前待确认点只剩浏览器运行态回归和一次前端 Jest 模块解析抖动

@@ -16,17 +16,21 @@ export const useEnterpriseApiRequest = () => {
   return useCallback(
     (path: string, init?: RequestInit) => {
       const headers = new Headers(init?.headers);
+      const shouldUseLocalBypass = isLocalDevelopmentAuthBypass && !accessToken;
 
       if (accessToken) {
         headers.set('Authorization', `Bearer ${accessToken}`);
       }
 
-      if (isLocalDevelopmentAuthBypass && !accessToken) {
+      if (shouldUseLocalBypass) {
         headers.set('x-dev-bypass-auth', 'true');
       }
 
       return fetch(getEnterpriseApiUrl(path), {
         ...init,
+        credentials: shouldUseLocalBypass
+          ? 'omit'
+          : init?.credentials,
         headers,
       });
     },

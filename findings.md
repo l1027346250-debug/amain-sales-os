@@ -107,3 +107,120 @@
 - Twenty 现有 IMAP/SMTP validator 可以直接复用，但当前缺一层“企业托管凭证”的正式安全实现。
 - 这轮为了打通运行链，`EnterpriseMailboxCredentialService` 先做了可回读的过渡实现；它解决了 validate endpoint 不能拿空密码的问题，但还不是最终安全方案。
 - 下一步前端 Admin 页面接入前，后端已经具备最小 REST 面：profile create/list/validate、assignment create、health list。
+
+## 2026-04-30 AMAIN Mailbox admin 前端发现
+
+- `Mailbox Accounts / Assignments / Health` 已经接入 AMAIN Admin 路由，404 的直接原因是 3001 上跑着旧前端实例，不是路由代码缺失。
+- 重启 `twenty-front` 后，浏览器回归确认 `/enterprise/mailbox/accounts`、`/enterprise/mailbox/assignments`、`/enterprise/mailbox/health` 都能进入真实页面。
+- `enterprisePermissions.ts` 原文件带乱码，继续增量补丁成本很高；这轮直接重写成干净的英文权限目录更稳。
+- `Assignments` 页面如果只有 `POST` 没有 `GET`，会退化成一次性表单；当前已经补上 `GET /api/enterprise/mailbox-assignments`，页面能回显当前分配记录。
+- `corepack yarn nx typecheck twenty-front` 在这轮邮箱页完成后仍会被仓库里现存的大量无关类型错误挡住，但新引入的 mailbox admin 页面没有新增这批错误。
+
+## 2026-05-05 AMAIN Mailbox admin 运行态发现
+
+- mailbox admin 的真正阻塞不是页面代码，而是数据库里 mailbox 迁移没有执行；当前已确认 `run-typeorm-migration --force` 是这套仓库在本地跳过 workspace version guard 的正确入口。
+- `AddEnterpriseMailboxControl1774900000000` 执行后，mailbox profile / assignment / permission / rule 表都已真实存在，后续 mailbox admin 不再依赖“假数据页”推进。
+- 当前本地已通过真实 REST API 写入一组可回归的 mailbox 样本：
+  - profile：`sales.alibaba.demo@amaincrm.local`
+  - assignment：绑定 `Tim Apple`
+  - rule：`Pending reply triage`
+- 之前 `GET /api/enterprise/mailbox-assignments` 看起来为空，不是 service 逻辑错误，而是 3000 上的旧后端运行态没有吃到最新构建；刷新运行态后，profiles / assignments / rules 都能返回真实数据。
+- `EnterpriseMailboxControlPages.test.tsx` 的失败根因不是页面本身，而是测试文件没有 mock `twenty-ui/input` 的 `Button`；补 mock 后，5 个 mailbox admin 页面测试全部通过。
+- `Mailbox Rules` 原先只有创建和只读列表，还不够支撑管理员代绑后的真实运营；当前已经补上规则启停主链。
+- 规则启停改动不只在前端，后端也新增了 `PATCH /api/enterprise/mailbox-rules/:id`，并把规则列表回写成带 `emailAddress` 的快照，避免 Admin 侧只能看到 UUID。
+- 仅有启停仍然不够，运营侧至少需要改规则名和优先级；当前规则页已经补上行内编辑 `name / priority`，并通过前端测试确认会真实发出 `PATCH` 请求。
+
+## 2026-05-06 AMAIN Mailbox assignments 权限运营面发现
+
+- `Mailbox Assignments` 如果只有 create/list，会停留在一次性分配页，管理员后续无法持续运营邮箱权限；当前已经补上 `PATCH /api/enterprise/mailbox-assignments/:id`。
+- assignment 更新主链现在不仅能改基础分配状态，还能同时维护：
+  - `permissionCodes`
+  - `canManageRules`
+  - `canViewSubordinates`
+  - `canHandleSubordinates`
+- 前端 `EnterpriseMailboxAssignmentsPage` 已从只读表格推进成可编辑权限面，支持行内切换权限包和 subordinate controls。
+- 当前这条链的真实剩余点不是 API 缺失，而是管理员创建 assignment 时仍需手工输入 `workspaceMemberId / mailboxProfileId`，还没有提升成真实选择器。
+- assignment 编辑测试里的真实问题是选择器歧义，不是 API 或渲染错误：
+  - `mail.forward` 在创建表单和编辑行里各出现一次
+  - 邮箱地址文本同时出现在下拉 option 和表格行里
+- 当前已把测试作用域收紧到 assignment 行，前端 suite 和运行态回归都已通过。
+- `assignmentStatus` 原本只是数据库字段，没有进入 Admin 运营动作；当前已复用 `PATCH /api/enterprise/mailbox-assignments/:id`，把状态切换并入同一更新链。
+- 前端 Jest 对 `twenty-shared/translations` 的解析仍然不稳定，直接依赖 package exports 会偶发失败；当前已在 `packages/twenty-front/jest.config.mjs` 增加显式 mapper，稳定落到 `../twenty-shared/dist/translations.cjs`。
+- 本轮浏览器重新打开 `/enterprise/mailbox/assignments` 时遇到一次空壳页，症状更像本地运行态抖动或旧前端实例状态异常，不像 assignment 状态切换代码回退。
+- `Mailbox Assignments` 虽然早就不是手工输入 UUID，但创建区之前仍然只是两个基础下拉和权限勾选，缺少可运营反馈；当前已补 member coverage、mailbox readiness、mailbox occupancy 和 duplicate assignment 阻断。
+- assignment 创建主链现在不再默认把所有 subordinate / rules 控制留给后续编辑；管理员在创建时就能一起设定 `primary mailbox / canManageRules / canViewSubordinates / canHandleSubordinates`。
+- 当前剩余缺口不是“能不能分配”，而是更细的运营约束：例如一个成员已有主邮箱时的冲突提示、同一 mailbox 多成员分配的发送优先级提示，以及 routing 规则和 assignment 的联动。
+- 当前已把“同一成员只能有一个 active primary mailbox”下沉到后端 service，不再只靠前端禁用按钮；创建和重新激活主邮箱都会命中这条约束。
+- Assignments 创建区现在会直接显示当前 `Primary sender`，管理员在切新的主邮箱前就能看见现有发信优先级，不需要先打开列表行判断。
+- 当前已补“同一 mailbox 分给多个成员”时的 sender routing 提示：创建区会显示 active assignees，并明确谁当前拥有 primary sender route。
+- 当前剩余缺口已经不在 assignment 语义，而在 rules 结构：`conditionsJson / actionsJson` 仍然是裸 JSON，管理员还没有低门槛的规则配置表单。
+- 当前已把 `pending-reply` 规则从裸 JSON 推进成轻量结构化编辑：
+  - `folder`
+  - `maxReplyDelayHours`
+  - `onlyUnread`
+  - `createTask`
+  - `escalateToManager`
+  - `applyPendingTag`
+- 当前已把 `folder-routing` 规则从裸 JSON 推进成轻量结构化编辑：
+  - `sourceFolder`
+  - `targetFolder`
+  - `senderDomain`
+  - `subjectKeyword`
+  - `markAsRead`
+  - `stopFurtherRules`
+- 规则页仍保留非 `pending-reply` 类型的 JSON fallback，这样可以先把最重要的待处理规则做实，再逐步收其他规则类型。
+- 规则页当前最合理的下一步已经不是继续补 `pending-reply` 和 `folder-routing`，而是把 `customer-auto-link` 和 `subordinate-escalation` 也推进到结构化规则层，减少 Admin 端继续编辑裸 JSON 的比例。
+- `twenty-shared/translations` 的 Jest 映射在这个环境下继续存在解析抖动；当前已改成 `packages/twenty-front/__mocks__/twentySharedTranslations.ts`，把 mailbox control 前端测试稳定下来。
+- `twenty-ui/input` 在当前 Jest 运行态也有一次模块解析抖动；当前已增加 `packages/twenty-front/__mocks__/twentyUiInput.tsx` 和 mapper，稳定 mailbox control 测试链。
+- 当前已把 `customer-auto-link` 规则从裸 JSON 推进成轻量结构化编辑：
+  - `senderDomain`
+  - `onlyUnlinkedThreads`
+  - `requireKnownContact`
+  - `linkToPerson`
+  - `linkToCompany`
+  - `attachToLatestOpportunity`
+  - `createLeadWhenUnmatched`
+- 当前已把 `subordinate-escalation` 规则从裸 JSON 推进成轻量结构化编辑：
+  - `sourceFolder`
+  - `maxReplyDelayHours`
+  - `onlyAssignedThreads`
+  - `createTask`
+  - `notifyOwner`
+  - `escalateToManager`
+  - `reassignToPrimarySender`
+- 这意味着 `Mailbox Rules` 当前主要规则族已经都离开了“必须手改 JSON”的阶段；剩下的价值点不再是补更多同类表单，而是补规则命中结果、执行摘要和运营可见性。
+- 当前已把 `Mailbox Rules` 的下一层推进成 `Rule coverage and recent activity` 面板，但这层是**配置活动可见性**，不是规则执行结果。
+- 后端新增的 `GET /api/enterprise/mailbox-rules/activity` 当前读取的是 `enterpriseMailboxRule` 的审计日志，并把最近的创建、更新、启停活动映射成运营侧可读快照。
+- 这一步的价值是让管理员看见“谁改了什么规则、挂在哪个 mailbox 上、最近有哪些变更”，而不是再盯着纯静态规则表。
+- 现在必须保持语义克制：配置活动不等于命中结果。真正的 `rule hit summary / last execution / failure reason / dry-run` 还需要等规则执行链开始写入专门结果或运行审计。
+- 前端 rules hook 当前已改成“先拉规则，再容错拉 activity”，避免 activity endpoint 一次失败把整页规则列表拖死。
+- 当前已把下一层推进成 `Rule readiness preview`，它和 activity 一样属于运营可见性，但语义更接近“运行前检查”，不是“运行后结果”。
+- `GET /api/enterprise/mailbox-rules/readiness` 当前不会伪造线程命中，它只检查真实可验证条件：
+  - mailbox profile 是否 `active + validated`
+  - 当前 mailbox 是否存在 active assignment
+  - 是否能找到对应 message channel
+  - 规则里引用的 `sourceFolder / targetFolder` 是否真实存在
+- 这一层能直接发现最常见的运营错误：
+  - 规则挂在未验证邮箱上
+  - 规则指向了不存在的 folder
+  - mailbox 还没人接手或 channel 还没同步
+- 现在真正剩下的缺口已经更明确：
+  - readiness 不是 dry-run
+  - dry-run 需要引入线程样本或真实执行器结果模型
+- 当前已把 `dry-run` 真正补进 `Mailbox Rules`，不再只停留在 readiness：
+  - `GET /api/enterprise/mailbox-rules/:id/preview`
+  - 规则页支持逐条 `Preview rule`
+- dry-run 当前返回的不是伪统计，而是**真实候选线程样本**，包括：
+  - `threadId / messageId`
+  - 发件人邮箱
+  - 邮件主题 / 接收时间
+  - 是否 pending
+  - 是否已挂 task
+  - 是否已挂 CRM link
+  - 命中的条件信号
+  - 预计执行动作
+- 这一步已经把 `Mailbox Rules` 从“能配置、能看健康”推进到“能拿真实线程做规则预演”。
+- 当前剩余的真正缺口已经进一步收窄：
+  - 还没有**执行后结果**模型
+  - 还没有 `last result / failure reason / skipped reason`
+  - dry-run 目前是实时采样，不是带审计留痕的执行记录

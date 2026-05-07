@@ -53,6 +53,9 @@ const jestConfig = {
     '\\.(jpg|jpeg|png|gif|webp|svg|svg\\?react)$':
       '<rootDir>/__mocks__/imageMockFront.js',
     '\\.css$': '<rootDir>/__mocks__/styleMock.js',
+    '^twenty-ui/input$': '<rootDir>/__mocks__/twentyUiInput.tsx',
+    '^twenty-shared/translations$':
+      '<rootDir>/__mocks__/twentySharedTranslations.ts',
     ...pathsToModuleNameMapper(tsConfig.compilerOptions.paths, {
       prefix: '<rootDir>/',
     }),

@@ -41,4 +41,21 @@ export class EnterpriseConfigAuditService {
 
     return this.enterpriseConfigAuditLogRepository.save(log);
   }
+
+  async findRecentLogsByResourceType(input: {
+    workspaceId: string;
+    resourceType: string;
+    limit?: number;
+  }) {
+    return this.enterpriseConfigAuditLogRepository.find({
+      where: {
+        workspaceId: input.workspaceId,
+        resourceType: input.resourceType,
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: input.limit ?? 10,
+    });
+  }
 }
