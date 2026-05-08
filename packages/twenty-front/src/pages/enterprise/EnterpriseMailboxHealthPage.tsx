@@ -83,6 +83,8 @@ export const EnterpriseMailboxHealthPage = () => {
                     <th>Provider</th>
                     <th>Validation</th>
                     <th>Sync</th>
+                    <th>Channel</th>
+                    <th>Diagnostics</th>
                     <th>Last sync at</th>
                   </tr>
                 </thead>
@@ -107,6 +109,13 @@ export const EnterpriseMailboxHealthPage = () => {
                         >
                           {snapshot.lastSyncStatus ?? 'pending'}
                         </StyledStatus>
+                      </td>
+                      <td>{snapshot.messageChannelId ?? 'not linked'}</td>
+                      <td>
+                        {snapshot.lastValidationError ??
+                          (snapshot.validationStatus === 'validated'
+                            ? 'Mailbox validated.'
+                            : 'Awaiting validation.')}
                       </td>
                       <td>{snapshot.lastSyncAt ?? '-'}</td>
                     </tr>

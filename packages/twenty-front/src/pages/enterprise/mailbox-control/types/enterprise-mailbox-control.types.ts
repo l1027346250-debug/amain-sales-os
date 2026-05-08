@@ -14,8 +14,11 @@ export type EnterpriseMailboxProfile = {
   status: string;
   validationStatus: string;
   lastValidatedAt?: string | null;
+  lastValidationError?: string | null;
   lastSyncAt?: string | null;
   lastSyncStatus?: string | null;
+  connectedAccountId?: string | null;
+  messageChannelId?: string | null;
 };
 
 export type EnterpriseMailboxHealthSnapshot = {
@@ -24,8 +27,10 @@ export type EnterpriseMailboxHealthSnapshot = {
   provider: string;
   status: string;
   validationStatus: string;
+  lastValidationError?: string | null;
   lastSyncStatus: string | null;
   lastSyncAt: string | null;
+  messageChannelId?: string | null;
 };
 
 export type EnterpriseMailboxWorkspaceMember = {
@@ -123,4 +128,22 @@ export type EnterpriseMailboxRuleDryRunPreview = {
   blockers: string[];
   candidateCount: number;
   candidates: EnterpriseMailboxRulePreviewCandidate[];
+};
+
+export type EnterpriseMailboxRuleExecutionResult = {
+  id: string;
+  mailboxRuleId: string;
+  mailboxProfileId: string;
+  executionType: string;
+  outcome: string;
+  threadId: string | null;
+  summary: string;
+  failureReason: string | null;
+  matchedSignalsJson: string[] | null;
+  plannedActionsJson: string[] | null;
+  metadataJson: Record<string, unknown> | null;
+  createdAt: string;
+  emailAddress: string | null;
+  ruleName: string | null;
+  ruleType: string | null;
 };

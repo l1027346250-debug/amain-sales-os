@@ -7,8 +7,11 @@ import { ApplicationModule } from 'src/engine/core-modules/application/applicati
 import { AuthModule } from 'src/engine/core-modules/auth/auth.module';
 import { FileModule } from 'src/engine/core-modules/file/file.module';
 import { ImapSmtpCaldavModule } from 'src/engine/core-modules/imap-smtp-caldav-connection/imap-smtp-caldav-connection.module';
+import { ConnectedAccountDataAccessModule } from 'src/engine/metadata-modules/connected-account/data-access/connected-account-data-access.module';
 import { MessageChannelDataAccessModule } from 'src/engine/metadata-modules/message-channel/data-access/message-channel-data-access.module';
+import { MessageFolderDataAccessModule } from 'src/engine/metadata-modules/message-folder/data-access/message-folder-data-access.module';
 import { TradeCrmMailThreadStateEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-state.entity';
+import { TradeCrmMailThreadTagEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-tag.entity';
 import { TradeCrmMailThreadTaskLinkEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-task-link.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
@@ -17,6 +20,7 @@ import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permi
 import { RoleTargetEntity } from 'src/engine/metadata-modules/role-target/role-target.entity';
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { WorkspaceCacheStorageModule } from 'src/engine/workspace-cache-storage/workspace-cache-storage.module';
+import { IMAPAPIsModule } from 'src/modules/connected-account/imap-api/imap-apis.module';
 import { EnterpriseConfigAuditLogEntity } from 'src/modules/enterprise/audit/enterprise-config-audit-log.entity';
 import { EnterpriseConfigAuditService } from 'src/modules/enterprise/audit/services/enterprise-config-audit.service';
 import { EnterpriseCustomerExportExpiryCleanupCronCommand } from 'src/modules/enterprise/customer-export/commands/enterprise-customer-export-expiry-cleanup.cron.command';
@@ -59,6 +63,7 @@ import { EnterpriseMailboxAssignmentEntity } from 'src/modules/enterprise/mailbo
 import { EnterpriseMailboxPermissionEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-permission.entity';
 import { EnterpriseMailboxProfileEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-profile.entity';
 import { EnterpriseMailboxRuleEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-rule.entity';
+import { EnterpriseMailboxRuleResultEntity } from 'src/modules/enterprise/mailbox-control/entities/enterprise-mailbox-rule-result.entity';
 import { EnterpriseMailboxAssignmentService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-assignment.service';
 import { EnterpriseMailboxCredentialService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-credential.service';
 import { EnterpriseMailboxHealthService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-health.service';
@@ -93,8 +98,11 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
     ApplicationModule,
     AuthModule,
     FileModule,
+    IMAPAPIsModule,
     ImapSmtpCaldavModule,
+    ConnectedAccountDataAccessModule,
     MessageChannelDataAccessModule,
+    MessageFolderDataAccessModule,
     PermissionsModule,
     WorkspaceCacheStorageModule,
     TypeOrmModule.forFeature([
@@ -128,8 +136,10 @@ import { EnterpriseSourceConvertService } from 'src/modules/enterprise/source-co
       EnterpriseMailboxAssignmentEntity,
       EnterpriseMailboxPermissionEntity,
       EnterpriseMailboxRuleEntity,
+      EnterpriseMailboxRuleResultEntity,
       EnterpriseMailThreadCrmLinkEntity,
       TradeCrmMailThreadStateEntity,
+      TradeCrmMailThreadTagEntity,
       TradeCrmMailThreadTaskLinkEntity,
       EnterpriseConfigAuditLogEntity,
     ]),

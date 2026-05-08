@@ -53,6 +53,16 @@ export class EnterpriseMailboxRulesController {
     return this.enterpriseMailboxRuleService.findRecentActivity(workspace.id);
   }
 
+  @Get('results')
+  async findRecentResults(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(workspace.id, request);
+
+    return this.enterpriseMailboxRuleService.findRecentResults(workspace.id);
+  }
+
   @Get('readiness')
   async findReadinessPreview(
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -75,6 +85,17 @@ export class EnterpriseMailboxRulesController {
       workspace.id,
       id,
     );
+  }
+
+  @Post(':id/run')
+  async runRuleNow(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Param('id') id: string,
+    @Req() request: Request,
+  ) {
+    await this.assertPermission(workspace.id, request);
+
+    return this.enterpriseMailboxRuleService.runRuleNow(workspace.id, id);
   }
 
   @Post()

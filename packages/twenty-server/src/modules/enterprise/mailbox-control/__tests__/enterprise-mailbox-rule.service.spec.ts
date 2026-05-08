@@ -1,6 +1,12 @@
 import { EnterpriseMailboxRuleService } from 'src/modules/enterprise/mailbox-control/services/enterprise-mailbox-rule.service';
 
 describe('EnterpriseMailboxRuleService', () => {
+  const buildGlobalWorkspaceOrmManagerMock = () => ({
+    executeInWorkspaceContext: jest
+      .fn()
+      .mockImplementation(async (fn: () => unknown) => await fn()),
+  });
+
   it('should return mailbox rules with the mailbox email address attached', async () => {
     const mailboxRuleRepository = {
       find: jest.fn().mockResolvedValue([
@@ -36,6 +42,8 @@ describe('EnterpriseMailboxRuleService', () => {
     const service = new EnterpriseMailboxRuleService(
       mailboxRuleRepository as never,
       mailboxProfileRepository as never,
+      {} as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -84,6 +92,8 @@ describe('EnterpriseMailboxRuleService', () => {
     const service = new EnterpriseMailboxRuleService(
       mailboxRuleRepository as never,
       mailboxProfileRepository as never,
+      {} as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -151,6 +161,8 @@ describe('EnterpriseMailboxRuleService', () => {
     const service = new EnterpriseMailboxRuleService(
       mailboxRuleRepository as never,
       mailboxProfileRepository as never,
+      {} as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -257,6 +269,8 @@ describe('EnterpriseMailboxRuleService', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
+      {} as never,
       auditService as never,
     );
 
@@ -338,6 +352,7 @@ describe('EnterpriseMailboxRuleService', () => {
       createLog: jest.fn().mockResolvedValue(undefined),
       findRecentLogsByResourceType: jest.fn(),
     };
+    const globalWorkspaceOrmManager = buildGlobalWorkspaceOrmManagerMock();
 
     const service = new EnterpriseMailboxRuleService(
       mailboxRuleRepository as never,
@@ -346,8 +361,10 @@ describe('EnterpriseMailboxRuleService', () => {
       {} as never,
       {} as never,
       {} as never,
-      messageChannelDataAccessService as never,
       {} as never,
+      {} as never,
+      messageChannelDataAccessService as never,
+      globalWorkspaceOrmManager as never,
       auditService as never,
     );
 
@@ -444,6 +461,11 @@ describe('EnterpriseMailboxRuleService', () => {
       ]),
     };
 
+    const enterpriseMailboxRuleResultRepository = {
+      save: jest.fn().mockImplementation(async (input) => input),
+      create: jest.fn().mockImplementation((input) => input),
+    };
+
     const messageChannelDataAccessService = {
       findMany: jest.fn().mockResolvedValue([
         {
@@ -494,7 +516,9 @@ describe('EnterpriseMailboxRuleService', () => {
       mailboxAssignmentRepository as never,
       enterpriseMailThreadCrmLinkRepository as never,
       tradeCrmMailThreadStateRepository as never,
+      {} as never,
       tradeCrmMailThreadTaskLinkRepository as never,
+      enterpriseMailboxRuleResultRepository as never,
       messageChannelDataAccessService as never,
       globalWorkspaceOrmManager as never,
       auditService as never,
@@ -516,5 +540,546 @@ describe('EnterpriseMailboxRuleService', () => {
         ],
       }),
     );
+  });
+
+  it('should execute folder-routing runtime by moving associations to the target folder', async () => {
+    const mailboxRuleRepository = {
+      find: jest.fn(),
+      findOneByOrFail: jest.fn().mockResolvedValue({
+        id: 'rule-id',
+        workspaceId: 'workspace-id',
+        mailboxProfileId: 'mailbox-profile-id',
+        name: 'Route RFQ mail',
+        ruleType: 'folder-routing',
+        enabled: true,
+        priority: 10,
+        conditionsJson: {
+          sourceFolder: 'INBOX',
+        },
+        actionsJson: {
+          targetFolder: 'VIP',
+          markAsRead: true,
+        },
+      }),
+      save: jest.fn(),
+    };
+
+    const mailboxProfileRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          id: 'mailbox-profile-id',
+          emailAddress: 'sales@company.com',
+          status: 'active',
+          validationStatus: 'validated',
+          messageChannelId: 'message-channel-id',
+        },
+      ]),
+      findOneByOrFail: jest.fn(),
+    };
+
+    const associationRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          id: 'association-1',
+          messageChannelId: 'message-channel-id',
+          message: {
+            messageThreadId: 'thread-1',
+          },
+        },
+      ]),
+    };
+    const associationFolderRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          id: 'folder-link-1',
+          messageChannelMessageAssociationId: 'association-1',
+          messageFolderId: 'folder-inbox-id',
+        },
+      ]),
+      delete: jest.fn().mockResolvedValue(undefined),
+      insert: jest.fn().mockResolvedValue(undefined),
+    };
+    const globalWorkspaceOrmManager = {
+      executeInWorkspaceContext: jest.fn().mockImplementation(async (fn) => fn()),
+      getRepository: jest
+        .fn()
+        .mockImplementation(async (_workspaceId: string, objectName: string) => {
+          if (objectName === 'messageChannelMessageAssociation') {
+            return associationRepository;
+          }
+
+          if (objectName === 'messageChannelMessageAssociationMessageFolder') {
+            return associationFolderRepository;
+          }
+
+          throw new Error(`Unexpected repository ${objectName}`);
+        }),
+    };
+
+    const enterpriseMailboxRuleResultRepository = {
+      save: jest.fn().mockImplementation(async (input) => input),
+      create: jest.fn().mockImplementation((input) => input),
+      find: jest.fn(),
+    };
+
+    const messageChannelDataAccessService = {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'message-channel-id',
+          handle: 'sales@company.com',
+          messageFolders: [
+            {
+              id: 'folder-inbox-id',
+              name: 'INBOX',
+              externalId: 'INBOX',
+            },
+            {
+              id: 'folder-vip-id',
+              name: 'VIP',
+              externalId: 'VIP',
+            },
+          ],
+        },
+      ]),
+    };
+
+    const auditService = {
+      createLog: jest.fn().mockResolvedValue(undefined),
+      findRecentLogsByResourceType: jest.fn(),
+    };
+
+    const service = new EnterpriseMailboxRuleService(
+      mailboxRuleRepository as never,
+      mailboxProfileRepository as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      enterpriseMailboxRuleResultRepository as never,
+      messageChannelDataAccessService as never,
+      globalWorkspaceOrmManager as never,
+      auditService as never,
+    );
+
+    jest.spyOn(service, 'findRuleDryRunPreview').mockResolvedValue({
+      ruleId: 'rule-id',
+      ruleName: 'Route RFQ mail',
+      ruleType: 'folder-routing',
+      emailAddress: 'sales@company.com',
+      status: 'ready',
+      warnings: [],
+      blockers: [],
+      candidateCount: 1,
+      candidates: [
+        {
+          threadId: 'thread-1',
+          messageId: 'message-1',
+          subject: 'RFQ from buyer',
+          senderHandle: 'buyer@buyer.example.com',
+          receivedAt: '2026-05-07T09:00:00.000Z',
+          pending: false,
+          taskLinked: false,
+          crmLinked: false,
+          matchedSignals: ['Matched folder INBOX'],
+          plannedActions: ['Route to VIP', 'Mark as read'],
+        },
+      ],
+    });
+
+    const result = await service.runRuleNow('workspace-id', 'rule-id');
+
+    expect(associationFolderRepository.delete).toHaveBeenCalledWith([
+      'folder-link-1',
+    ]);
+    expect(associationFolderRepository.insert).toHaveBeenCalledWith([
+      {
+        messageChannelMessageAssociationId: 'association-1',
+        messageFolderId: 'folder-vip-id',
+      },
+    ]);
+    expect(enterpriseMailboxRuleResultRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executionType: 'runtime',
+        outcome: 'acted',
+        threadId: 'thread-1',
+        metadataJson: expect.objectContaining({
+          targetFolderId: 'folder-vip-id',
+          markAsReadApplied: false,
+          unsupportedActions: ['markAsRead'],
+        }),
+      }),
+    );
+    expect(result).toEqual({
+      executedCount: 1,
+      skippedCount: 0,
+      unsupported: false,
+    });
+  });
+
+  it('should execute customer-auto-link runtime by linking thread to person company and latest opportunity', async () => {
+    const mailboxRuleRepository = {
+      find: jest.fn(),
+      findOneByOrFail: jest.fn().mockResolvedValue({
+        id: 'rule-id',
+        workspaceId: 'workspace-id',
+        mailboxProfileId: 'mailbox-profile-id',
+        name: 'Auto link known customers',
+        ruleType: 'customer-auto-link',
+        enabled: true,
+        priority: 20,
+        conditionsJson: {
+          senderDomain: 'buyer.example.com',
+          requireKnownContact: true,
+        },
+        actionsJson: {
+          linkToPerson: true,
+          linkToCompany: true,
+          attachToLatestOpportunity: true,
+          createLeadWhenUnmatched: true,
+        },
+      }),
+      save: jest.fn(),
+    };
+
+    const personRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          id: 'person-1',
+          companyId: 'company-1',
+        },
+      ]),
+    };
+    const opportunityRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          id: 'opportunity-1',
+          companyId: 'company-1',
+          updatedAt: new Date('2026-05-07T09:00:00.000Z'),
+        },
+      ]),
+    };
+    const globalWorkspaceOrmManager = {
+      executeInWorkspaceContext: jest.fn().mockImplementation(async (fn) => fn()),
+      getRepository: jest
+        .fn()
+        .mockImplementation(async (_workspaceId: string, objectName: string) => {
+          if (objectName === 'person') {
+            return personRepository;
+          }
+
+          if (objectName === 'opportunity') {
+            return opportunityRepository;
+          }
+
+          throw new Error(`Unexpected repository ${objectName}`);
+        }),
+    };
+
+    const enterpriseMailThreadCrmLinkRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockImplementation(async (input) => ({
+        id: 'crm-link-1',
+        ...input,
+      })),
+    };
+    const enterpriseMailboxRuleResultRepository = {
+      save: jest.fn().mockImplementation(async (input) => input),
+      create: jest.fn().mockImplementation((input) => input),
+      find: jest.fn(),
+    };
+
+    const auditService = {
+      createLog: jest.fn().mockResolvedValue(undefined),
+      findRecentLogsByResourceType: jest.fn(),
+    };
+
+    const service = new EnterpriseMailboxRuleService(
+      mailboxRuleRepository as never,
+      { find: jest.fn().mockResolvedValue([]), findOneByOrFail: jest.fn() } as never,
+      {} as never,
+      enterpriseMailThreadCrmLinkRepository as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      enterpriseMailboxRuleResultRepository as never,
+      {} as never,
+      globalWorkspaceOrmManager as never,
+      auditService as never,
+    );
+
+    jest.spyOn(service, 'findRuleDryRunPreview').mockResolvedValue({
+      ruleId: 'rule-id',
+      ruleName: 'Auto link known customers',
+      ruleType: 'customer-auto-link',
+      emailAddress: 'sales@company.com',
+      status: 'ready',
+      warnings: [],
+      blockers: [],
+      candidateCount: 1,
+      candidates: [
+        {
+          threadId: 'thread-1',
+          messageId: 'message-1',
+          subject: 'Need quote update',
+          senderHandle: 'buyer@buyer.example.com',
+          receivedAt: '2026-05-07T09:00:00.000Z',
+          pending: false,
+          taskLinked: false,
+          crmLinked: false,
+          matchedSignals: [
+            'Matched sender domain buyer.example.com',
+            'Matched person person-1',
+          ],
+          plannedActions: [
+            'Link to person',
+            'Link to company',
+            'Attach to latest opportunity',
+            'Create lead when unmatched',
+          ],
+        },
+      ],
+    });
+
+    const result = await service.runRuleNow('workspace-id', 'rule-id');
+
+    expect(personRepository.find).toHaveBeenCalled();
+    expect(opportunityRepository.find).toHaveBeenCalled();
+    expect(enterpriseMailThreadCrmLinkRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: 'workspace-id',
+        threadId: 'thread-1',
+        personId: 'person-1',
+        companyId: 'company-1',
+        opportunityId: 'opportunity-1',
+        source: 'rule:customer-auto-link',
+      }),
+    );
+    expect(enterpriseMailboxRuleResultRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executionType: 'runtime',
+        outcome: 'acted',
+        threadId: 'thread-1',
+        metadataJson: expect.objectContaining({
+          personId: 'person-1',
+          companyId: 'company-1',
+          opportunityId: 'opportunity-1',
+          unsupportedActions: ['createLeadWhenUnmatched'],
+        }),
+      }),
+    );
+    expect(result).toEqual({
+      executedCount: 1,
+      skippedCount: 0,
+      unsupported: false,
+    });
+  });
+
+  it('should execute subordinate-escalation runtime by creating a task assigned to the manager handler', async () => {
+    const mailboxRuleRepository = {
+      find: jest.fn(),
+      findOneByOrFail: jest.fn().mockResolvedValue({
+        id: 'rule-id',
+        workspaceId: 'workspace-id',
+        mailboxProfileId: 'mailbox-profile-id',
+        name: 'Escalate overdue subordinate mail',
+        ruleType: 'subordinate-escalation',
+        enabled: true,
+        priority: 30,
+        conditionsJson: {
+          sourceFolder: 'INBOX',
+          maxReplyDelayHours: 1,
+          onlyAssignedThreads: false,
+        },
+        actionsJson: {
+          createTask: true,
+          notifyOwner: true,
+          escalateToManager: true,
+          reassignToPrimarySender: false,
+        },
+      }),
+      save: jest.fn(),
+    };
+
+    const enterpriseMailboxAssignmentRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          workspaceMemberId: 'manager-member-id',
+          mailboxProfileId: 'mailbox-profile-id',
+          assignmentStatus: 'active',
+          canHandleSubordinates: true,
+          canViewSubordinates: true,
+          isPrimaryMailbox: false,
+          updatedAt: new Date('2026-05-07T08:00:00.000Z'),
+        },
+        {
+          workspaceMemberId: 'primary-member-id',
+          mailboxProfileId: 'mailbox-profile-id',
+          assignmentStatus: 'active',
+          canHandleSubordinates: false,
+          canViewSubordinates: false,
+          isPrimaryMailbox: true,
+          updatedAt: new Date('2026-05-07T07:00:00.000Z'),
+        },
+      ]),
+    };
+
+    const enterpriseMailThreadCrmLinkRepository = {
+      find: jest.fn().mockResolvedValue([
+        {
+          threadId: 'thread-1',
+          companyId: 'company-1',
+          personId: 'person-1',
+          opportunityId: 'opportunity-1',
+        },
+      ]),
+      save: jest.fn(),
+    };
+    const tradeCrmMailThreadStateRepository = {
+      findOneBy: jest.fn().mockResolvedValue({
+        id: 'thread-state-1',
+        workspaceId: 'workspace-id',
+        threadId: 'thread-1',
+        isPending: false,
+      }),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const tradeCrmMailThreadTaskLinkRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const taskRepository = {
+      create: jest.fn().mockImplementation((input) => input),
+      save: jest.fn().mockImplementation(async (input) => ({
+        id: 'task-1',
+        ...input,
+      })),
+      findOne: jest.fn(),
+    };
+    const taskTargetRepository = {
+      create: jest.fn().mockImplementation((input) => input),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const globalWorkspaceOrmManager = {
+      executeInWorkspaceContext: jest.fn().mockImplementation(async (fn) => fn()),
+      getRepository: jest
+        .fn()
+        .mockImplementation(async (_workspaceId: string, objectName: string) => {
+          if (objectName === 'task') {
+            return taskRepository;
+          }
+
+          if (objectName === 'taskTarget') {
+            return taskTargetRepository;
+          }
+
+          throw new Error(`Unexpected repository ${objectName}`);
+        }),
+    };
+
+    const enterpriseMailboxRuleResultRepository = {
+      save: jest.fn().mockImplementation(async (input) => input),
+      create: jest.fn().mockImplementation((input) => input),
+      find: jest.fn(),
+    };
+
+    const auditService = {
+      createLog: jest.fn().mockResolvedValue(undefined),
+      findRecentLogsByResourceType: jest.fn(),
+    };
+
+    const service = new EnterpriseMailboxRuleService(
+      mailboxRuleRepository as never,
+      { find: jest.fn().mockResolvedValue([]), findOneByOrFail: jest.fn() } as never,
+      enterpriseMailboxAssignmentRepository as never,
+      enterpriseMailThreadCrmLinkRepository as never,
+      tradeCrmMailThreadStateRepository as never,
+      {} as never,
+      tradeCrmMailThreadTaskLinkRepository as never,
+      enterpriseMailboxRuleResultRepository as never,
+      {} as never,
+      globalWorkspaceOrmManager as never,
+      auditService as never,
+    );
+
+    jest.spyOn(service, 'findRuleDryRunPreview').mockResolvedValue({
+      ruleId: 'rule-id',
+      ruleName: 'Escalate overdue subordinate mail',
+      ruleType: 'subordinate-escalation',
+      emailAddress: 'sales@company.com',
+      status: 'ready',
+      warnings: [],
+      blockers: [],
+      candidateCount: 1,
+      candidates: [
+        {
+          threadId: 'thread-1',
+          messageId: 'message-1',
+          subject: 'Escalation candidate',
+          senderHandle: 'buyer@buyer.example.com',
+          receivedAt: '2026-05-07T00:00:00.000Z',
+          pending: false,
+          taskLinked: false,
+          crmLinked: true,
+          matchedSignals: ['Matched folder INBOX'],
+          plannedActions: [
+            'Create escalation task',
+            'Notify current owner',
+            'Escalate to manager',
+          ],
+        },
+      ],
+    });
+
+    const result = await service.runRuleNow('workspace-id', 'rule-id');
+
+    expect(tradeCrmMailThreadStateRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'thread-state-1',
+        workspaceId: 'workspace-id',
+        threadId: 'thread-1',
+        isPending: true,
+      }),
+    );
+    expect(taskRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assigneeId: 'manager-member-id',
+        title: 'Reply follow-up: Escalation candidate',
+      }),
+    );
+    expect(taskTargetRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'task-1',
+        targetCompanyId: 'company-1',
+        targetPersonId: 'person-1',
+        targetOpportunityId: 'opportunity-1',
+      }),
+    );
+    expect(tradeCrmMailThreadTaskLinkRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: 'workspace-id',
+        threadId: 'thread-1',
+        taskId: 'task-1',
+      }),
+    );
+    expect(enterpriseMailboxRuleResultRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executionType: 'runtime',
+        outcome: 'acted',
+        threadId: 'thread-1',
+        metadataJson: expect.objectContaining({
+          taskId: 'task-1',
+          managerAssigneeId: 'manager-member-id',
+          escalationAssigneeId: 'manager-member-id',
+          unsupportedActions: ['notifyOwner'],
+        }),
+      }),
+    );
+    expect(result).toEqual({
+      executedCount: 1,
+      skippedCount: 0,
+      unsupported: false,
+    });
   });
 });

@@ -772,3 +772,315 @@
   - `corepack yarn nx typecheck twenty-front` passes
   - `corepack yarn nx build twenty-front` passes
   - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox rule results progress
+
+- Added the first persistent result model for mailbox rules:
+  - `enterpriseMailboxRuleResult`
+  - migration `1776200000000-add-enterprise-mailbox-rule-result.ts`
+- Added backend result read API:
+  - `GET /api/enterprise/mailbox-rules/results`
+- The current write path is intentionally scoped:
+  - `findRuleDryRunPreview(...)` now records a result row after preview
+  - execution type is explicitly `preview`
+  - outcome is explicitly one of:
+    - `matched`
+    - `no-match`
+    - `blocked`
+- Stored result fields now include:
+  - summary
+  - failure reason
+  - matched signals
+  - planned actions
+  - candidate count / status inside metadata
+- Added a new front-end `Recent rule results` panel so operators can see the latest rule outcomes without leaving the rules page.
+- Important semantic constraint:
+  - this is the beginning of a result ledger
+  - not yet a full runtime automation log
+  - preview results are clearly labeled as preview
+- Re-verified:
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 6 tests
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 19 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox pending-reply runtime execution progress
+
+- Added the first real runtime execution path for mailbox rules.
+- New backend endpoint:
+  - `POST /api/enterprise/mailbox-rules/:id/run`
+- Runtime behavior is intentionally scoped:
+  - `pending-reply` executes for real
+  - all other rule types return explicit `skipped / unsupported`
+- `pending-reply` runtime now performs real state mutation:
+  - marks candidate threads as pending
+  - applies `pending-reply` tag when configured
+  - creates follow-up task when configured and no task link exists yet
+  - writes `threadId -> taskId`
+  - writes `enterpriseMailboxRuleResult` rows with `executionType = runtime`
+- Added front-end operator action:
+  - `Run rule now`
+  - available inline on each mailbox rule row
+- Important semantic constraint:
+  - runtime is real for `pending-reply`
+  - runtime is intentionally not fake for other rule families
+  - unsupported families are surfaced as `skipped / unsupported`
+- Re-verified:
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 6 tests
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 19 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox folder-routing runtime execution progress
+
+- Extended `POST /api/enterprise/mailbox-rules/:id/run` beyond `pending-reply`.
+- `folder-routing` now has a first real runtime path instead of `skipped / unsupported`.
+- Current runtime behavior:
+  - loads the mailbox's real synced folders from the resolved message channel
+  - resolves source and target folders by `name / externalId`
+  - finds real `messageChannelMessageAssociation` rows for candidate threads
+  - removes source-folder links from `messageChannelMessageAssociationMessageFolder`
+  - inserts the target-folder link when missing
+  - writes a runtime result row with `targetFolderId / targetFolderName`
+- Important semantic boundary remains explicit:
+  - `markAsRead` is not faked
+  - current workspace message model does not expose a stable writable read-state field for this runtime
+  - runtime records `unsupportedActions = ['markAsRead']` instead of pretending the action succeeded
+- `customer-auto-link` and `subordinate-escalation` still intentionally remain `skipped / unsupported` until their executors are implemented.
+- Re-verified:
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 7 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox customer-auto-link runtime execution progress
+
+- Extended `POST /api/enterprise/mailbox-rules/:id/run` beyond mailbox routing into CRM relationship binding.
+- `customer-auto-link` now has a first real runtime path instead of `skipped / unsupported`.
+- Current runtime behavior:
+  - consumes preview candidates that already carry `Matched person <personId>`
+  - loads real `person` records from the workspace
+  - derives `companyId` from the matched person
+  - resolves the latest `opportunity` for that company when configured
+  - upserts `enterpriseMailThreadCrmLink`
+  - writes runtime results with `personId / companyId / opportunityId`
+- Important semantic boundary remains explicit:
+  - `createLeadWhenUnmatched` is not faked
+  - if no CRM target can be resolved, runtime records `skipped` or `failed`
+  - when `createLeadWhenUnmatched` is requested, the result records `unsupportedActions = ['createLeadWhenUnmatched']`
+- Re-verified:
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 8 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox subordinate-escalation runtime execution progress
+
+- Extended `POST /api/enterprise/mailbox-rules/:id/run` to the fourth structured rule family.
+- `subordinate-escalation` now has a first real runtime path instead of `skipped / unsupported`.
+- Current runtime behavior:
+  - evaluates `maxReplyDelayHours` against each preview candidate at runtime
+  - skips threads when `onlyAssignedThreads` is enabled and no linked task exists
+  - marks the thread as pending
+  - creates a follow-up task when configured
+  - assigns or reassigns the task to a mailbox handler chosen from active assignments:
+    - manager handler first (`canHandleSubordinates`)
+    - then subordinate viewer
+    - then primary sender
+  - writes runtime result rows with `taskId / primaryAssigneeId / managerAssigneeId / escalationAssigneeId`
+- Important semantic boundary remains explicit:
+  - `notifyOwner` is not faked
+  - runtime records `unsupportedActions = ['notifyOwner']`
+- Re-verified:
+  - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 9 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `npx nx build twenty-server` passes
+
+## 2026-05-07 AMAIN Mailbox rules operator-result surface progress
+
+- Tightened the `Recent rule results` panel so it reads like an operator surface instead of a raw audit table.
+- The page now explicitly separates:
+  - `Dry-run preview`
+  - `Live run`
+- The page now translates outcomes into business-readable labels:
+  - `Preview would act`
+  - `Actions applied`
+  - `Skipped by guardrail`
+  - `Execution failed`
+- The result details column now surfaces:
+  - `Thread`
+  - `Task`
+  - `Unsupported`
+  - `Signals`
+  - `Planned`
+- Added top-level result counters for:
+  - dry-run previews
+  - actions applied
+  - skipped / no candidates
+  - failed runs
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 19 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-07 AMAIN Mailbox rules live runtime recovery
+
+- Root cause for the broken `Preview rule` / `Run rule now` path was not the Rules page UI.
+- The failure chain was:
+  - the backend process serving `localhost:3000` was stale and did not have the new rule routes loaded
+  - a fresh backend restart failed because `TradeCrmMailThreadTagEntityRepository` was missing from `EnterpriseManagementModule`
+  - after fixing DI, `preview/run` still failed because mailbox rule service read message channels outside workspace ORM context
+  - after fixing workspace context, runtime still failed until the `AddEnterpriseMailboxRuleResult1776200000000` migration was applied
+- Concrete fixes completed:
+  - registered `TradeCrmMailThreadTagEntity` in `packages/twenty-server/src/modules/enterprise/enterprise.module.ts`
+  - wrapped mailbox rule service message-channel reads in workspace context via `findMessageChannelsWithFolders(...)`
+  - ran `npx nx run twenty-server:database:migrate`
+- Verified live API state now:
+  - `GET /api/enterprise/mailbox-rules/:id/preview` returns `200`
+  - `POST /api/enterprise/mailbox-rules/:id/run` returns `201`
+  - `GET /api/enterprise/mailbox-rules/results` returns `200`
+- Verified live Rules page state now:
+  - `Recent rule results` renders real preview/runtime rows
+  - current runtime is operational but blocked by business readiness, not by code failure
+- current visible blocker is expected: `No synced message channel is linked to this mailbox yet.`
+- Regression artifact:
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-live-results.png`
+- Next real product step is no longer fixing preview/run mechanics. It is connecting a validated mailbox profile to a synced message channel so rules can act on real candidate threads.
+
+## 2026-05-07 AMAIN Mailbox validation diagnostics live recovery
+
+- Applied migration `1776500000000-add-enterprise-mailbox-validation-error` through the standard Nx migration target.
+- Re-ran live mailbox admin API checks:
+  - `GET /api/enterprise/mailbox-profiles`
+  - `GET /api/enterprise/mailbox-health`
+  - `POST /api/enterprise/mailbox-profiles/:id/validate`
+- The live mailbox sample now reports the real validation failure instead of a generic error:
+  - `IMAP connection failed: Client network socket disconnected before secure TLS connection was established`
+- `EnterpriseMailboxProfileService` already persists this state; the current runtime now proves the write path works:
+  - `validationStatus = failed`
+  - `lastValidationError` populated
+  - `connectedAccountId = null`
+  - `messageChannelId = null`
+- Front-end mailbox admin now surfaces this directly:
+  - `Mailbox Accounts` shows the exact validation error
+  - `Mailbox Rules` creation is blocked when the selected mailbox is still `pending` or `failed`
+- Re-verified:
+  - `npx jest src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=jest.config.mjs --runInBand` passes with 21 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-08 AMAIN Mailbox rules operator-surface update
+
+- Kept the backend rule runtime unchanged and improved the operator-facing Rules page instead.
+- `EnterpriseMailboxRulesPage` now exposes:
+  - a per-rule `Last result` snapshot directly in the rules table
+  - explicit result summary buckets for `Dry-run previews`, `Live runs`, `Actions applied`, `Blocked / failed`, and `Skipped / no candidates`
+- This closes the gap between “rules are executable” and “admins can actually read what just happened” without drilling into the lower results table first.
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 21 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-08 AMAIN Mailbox rules result filtering update
+
+- Added `Filter results by rule` and `Filter results by execution outcome` to the Rules page.
+- The result summary cards now recompute from the filtered dataset instead of always showing the full ledger.
+- This makes the page usable for real operator triage once multiple rules start writing mixed preview/runtime rows.
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 21 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-08 AMAIN Mailbox rules expandable result details
+
+- Added expandable thread-level details to `Recent rule results` on `EnterpriseMailboxRulesPage`.
+- Each runtime or preview result row now exposes `Show result details / Hide result details`.
+- Expanded details surface:
+  - thread id
+  - task id
+  - person/company/opportunity ids when present
+  - failure reason
+  - matched signals
+  - planned actions
+  - unsupported actions
+- Kept the existing summary row unchanged so operators can still scan the table quickly before expanding.
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 21 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-08 AMAIN Mailbox rule-row latest execution feedback
+
+- Added rule-row inline feedback to `EnterpriseMailboxRulesPage`.
+- Rules that already have a latest result now show:
+  - `Show latest run feedback`
+  - `Hide latest run feedback`
+- Clicking `Run rule now` now auto-expands the current rule row after the run completes.
+- The inline panel surfaces:
+  - execution type
+  - outcome
+  - timestamp
+  - summary
+  - thread/task/CRM detail items from the newest result
+- This reduces the need to scan the global result ledger immediately after a run.
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 21 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+
+## 2026-05-08 AMAIN Mailbox rules live runtime recovery
+
+- Fixed the last live `Run rule now` crash in `EnterpriseMailboxRuleService`.
+- Root cause:
+  - runtime execution still inserted `tradeCrmMailThreadState` rows blindly
+  - candidate threads that already had state rows hit the unique index on `(workspaceId, threadId)`
+- Implemented `workspaceId + threadId` upsert semantics for runtime thread-state writes.
+- Re-verified:
+  - `cd packages/twenty-server && npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` passes with 9 tests
+  - `npx nx build twenty-server` passes
+  - live `POST /api/enterprise/mailbox-rules/:id/run` returns `201` with `{"executedCount":3,"skippedCount":0,"unsupported":false}`
+- Restarted the stable backend process so localhost now serves the fixed runtime path.
+- Browser regression artifact:
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-inline-feedback-live.png`
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-inline-feedback-live.json`
+
+## 2026-05-08 AMAIN Mailbox local mailbox readiness
+
+- Re-checked the local seeded mailbox through live admin APIs instead of relying on earlier failure history.
+- Current `sales.alibaba.demo@amaincrm.local` state is healthy for local development:
+  - `validationStatus = validated`
+  - `lastValidationError = null`
+  - `lastSyncStatus = ACTIVE`
+  - `connectedAccountId` present
+  - `messageChannelId` present
+- This means the old IMAP TLS validation blocker is no longer the active local-development constraint.
+
+## 2026-05-08 AMAIN Mailbox rule-result record links
+
+- Upgraded `EnterpriseMailboxRulesPage` so result details no longer trap operators in raw ids.
+- `task / person / company / opportunity` ids now render as record links with AMAIN source context in:
+  - global `Recent rule results` detail rows
+  - per-rule latest execution feedback panels
+- Re-verified:
+  - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` passes with 21 tests
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+- Live browser artifact:
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-links-live.png`
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-links-live.json`
+
+## 2026-05-08 AMAIN Mailbox rule-result live click-path verification
+
+- Created and executed a live `customer-auto-link` rule against the seeded local mailbox so the result ledger would include real CRM targets.
+- Live API verification:
+  - `POST /api/enterprise/mailbox-rules` created `Customer auto-link live check`
+  - `GET /api/enterprise/mailbox-rules/:id/preview` returned 3 candidates
+  - `POST /api/enterprise/mailbox-rules/:id/run` returned `201` with `{"executedCount":2,"skippedCount":1,"unsupported":false}`
+- Browser-level regression on `/enterprise/mailbox/rules` now confirms:
+  - a result row can be expanded to show live `Person / Company / Opportunity` links
+  - clicking the `Person` link navigates to `/object/person/...`
+  - the target object page does not show Twenty `工作区`
+- Regression artifacts:
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-link-source-live.png`
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-link-target-live.png`
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-link-live.json`

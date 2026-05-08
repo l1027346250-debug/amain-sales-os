@@ -3,7 +3,12 @@ import { Fragment, useMemo, useState } from 'react';
 import { EnterprisePermissionGuard } from '@/enterprise/shared/components/EnterprisePermissionGuard';
 import { EnterpriseShell } from '@/enterprise/shared/components/EnterpriseShell';
 import { enterprisePermissionCodes } from '@/enterprise/shared/constants/enterprisePermissions';
+import {
+  createTradeCrmRecordSource,
+  getTradeCrmRecordPathFromSource,
+} from '@/trade-crm/shared/navigation/tradeCrmRecordSource';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
+import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { Button } from 'twenty-ui/input';
 
 import {
@@ -19,6 +24,8 @@ import {
   StyledHeroTitle,
   StyledLabel,
   StyledInput,
+  StyledMetaItem,
+  StyledMetaList,
   StyledPanel,
   StyledSectionText,
   StyledSectionTitle,
@@ -294,6 +301,35 @@ const buildSubordinateEscalationRuleJson = (input: {
   },
 });
 
+const mailboxRulesRecordSource = createTradeCrmRecordSource({
+  href: '/enterprise/mailbox/rules',
+  workspaceKey: 'admin',
+  workspaceLabel: 'Admin',
+  viewKey: 'mailbox-rules',
+  viewLabel: 'Mailbox Rules',
+  trail: 'mailbox-rule-result',
+});
+
+const getMailboxRuleResultRecordHref = (input: {
+  kind: 'task' | 'person' | 'company' | 'opportunity';
+  recordId: string;
+}) => {
+  const objectNameSingular =
+    input.kind === 'task'
+      ? CoreObjectNameSingular.Task
+      : input.kind === 'person'
+        ? CoreObjectNameSingular.Person
+        : input.kind === 'company'
+          ? CoreObjectNameSingular.Company
+          : CoreObjectNameSingular.Opportunity;
+
+  return getTradeCrmRecordPathFromSource({
+    objectNameSingular,
+    objectRecordId: input.recordId,
+    source: mailboxRulesRecordSource,
+  });
+};
+
 export const EnterpriseMailboxRulesPage = () => {
   const sidebar = useMemo(buildEnterpriseSidebar, []);
   const { enqueueErrorSnackBar } = useSnackBar();
@@ -303,10 +339,12 @@ export const EnterpriseMailboxRulesPage = () => {
     isLoading,
     loadMailboxRulePreview,
     mailboxRuleActivity,
+    mailboxRuleResults,
     mailboxRulePreviewsById,
     mailboxRuleReadiness,
     mailboxRules,
     previewLoadingRuleId,
+    runMailboxRuleNow,
     updateMailboxRule,
   } = useEnterpriseMailboxRules();
   const [mailboxProfileId, setMailboxProfileId] = useState('');
@@ -345,6 +383,40 @@ export const EnterpriseMailboxRulesPage = () => {
   const [expandedPreviewRuleId, setExpandedPreviewRuleId] = useState<string | null>(
     null,
   );
+  const [expandedLatestResultRuleId, setExpandedLatestResultRuleId] =
+    useState<string | null>(null);
+  const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
+  const [resultRuleFilter, setResultRuleFilter] = useState('all');
+  const [resultTypeFilter, setResultTypeFilter] = useState('all');
+
+  const selectedMailboxProfile = useMemo(
+    () =>
+      mailboxProfiles.find((mailboxProfile) => mailboxProfile.id === mailboxProfileId),
+    [mailboxProfileId, mailboxProfiles],
+  );
+
+  const mailboxRuleCreateBlockedReason = useMemo(() => {
+    if (!selectedMailboxProfile) {
+      return null;
+    }
+
+    if (selectedMailboxProfile.status !== 'active') {
+      return 'The selected mailbox is not active. Reactivate it before creating mailbox rules.';
+    }
+
+    if (selectedMailboxProfile.validationStatus === 'failed') {
+      return (
+        selectedMailboxProfile.lastValidationError ??
+        'The selected mailbox failed IMAP/SMTP validation. Revalidate it before creating mailbox rules.'
+      );
+    }
+
+    if (selectedMailboxProfile.validationStatus !== 'validated') {
+      return 'Validate and provision this mailbox before attaching mailbox rules.';
+    }
+
+    return null;
+  }, [selectedMailboxProfile]);
 
   const formatJson = (value: Record<string, unknown> | null | undefined) =>
     JSON.stringify(value ?? {}, null, 2);
@@ -360,6 +432,243 @@ export const EnterpriseMailboxRulesPage = () => {
 
   const getStatusTone = (value: 'ready' | 'warning' | 'blocked') =>
     value === 'ready' ? 'success' : value === 'warning' ? 'warning' : 'neutral';
+
+  const formatRuleResultExecutionLabel = (value: string) =>
+    value === 'preview'
+      ? 'Dry-run preview'
+      : value === 'runtime'
+        ? 'Live run'
+        : value;
+
+  const formatRuleResultOutcomeLabel = (
+    executionType: string,
+    outcome: string,
+  ) => {
+    if (executionType === 'preview' && outcome === 'matched') {
+      return 'Preview would act';
+    }
+
+    if (executionType === 'preview' && outcome === 'no-match') {
+      return 'Preview found no candidates';
+    }
+
+    if (outcome === 'acted') {
+      return 'Actions applied';
+    }
+
+    if (outcome === 'skipped') {
+      return 'Skipped by guardrail';
+    }
+
+    if (outcome === 'blocked') {
+      return 'Blocked';
+    }
+
+    if (outcome === 'failed') {
+      return 'Execution failed';
+    }
+
+    if (outcome === 'matched') {
+      return 'Matched';
+    }
+
+    if (outcome === 'no-match') {
+      return 'No candidates';
+    }
+
+    return outcome;
+  };
+
+  const getRuleResultOutcomeTone = (executionType: string, outcome: string) => {
+    if (outcome === 'acted') {
+      return 'success';
+    }
+
+    if (outcome === 'failed' || outcome === 'blocked') {
+      return 'neutral';
+    }
+
+    if (outcome === 'skipped' || outcome === 'no-match') {
+      return 'warning';
+    }
+
+    if (executionType === 'preview' && outcome === 'matched') {
+      return 'warning';
+    }
+
+    return 'success';
+  };
+
+  const buildRuleResultNotes = (input: {
+    failureReason: string | null;
+    matchedSignalsJson: string[] | null;
+    metadataJson: Record<string, unknown> | null;
+    plannedActionsJson: string[] | null;
+    threadId: string | null;
+  }) => {
+    const notes: string[] = [];
+
+    if (input.failureReason) {
+      notes.push(`Reason: ${input.failureReason}`);
+    }
+
+    if (input.threadId) {
+      notes.push(`Thread: ${input.threadId}`);
+    }
+
+    if (input.metadataJson?.taskId && typeof input.metadataJson.taskId === 'string') {
+      notes.push(`Task: ${input.metadataJson.taskId}`);
+    }
+
+    if (
+      input.metadataJson?.unsupportedActions &&
+      Array.isArray(input.metadataJson.unsupportedActions) &&
+      input.metadataJson.unsupportedActions.length > 0
+    ) {
+      notes.push(
+        `Unsupported: ${input.metadataJson.unsupportedActions.join(', ')}`,
+      );
+    }
+
+    if (input.matchedSignalsJson && input.matchedSignalsJson.length > 0) {
+      notes.push(`Signals: ${input.matchedSignalsJson.join(' | ')}`);
+    }
+
+    if (input.plannedActionsJson && input.plannedActionsJson.length > 0) {
+      notes.push(`Planned: ${input.plannedActionsJson.join(' | ')}`);
+    }
+
+    return notes;
+  };
+
+  const buildRuleResultDetailItems = (input: {
+    failureReason: string | null;
+    matchedSignalsJson: string[] | null;
+    metadataJson: Record<string, unknown> | null;
+    plannedActionsJson: string[] | null;
+    threadId: string | null;
+  }) => {
+    const detailItems: Array<{
+      href?: string;
+      label: string;
+      value: string;
+    }> = [];
+
+    if (input.threadId) {
+      detailItems.push({ label: 'Thread', value: input.threadId });
+    }
+
+    if (input.metadataJson?.taskId && typeof input.metadataJson.taskId === 'string') {
+      detailItems.push({
+        href: getMailboxRuleResultRecordHref({
+          kind: 'task',
+          recordId: input.metadataJson.taskId,
+        }),
+        label: 'Task',
+        value: input.metadataJson.taskId,
+      });
+    }
+
+    if (
+      input.metadataJson?.personId &&
+      typeof input.metadataJson.personId === 'string'
+    ) {
+      detailItems.push({
+        href: getMailboxRuleResultRecordHref({
+          kind: 'person',
+          recordId: input.metadataJson.personId,
+        }),
+        label: 'Person',
+        value: input.metadataJson.personId,
+      });
+    }
+
+    if (
+      input.metadataJson?.companyId &&
+      typeof input.metadataJson.companyId === 'string'
+    ) {
+      detailItems.push({
+        href: getMailboxRuleResultRecordHref({
+          kind: 'company',
+          recordId: input.metadataJson.companyId,
+        }),
+        label: 'Company',
+        value: input.metadataJson.companyId,
+      });
+    }
+
+    if (
+      input.metadataJson?.opportunityId &&
+      typeof input.metadataJson.opportunityId === 'string'
+    ) {
+      detailItems.push({
+        href: getMailboxRuleResultRecordHref({
+          kind: 'opportunity',
+          recordId: input.metadataJson.opportunityId,
+        }),
+        label: 'Opportunity',
+        value: input.metadataJson.opportunityId,
+      });
+    }
+
+    if (input.failureReason) {
+      detailItems.push({ label: 'Failure reason', value: input.failureReason });
+    }
+
+    if (input.matchedSignalsJson && input.matchedSignalsJson.length > 0) {
+      detailItems.push({
+        label: 'Matched signals',
+        value: input.matchedSignalsJson.join(' 路 '),
+      });
+    }
+
+    if (input.plannedActionsJson && input.plannedActionsJson.length > 0) {
+      detailItems.push({
+        label: 'Planned actions',
+        value: input.plannedActionsJson.join(' 路 '),
+      });
+    }
+
+    if (
+      Array.isArray(input.metadataJson?.unsupportedActions) &&
+      input.metadataJson.unsupportedActions.length > 0
+    ) {
+      detailItems.push({
+        label: 'Unsupported actions',
+        value: input.metadataJson.unsupportedActions.join(' 路 '),
+      });
+    }
+
+    return detailItems;
+  };
+
+  const formatRuleResultSnapshot = (
+    resultItem?: (typeof mailboxRuleResults)[number] | null,
+  ): {
+    executionLabel: string;
+    outcomeLabel: string;
+    tone: 'neutral' | 'success' | 'warning';
+    when: string;
+    summary: string;
+  } | null => {
+    if (!resultItem) {
+      return null;
+    }
+
+    return {
+      executionLabel: formatRuleResultExecutionLabel(resultItem.executionType),
+      outcomeLabel: formatRuleResultOutcomeLabel(
+        resultItem.executionType,
+        resultItem.outcome,
+      ),
+      tone: getRuleResultOutcomeTone(
+        resultItem.executionType,
+        resultItem.outcome,
+      ),
+      when: new Date(resultItem.createdAt).toLocaleString(),
+      summary: resultItem.summary,
+    };
+  };
 
   const ruleSummary = useMemo(
     () => ({
@@ -379,6 +688,79 @@ export const EnterpriseMailboxRulesPage = () => {
     }),
     [mailboxRules],
   );
+
+  const filteredMailboxRuleResults = useMemo(
+    () =>
+      mailboxRuleResults.filter((resultItem) => {
+        if (
+          resultRuleFilter !== 'all' &&
+          resultItem.mailboxRuleId !== resultRuleFilter
+        ) {
+          return false;
+        }
+
+        if (
+          resultTypeFilter !== 'all' &&
+          `${resultItem.executionType}:${resultItem.outcome}` !== resultTypeFilter
+        ) {
+          return false;
+        }
+
+        return true;
+      }),
+    [mailboxRuleResults, resultRuleFilter, resultTypeFilter],
+  );
+
+  const filteredRuleResultSummary = useMemo(
+    () => ({
+      actedRuns: filteredMailboxRuleResults.filter(
+        (resultItem) => resultItem.outcome === 'acted',
+      ).length,
+      blockedRuns: filteredMailboxRuleResults.filter(
+        (resultItem) => resultItem.outcome === 'blocked',
+      ).length,
+      failedRuns: filteredMailboxRuleResults.filter(
+        (resultItem) => resultItem.outcome === 'failed',
+      ).length,
+      liveRuns: filteredMailboxRuleResults.filter(
+        (resultItem) => resultItem.executionType === 'runtime',
+      ).length,
+      previewRuns: filteredMailboxRuleResults.filter(
+        (resultItem) => resultItem.executionType === 'preview',
+      ).length,
+      skippedRuns: filteredMailboxRuleResults.filter(
+        (resultItem) =>
+          resultItem.outcome === 'skipped' || resultItem.outcome === 'no-match',
+      ).length,
+    }),
+    [filteredMailboxRuleResults],
+  );
+
+  const latestRuleResultByRuleId = useMemo(
+    () =>
+      mailboxRuleResults.reduce<Record<string, (typeof mailboxRuleResults)[number]>>(
+        (currentValue, resultItem) => {
+          const existingResult = currentValue[resultItem.mailboxRuleId];
+
+          if (
+            !existingResult ||
+            new Date(resultItem.createdAt).getTime() >
+              new Date(existingResult.createdAt).getTime()
+          ) {
+            currentValue[resultItem.mailboxRuleId] = resultItem;
+          }
+
+          return currentValue;
+        },
+        {},
+      ),
+    [mailboxRuleResults],
+  );
+
+  const handleRunMailboxRuleNow = async (mailboxRuleId: string) => {
+    await runMailboxRuleNow(mailboxRuleId);
+    setExpandedLatestResultRuleId(mailboxRuleId);
+  };
 
   const createRule = async () => {
     try {
@@ -577,6 +959,9 @@ export const EnterpriseMailboxRulesPage = () => {
                   {mailboxProfiles.map((mailboxProfile) => (
                     <option key={mailboxProfile.id} value={mailboxProfile.id}>
                       {mailboxProfile.emailAddress}
+                      {mailboxProfile.validationStatus !== 'validated'
+                        ? ` (${mailboxProfile.validationStatus})`
+                        : ''}
                     </option>
                   ))}
                 </StyledSelect>
@@ -616,6 +1001,22 @@ export const EnterpriseMailboxRulesPage = () => {
                 />
               </StyledField>
             </StyledFormGrid>
+
+            {selectedMailboxProfile ? (
+              <StyledSectionText>
+                Mailbox status: {selectedMailboxProfile.status} / validation{' '}
+                {selectedMailboxProfile.validationStatus}
+                {selectedMailboxProfile.messageChannelId
+                  ? ` / channel ${selectedMailboxProfile.messageChannelId}`
+                  : ' / channel pending'}
+              </StyledSectionText>
+            ) : null}
+
+            {mailboxRuleCreateBlockedReason ? (
+              <StyledStatus tone="warning">
+                {mailboxRuleCreateBlockedReason}
+              </StyledStatus>
+            ) : null}
 
             {ruleType === 'pending-reply' ? (
               <>
@@ -1050,7 +1451,10 @@ export const EnterpriseMailboxRulesPage = () => {
             <Button
               title="Create rule"
               disabled={
-                !mailboxProfileId.trim() || !name.trim() || !priority.trim()
+                !mailboxProfileId.trim() ||
+                !name.trim() ||
+                !priority.trim() ||
+                mailboxRuleCreateBlockedReason !== null
               }
               onClick={createRule}
             />
@@ -1116,6 +1520,212 @@ export const EnterpriseMailboxRulesPage = () => {
           </StyledPanel>
 
           <StyledPanel>
+            <StyledSectionTitle>Recent rule results</StyledSectionTitle>
+            <StyledSectionText>
+              This feed separates dry-run previews from live execution. Treat
+              preview rows as planning checks; treat live runs as operational
+              changes to mailbox state, task creation, or CRM linking.
+            </StyledSectionText>
+            <StyledMetaList>
+              <StyledMetaItem>
+                <StyledSectionTitle>Dry-run previews</StyledSectionTitle>
+                <StyledStatus tone="warning">
+                  {filteredRuleResultSummary.previewRuns}
+                </StyledStatus>
+              </StyledMetaItem>
+              <StyledMetaItem>
+                <StyledSectionTitle>Live runs</StyledSectionTitle>
+                <StyledStatus tone="success">
+                  {filteredRuleResultSummary.liveRuns}
+                </StyledStatus>
+              </StyledMetaItem>
+              <StyledMetaItem>
+                <StyledSectionTitle>Actions applied</StyledSectionTitle>
+                <StyledStatus tone="success">
+                  {filteredRuleResultSummary.actedRuns}
+                </StyledStatus>
+              </StyledMetaItem>
+              <StyledMetaItem>
+                <StyledSectionTitle>Blocked / failed</StyledSectionTitle>
+                <StyledStatus tone="neutral">
+                  {filteredRuleResultSummary.blockedRuns +
+                    filteredRuleResultSummary.failedRuns}
+                </StyledStatus>
+              </StyledMetaItem>
+              <StyledMetaItem>
+                <StyledSectionTitle>Skipped / no candidates</StyledSectionTitle>
+                <StyledStatus tone="warning">
+                  {filteredRuleResultSummary.skippedRuns}
+                </StyledStatus>
+              </StyledMetaItem>
+            </StyledMetaList>
+
+            <StyledFormGrid>
+              <StyledField>
+                <StyledLabel>Filter by rule</StyledLabel>
+                <StyledSelect
+                  aria-label="Filter results by rule"
+                  value={resultRuleFilter}
+                  onChange={(event) => setResultRuleFilter(event.target.value)}
+                >
+                  <option value="all">All rules</option>
+                  {mailboxRules.map((mailboxRule) => (
+                    <option key={mailboxRule.id} value={mailboxRule.id}>
+                      {mailboxRule.name}
+                    </option>
+                  ))}
+                </StyledSelect>
+              </StyledField>
+              <StyledField>
+                <StyledLabel>Filter by result type</StyledLabel>
+                <StyledSelect
+                  aria-label="Filter results by execution outcome"
+                  value={resultTypeFilter}
+                  onChange={(event) => setResultTypeFilter(event.target.value)}
+                >
+                  <option value="all">All result types</option>
+                  <option value="preview:matched">Preview would act</option>
+                  <option value="preview:no-match">Preview no candidates</option>
+                  <option value="preview:blocked">Preview blocked</option>
+                  <option value="runtime:acted">Runtime acted</option>
+                  <option value="runtime:skipped">Runtime skipped</option>
+                  <option value="runtime:no-match">Runtime no candidates</option>
+                  <option value="runtime:blocked">Runtime blocked</option>
+                  <option value="runtime:failed">Runtime failed</option>
+                </StyledSelect>
+              </StyledField>
+            </StyledFormGrid>
+
+            {filteredMailboxRuleResults.length === 0 ? (
+              <StyledEmpty>No rule results yet.</StyledEmpty>
+            ) : (
+              <StyledTable>
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Rule</th>
+                    <th>Mailbox</th>
+                    <th>Execution</th>
+                    <th>Outcome</th>
+                    <th>Summary</th>
+                    <th>Failure / signals</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMailboxRuleResults.map((resultItem) => {
+                    const resultNotes = buildRuleResultNotes({
+                      failureReason: resultItem.failureReason,
+                      matchedSignalsJson: resultItem.matchedSignalsJson,
+                      metadataJson: resultItem.metadataJson,
+                      plannedActionsJson: resultItem.plannedActionsJson,
+                      threadId: resultItem.threadId,
+                    });
+                    const resultDetailItems = buildRuleResultDetailItems({
+                      failureReason: resultItem.failureReason,
+                      matchedSignalsJson: resultItem.matchedSignalsJson,
+                      metadataJson: resultItem.metadataJson,
+                      plannedActionsJson: resultItem.plannedActionsJson,
+                      threadId: resultItem.threadId,
+                    });
+                    const isResultExpanded = expandedResultId === resultItem.id;
+
+                    return (
+                      <Fragment key={resultItem.id}>
+                        <tr>
+                          <td>{new Date(resultItem.createdAt).toLocaleString()}</td>
+                          <td>
+                            {resultItem.ruleName ?? resultItem.mailboxRuleId}
+                            <br />
+                            {resultItem.ruleType ?? 'Unknown type'}
+                          </td>
+                          <td>{resultItem.emailAddress ?? 'Unknown mailbox'}</td>
+                          <td>
+                            <StyledStatus
+                              tone={
+                                resultItem.executionType === 'preview'
+                                  ? 'warning'
+                                  : 'success'
+                              }
+                            >
+                              {formatRuleResultExecutionLabel(resultItem.executionType)}
+                            </StyledStatus>
+                          </td>
+                          <td>
+                            <StyledStatus
+                              tone={getRuleResultOutcomeTone(
+                                resultItem.executionType,
+                                resultItem.outcome,
+                              )}
+                            >
+                              {formatRuleResultOutcomeLabel(
+                                resultItem.executionType,
+                                resultItem.outcome,
+                              )}
+                            </StyledStatus>
+                          </td>
+                          <td>{resultItem.summary}</td>
+                          <td>
+                            {resultNotes.length === 0
+                              ? 'No blocking reason or matched signal recorded.'
+                              : null}
+                            {resultNotes.map((resultNote) => (
+                              <Fragment key={resultNote}>
+                                <br />
+                                {resultNote}
+                              </Fragment>
+                            ))}
+                            {resultDetailItems.length > 0 ? (
+                              <>
+                                <br />
+                                <Button
+                                  title={
+                                    isResultExpanded
+                                      ? 'Hide result details'
+                                      : 'Show result details'
+                                  }
+                                  onClick={() =>
+                                    setExpandedResultId((currentValue) =>
+                                      currentValue === resultItem.id ? null : resultItem.id,
+                                    )
+                                  }
+                                />
+                              </>
+                            ) : null}
+                          </td>
+                        </tr>
+                        {isResultExpanded ? (
+                          <tr>
+                            <td colSpan={7}>
+                              <StyledGrid>
+                                <StyledSectionTitle>Thread-level result details</StyledSectionTitle>
+                                <StyledFormGrid>
+                                  {resultDetailItems.map((detailItem) => (
+                                    <StyledMetaItem key={`${resultItem.id}-${detailItem.label}`}>
+                                      <strong>{detailItem.label}</strong>
+                                      <br />
+                                      {detailItem.href ? (
+                                        <a href={detailItem.href}>
+                                          {detailItem.value}
+                                        </a>
+                                      ) : (
+                                        detailItem.value
+                                      )}
+                                    </StyledMetaItem>
+                                  ))}
+                                </StyledFormGrid>
+                              </StyledGrid>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </StyledTable>
+            )}
+          </StyledPanel>
+
+          <StyledPanel>
             <StyledSectionTitle>Current rules</StyledSectionTitle>
             <StyledSectionText>
               Review the active rule queue for each mailbox before we add richer
@@ -1129,21 +1739,42 @@ export const EnterpriseMailboxRulesPage = () => {
             ) : (
               <StyledTable>
                 <thead>
-                  <tr>
-                    <th>Mailbox account</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Priority</th>
-                    <th>Conditions</th>
-                    <th>Actions</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+                    <tr>
+                      <th>Mailbox account</th>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Priority</th>
+                      <th>Conditions</th>
+                      <th>Actions</th>
+                      <th>Status</th>
+                      <th>Last result</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                   {mailboxRules.map((mailboxRule) => {
-                    const preview = mailboxRulePreviewsById[mailboxRule.id];
-                    const isPreviewExpanded = expandedPreviewRuleId === mailboxRule.id;
+                      const preview = mailboxRulePreviewsById[mailboxRule.id];
+                      const latestRuleResultItem =
+                        latestRuleResultByRuleId[mailboxRule.id] ?? null;
+                      const latestRuleResult = formatRuleResultSnapshot(
+                        latestRuleResultItem,
+                      );
+                      const isPreviewExpanded = expandedPreviewRuleId === mailboxRule.id;
+                      const isLatestResultExpanded =
+                        expandedLatestResultRuleId === mailboxRule.id &&
+                        latestRuleResultItem !== null;
+                      const latestResultDetailItems =
+                        latestRuleResultItem === null
+                          ? []
+                          : buildRuleResultDetailItems({
+                              failureReason: latestRuleResultItem.failureReason,
+                              matchedSignalsJson:
+                                latestRuleResultItem.matchedSignalsJson,
+                              metadataJson: latestRuleResultItem.metadataJson,
+                              plannedActionsJson:
+                                latestRuleResultItem.plannedActionsJson,
+                              threadId: latestRuleResultItem.threadId,
+                            });
 
                     return (
                       <Fragment key={mailboxRule.id}>
@@ -1714,16 +2345,32 @@ export const EnterpriseMailboxRulesPage = () => {
                           formatJson(mailboxRule.actionsJson)
                         )}
                       </td>
-                      <td>
-                        <StyledStatus
-                          tone={mailboxRule.enabled ? 'success' : 'neutral'}
-                        >
-                          {mailboxRule.enabled ? 'enabled' : 'disabled'}
-                        </StyledStatus>
-                      </td>
-                      <td>
-                        {editingRuleId === mailboxRule.id ? (
-                          <>
+                        <td>
+                          <StyledStatus
+                            tone={mailboxRule.enabled ? 'success' : 'neutral'}
+                          >
+                            {mailboxRule.enabled ? 'enabled' : 'disabled'}
+                          </StyledStatus>
+                        </td>
+                        <td>
+                          {latestRuleResult ? (
+                            <>
+                              <StyledStatus tone={latestRuleResult.tone}>
+                                {latestRuleResult.outcomeLabel}
+                              </StyledStatus>
+                              <br />
+                              {latestRuleResult.executionLabel} ·{' '}
+                              {latestRuleResult.when}
+                              <br />
+                              {latestRuleResult.summary}
+                            </>
+                          ) : (
+                            'No result yet'
+                          )}
+                        </td>
+                        <td>
+                          {editingRuleId === mailboxRule.id ? (
+                            <>
                             <Button
                               title="Save rule"
                               disabled={
@@ -1767,13 +2414,96 @@ export const EnterpriseMailboxRulesPage = () => {
                                 }
                               }}
                             />
+                            <Button
+                              title="Run rule now"
+                              onClick={() =>
+                                void handleRunMailboxRuleNow(mailboxRule.id)
+                              }
+                            />
+                            {latestRuleResultItem ? (
+                              <Button
+                                title={
+                                  isLatestResultExpanded
+                                    ? 'Hide latest run feedback'
+                                    : 'Show latest run feedback'
+                                }
+                                onClick={() =>
+                                  setExpandedLatestResultRuleId((currentValue) =>
+                                    currentValue === mailboxRule.id
+                                      ? null
+                                      : mailboxRule.id,
+                                  )
+                                }
+                              />
+                            ) : null}
                           </>
                         )}
                       </td>
                     </tr>
+                        {isLatestResultExpanded ? (
+                          <tr>
+                            <td colSpan={9}>
+                              <StyledPanel>
+                                <StyledSectionTitle>Latest execution feedback</StyledSectionTitle>
+                                <StyledSectionText>
+                                  This panel keeps the newest run or preview
+                                  outcome attached to the current rule so the
+                                  operator does not need to scan the global
+                                  result ledger after clicking Run rule now.
+                                </StyledSectionText>
+                                <StyledMetaList>
+                                  <StyledMetaItem>
+                                    <strong>Execution</strong>
+                                    <br />
+                                    {latestRuleResult?.executionLabel ?? 'Unknown'}
+                                  </StyledMetaItem>
+                                  <StyledMetaItem>
+                                    <strong>Outcome</strong>
+                                    <br />
+                                    {latestRuleResult?.outcomeLabel ?? 'Unknown'}
+                                  </StyledMetaItem>
+                                  <StyledMetaItem>
+                                    <strong>When</strong>
+                                    <br />
+                                    {latestRuleResult?.when ?? 'Unknown'}
+                                  </StyledMetaItem>
+                                </StyledMetaList>
+                                <StyledMetaItem>
+                                  <strong>Summary</strong>
+                                  <br />
+                                  {latestRuleResult?.summary ??
+                                    'No summary recorded.'}
+                                </StyledMetaItem>
+                                {latestResultDetailItems.length > 0 ? (
+                                  <StyledFormGrid>
+                                    {latestResultDetailItems.map((detailItem) => (
+                                      <StyledMetaItem
+                                        key={`${mailboxRule.id}-${detailItem.label}`}
+                                      >
+                                        <strong>{detailItem.label}</strong>
+                                        <br />
+                                        {detailItem.href ? (
+                                          <a href={detailItem.href}>
+                                            {detailItem.value}
+                                          </a>
+                                        ) : (
+                                          detailItem.value
+                                        )}
+                                      </StyledMetaItem>
+                                    ))}
+                                  </StyledFormGrid>
+                                ) : (
+                                  <StyledEmpty>
+                                    No thread-level details recorded for this run.
+                                  </StyledEmpty>
+                                )}
+                              </StyledPanel>
+                            </td>
+                          </tr>
+                        ) : null}
                         {isPreviewExpanded ? (
                           <tr>
-                            <td colSpan={8}>
+                            <td colSpan={9}>
                               <StyledPanel>
                                 <StyledSectionTitle>Dry-run preview</StyledSectionTitle>
                                 <StyledSectionText>

@@ -65,7 +65,7 @@ describe('Enterprise mailbox control pages', () => {
   });
 
   it('should render mailbox accounts from the enterprise API', async () => {
-    enterpriseApiRequestMock.mockImplementation((path: string) => {
+    enterpriseApiRequestMock.mockImplementation((path: string, init?: RequestInit) => {
       if (path === '/api/enterprise/mailbox-profiles') {
         return createJsonResponse([
           {
@@ -78,6 +78,11 @@ describe('Enterprise mailbox control pages', () => {
             smtpPort: 465,
             validationStatus: 'validated',
             status: 'active',
+            connectedAccountId: 'connected-account-1',
+            messageChannelId: 'message-channel-1',
+            lastSyncStatus: 'ACTIVE',
+            lastSyncAt: '2026-05-07T13:00:00.000Z',
+            lastValidationError: null,
           },
         ]);
       }
@@ -97,6 +102,66 @@ describe('Enterprise mailbox control pages', () => {
     expect(
       screen.getByText(/IMAP: imap\.qiye\.aliyun\.com:993 \/ SSL/i),
     ).toBeInTheDocument();
+    expect(screen.getByText('linked')).toBeInTheDocument();
+    expect(screen.getByText('ACTIVE')).toBeInTheDocument();
+    expect(screen.getByText('Channel linked: message-channel-1')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Revalidate & provision' }),
+    ).toBeInTheDocument();
+  });
+
+  it('should surface mailbox validation diagnostics after a failed revalidation attempt', async () => {
+    enterpriseApiRequestMock.mockImplementation((path: string, init?: RequestInit) => {
+      if (path === '/api/enterprise/mailbox-profiles' && !init?.method) {
+        return createJsonResponse([
+          {
+            id: 'mailbox-profile-1',
+            emailAddress: 'sales@acme.test',
+            provider: 'alibaba-mail',
+            imapHost: 'imap.qiye.aliyun.com',
+            imapPort: 993,
+            smtpHost: 'smtp.qiye.aliyun.com',
+            smtpPort: 465,
+            validationStatus: 'failed',
+            status: 'active',
+            connectedAccountId: null,
+            messageChannelId: null,
+            lastSyncStatus: null,
+            lastSyncAt: null,
+            lastValidationError:
+              'IMAP connection failed: Client network socket disconnected before secure TLS connection was established',
+          },
+        ]);
+      }
+
+      if (
+        path === '/api/enterprise/mailbox-profiles/mailbox-profile-1/validate' &&
+        init?.method === 'POST'
+      ) {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({
+            messages: [
+              'IMAP connection failed: Client network socket disconnected before secure TLS connection was established',
+            ],
+          }),
+        } satisfies Partial<Response> as Response);
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    render(<EnterpriseMailboxAccountsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('sales@acme.test')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(
+        'IMAP connection failed: Client network socket disconnected before secure TLS connection was established',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('should render mailbox health snapshots from the enterprise API', async () => {
@@ -111,6 +176,8 @@ describe('Enterprise mailbox control pages', () => {
             validationStatus: 'validated',
             lastSyncStatus: 'healthy',
             lastSyncAt: '2026-04-30T09:30:00.000Z',
+            messageChannelId: 'message-channel-1',
+            lastValidationError: null,
           },
         ]);
       }
@@ -127,6 +194,8 @@ describe('Enterprise mailbox control pages', () => {
     });
 
     expect(screen.getByText('sales@acme.test')).toBeInTheDocument();
+    expect(screen.getByText('message-channel-1')).toBeInTheDocument();
+    expect(screen.getByText('Mailbox validated.')).toBeInTheDocument();
   });
 
   it('should render mailbox assignment selectors for members and mailbox accounts', async () => {
@@ -345,6 +414,74 @@ describe('Enterprise mailbox control pages', () => {
         canManageRules: true,
         permissionCodes: ['mail.read', 'mail.send', 'mail.reply'],
       });
+    });
+  });
+
+  it('should block rule creation when the selected mailbox failed validation', async () => {
+    enterpriseApiRequestMock.mockImplementation((path: string, init?: RequestInit) => {
+      if (path === '/api/enterprise/mailbox-profiles') {
+        return createJsonResponse([
+          {
+            id: 'mailbox-profile-1',
+            emailAddress: 'sales@acme.test',
+            provider: 'alibaba-mail',
+            imapHost: 'imap.qiye.aliyun.com',
+            imapPort: 993,
+            smtpHost: 'smtp.qiye.aliyun.com',
+            smtpPort: 465,
+            validationStatus: 'failed',
+            status: 'active',
+            lastValidationError:
+              'IMAP connection failed: Client network socket disconnected before secure TLS connection was established',
+            messageChannelId: null,
+          },
+        ]);
+      }
+
+      if (path === '/api/enterprise/mailbox-rules' && !init?.method) {
+        return createJsonResponse([]);
+      }
+
+      if (path === '/api/enterprise/mailbox-rules/activity') {
+        return createJsonResponse([]);
+      }
+
+      if (path === '/api/enterprise/mailbox-rules/readiness') {
+        return createJsonResponse([]);
+      }
+
+      if (path === '/api/enterprise/mailbox-rules/results') {
+        return createJsonResponse([]);
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    render(<EnterpriseMailboxRulesPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('option', { name: 'sales@acme.test (failed)' }),
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Rule mailbox account' }), {
+      target: { value: 'mailbox-profile-1' },
+    });
+    fireEvent.change(screen.getByLabelText('Rule name'), {
+      target: { value: 'Pending reply triage' },
+    });
+    fireEvent.change(screen.getByLabelText('Rule priority'), {
+      target: { value: '10' },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'IMAP connection failed: Client network socket disconnected before secure TLS connection was established',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create rule' })).toBeDisabled();
     });
   });
 
@@ -782,7 +919,7 @@ describe('Enterprise mailbox control pages', () => {
   });
 
   it('should render mailbox rules from the enterprise API', async () => {
-    enterpriseApiRequestMock.mockImplementation((path: string) => {
+    enterpriseApiRequestMock.mockImplementation((path: string, init?: RequestInit) => {
       if (path === '/api/enterprise/mailbox-profiles') {
         return createJsonResponse([
           {
@@ -822,6 +959,50 @@ describe('Enterprise mailbox control pages', () => {
             resourceId: 'mailbox-rule-1',
             actorWorkspaceMemberId: 'workspace-member-1',
             createdAt: '2026-05-07T02:15:00.000Z',
+            emailAddress: 'sales@acme.test',
+            ruleName: 'Escalate unreplied VIP threads',
+            ruleType: 'pending-reply',
+          },
+        ]);
+      }
+
+      if (path === '/api/enterprise/mailbox-rules/results') {
+        return createJsonResponse([
+          {
+            id: 'result-1',
+            mailboxRuleId: 'mailbox-rule-1',
+            mailboxProfileId: 'mailbox-profile-1',
+            executionType: 'preview',
+            outcome: 'matched',
+            threadId: 'thread-1',
+            summary: 'Preview matched 1 candidate thread.',
+            failureReason: null,
+            matchedSignalsJson: ['Matched folder INBOX'],
+            plannedActionsJson: ['Create follow-up task'],
+            metadataJson: {
+              candidateCount: 1,
+            },
+            createdAt: '2026-05-07T04:00:00.000Z',
+            emailAddress: 'sales@acme.test',
+            ruleName: 'Escalate unreplied VIP threads',
+            ruleType: 'pending-reply',
+          },
+          {
+            id: 'result-2',
+            mailboxRuleId: 'mailbox-rule-1',
+            mailboxProfileId: 'mailbox-profile-1',
+            executionType: 'runtime',
+            outcome: 'acted',
+            threadId: 'thread-2',
+            summary: 'Applied pending workflow and created follow-up task.',
+            failureReason: null,
+            matchedSignalsJson: ['Matched folder INBOX', 'Exceeded reply SLA'],
+            plannedActionsJson: ['Apply pending tag', 'Create follow-up task'],
+            metadataJson: {
+              taskId: 'task-22',
+              unsupportedActions: ['notifyOwner'],
+            },
+            createdAt: '2026-05-07T05:00:00.000Z',
             emailAddress: 'sales@acme.test',
             ruleName: 'Escalate unreplied VIP threads',
             ruleType: 'pending-reply',
@@ -879,6 +1060,17 @@ describe('Enterprise mailbox control pages', () => {
         });
       }
 
+      if (
+        path === '/api/enterprise/mailbox-rules/mailbox-rule-1/run' &&
+        init?.method === 'POST'
+      ) {
+        return createJsonResponse({
+          executedCount: 1,
+          skippedCount: 0,
+          unsupported: false,
+        });
+      }
+
       throw new Error(`Unexpected path: ${path}`);
     });
 
@@ -894,21 +1086,110 @@ describe('Enterprise mailbox control pages', () => {
         screen.getAllByText('Escalate unreplied VIP threads').length,
       ).toBeGreaterThan(0);
       expect(screen.getByText('Rule coverage and recent activity')).toBeInTheDocument();
-      expect(screen.getByText('Rule readiness preview')).toBeInTheDocument();
-      expect(screen.getByText('update')).toBeInTheDocument();
+        expect(screen.getByText('Recent rule results')).toBeInTheDocument();
+        expect(screen.getByText('Rule readiness preview')).toBeInTheDocument();
+        expect(screen.getByText('update')).toBeInTheDocument();
+        expect(screen.getByText('Preview matched 1 candidate thread.')).toBeInTheDocument();
+        expect(screen.getByText('Applied pending workflow and created follow-up task.')).toBeInTheDocument();
+        expect(screen.getByText('Dry-run previews')).toBeInTheDocument();
+        expect(screen.getByText('Live runs')).toBeInTheDocument();
+      expect(screen.getByText('Blocked / failed')).toBeInTheDocument();
+      expect(screen.getByText('Skipped / no candidates')).toBeInTheDocument();
+        expect(screen.getByText('Last result')).toBeInTheDocument();
+        expect(
+          screen.getByRole('combobox', { name: 'Filter results by rule' }),
+        ).toBeInTheDocument();
+      expect(
+        screen.getByRole('combobox', {
+          name: 'Filter results by execution outcome',
+        }),
+        ).toBeInTheDocument();
+        expect(screen.getAllByText('Dry-run preview').length).toBeGreaterThan(0);
+        expect(screen.getByText('Live run')).toBeInTheDocument();
+        expect(screen.getAllByText('Preview would act').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Actions applied').length).toBeGreaterThan(0);
+      expect(screen.getByText(/Unsupported: notifyOwner/)).toBeInTheDocument();
+      expect(screen.getByText(/Task: task-22/)).toBeInTheDocument();
+      expect(
+        screen.getAllByRole('button', { name: 'Show result details' }).length,
+      ).toBeGreaterThan(0);
       expect(screen.getByText('Ready for runtime execution checks.')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Edit rule' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Disable rule' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Preview rule' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Show latest run feedback' }),
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.change(
+      screen.getByRole('combobox', { name: 'Filter results by execution outcome' }),
+      {
+        target: { value: 'runtime:acted' },
+      },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Applied pending workflow and created follow-up task.')).toBeInTheDocument();
+      expect(screen.queryByText('Preview matched 1 candidate thread.')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show latest run feedback' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Latest execution feedback')).toBeInTheDocument();
+      expect(screen.getByText('This panel keeps the newest run or preview outcome attached to the current rule so the operator does not need to scan the global result ledger after clicking Run rule now.')).toBeInTheDocument();
+      expect(
+        screen.getAllByText('Applied pending workflow and created follow-up task.').length,
+      ).toBeGreaterThan(1);
+      expect(screen.getByText('thread-2')).toBeInTheDocument();
+      expect(screen.getByText('task-22')).toBeInTheDocument();
+      expect(
+        screen.getAllByRole('link', { name: 'task-22' })[0],
+      ).toHaveAttribute('href', expect.stringContaining('/object/task/task-22'));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show result details' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Thread-level result details')).toBeInTheDocument();
+      expect(screen.getAllByText('thread-2').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('task-22').length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText('Matched folder INBOX 路 Exceeded reply SLA').length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText('Apply pending tag 路 Create follow-up task').length,
+      ).toBeGreaterThan(0);
+      expect(screen.getAllByText('notifyOwner').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide result details' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Thread-level result details')).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview rule' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Dry-run preview')).toBeInTheDocument();
+      expect(screen.getAllByText('Dry-run preview').length).toBeGreaterThan(0);
       expect(screen.getByText('Need quote update')).toBeInTheDocument();
       expect(screen.getByText('buyer@buyer.example.com')).toBeInTheDocument();
       expect(screen.getByText('Create follow-up task · Apply pending tag')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run rule now' }));
+
+    await waitFor(() => {
+      expect(enterpriseApiRequestMock).toHaveBeenCalledWith(
+        '/api/enterprise/mailbox-rules/mailbox-rule-1/run',
+        expect.objectContaining({
+          method: 'POST',
+        }),
+      );
+      expect(screen.getByText('Latest execution feedback')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Hide latest run feedback' })).toBeInTheDocument();
     });
   });
 

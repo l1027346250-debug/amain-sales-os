@@ -20,9 +20,11 @@ export class EnterpriseMailboxHealthService {
 
     return profiles.map((profile) => ({
       emailAddress: profile.emailAddress,
+      lastValidationError: profile.lastValidationError,
       lastSyncAt: profile.lastSyncAt,
       lastSyncStatus: profile.lastSyncStatus,
       mailboxProfileId: profile.id,
+      messageChannelId: profile.messageChannelId,
       provider: profile.provider,
       status: profile.status,
       validationStatus: profile.validationStatus,

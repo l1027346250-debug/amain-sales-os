@@ -224,3 +224,161 @@
   - 还没有**执行后结果**模型
   - 还没有 `last result / failure reason / skipped reason`
   - dry-run 目前是实时采样，不是带审计留痕的执行记录
+- 当前已补一层结果模型：
+  - `enterpriseMailboxRuleResult`
+  - `GET /api/enterprise/mailbox-rules/results`
+- 现在 `preview` 不再只是临时响应，它会把结果写进结果表，并在规则页显示最近结果：
+  - `executionType = preview`
+  - `outcome = matched / no-match / blocked`
+  - `summary`
+  - `failureReason`
+  - `matchedSignalsJson`
+  - `plannedActionsJson`
+- 这一步的价值不是“已经有 runtime 执行器”，而是先把**规则结果语义**定下来，后面真正接后台执行时不需要再重构规则页的数据结构。
+- 当前仍然不能误解：
+  - `Recent rule results` 里现在主来源是 preview
+  - 还不是后台周期执行的真实命中日志
+  - 下一刀必须补 runtime 写入链，尤其是 `skipped / failed / matched / acted`
+- 当前已把第一条真实 runtime 链落在 `pending-reply` 上：
+  - `POST /api/enterprise/mailbox-rules/:id/run`
+  - 这不是假按钮，当前会真实改 thread state，并在需要时创建 follow-up task。
+- `pending-reply` runtime 当前真实执行内容：
+  - 把 thread 标记为 pending
+  - 按规则补 `pending-reply` tag
+  - 如规则要求且当前 thread 还没 task link，则创建 task
+  - 回写 `threadId -> taskId`
+  - 写入 `enterpriseMailboxRuleResult`，`executionType = runtime`
+- 当前也明确把边界写死了：
+  - 只有 `pending-reply` 会真实执行
+  - `folder-routing` 现在也会真实执行
+  - `customer-auto-link / subordinate-escalation` 当前 runtime 仍会记为 `skipped / unsupported`
+  - 这样不会把“按钮可点”伪装成“规则已实现”
+- `folder-routing` runtime 当前的真实边界已经明确：
+  - 会把候选线程关联的 message-channel association 从 source folder 迁移到 target folder
+  - 会写 runtime result，带 `targetFolderId / targetFolderName`
+  - `markAsRead` 因为当前 workspace message model 没有稳定可写字段，所以不会伪造执行，只会在结果里标 `unsupportedActions = ['markAsRead']`
+- `customer-auto-link` runtime 现在也已经进入真实执行：
+  - 不再只是 `skipped / unsupported`
+  - 当前优先复用 preview 里已经识别到的 `personId`
+  - 然后沿 `person -> company -> latest opportunity` 回写 `enterpriseMailThreadCrmLink`
+  - 这条链已经能稳定把 thread 绑定到 CRM 上下文，不需要再靠页面侧近似推断
+- `customer-auto-link` 当前的边界同样写死了：
+  - `createLeadWhenUnmatched` 还没实现 lead 自动创建
+  - runtime 不会伪造这一步，只会在结果里标 `unsupportedActions = ['createLeadWhenUnmatched']`
+- `subordinate-escalation` 现在也已经进入真实执行：
+  - 不再只是 `skipped / unsupported`
+  - 会按 `maxReplyDelayHours` 做 runtime 阈值判断
+  - `onlyAssignedThreads` 未满足时会明确写 `skipped`
+  - 会把 thread 标成 pending
+  - 会按 mailbox assignment 里的 manager / primary sender 关系创建或改派 follow-up task
+- `subordinate-escalation` 当前边界也明确：
+  - `notifyOwner` 还没有稳定的通知落点
+  - runtime 不会伪造通知，只会在结果里标 `unsupportedActions = ['notifyOwner']`
+- `Rules` 页最近结果区之前太像原始日志，运营上不够可读。现在已经补成明确的结果面：
+  - `preview` 和 `runtime` 不再混写成同一种执行
+  - `acted / skipped / failed / matched` 已转成业务化标签
+  - 线程、任务、unsupported actions、signals、planned actions 都能直接从结果表看出来
+
+## 2026-05-07 Mailbox Rules runtime recovery findings
+
+- `Preview rule` and `Run rule now` were broken by a stacked runtime issue, not by a single page bug.
+- Confirmed failure chain:
+  1. stale backend process on port 3000
+  2. new backend could not boot because `TradeCrmMailThreadTagEntityRepository` was not registered in `EnterpriseManagementModule`
+  3. mailbox rule service called `messageChannelDataAccessService.findMany(...)` outside workspace ORM context, producing `Workspace context not set`
+  4. runtime result persistence required the `enterpriseMailboxRuleResult` table; until migration ran, preview/runtime failed on insert
+- After recovery, live Rules page behavior is now consistent with product semantics:
+  - preview works
+  - run works
+  - result ledger updates
+- The current blocked state on the rule is now business-real:
+  - mailbox profile exists
+  - mailbox rule exists
+  - but no synced message channel is linked to that mailbox yet
+  - therefore preview/runtime correctly return blocked/no-candidate states instead of crashing
+
+## 2026-05-07 Mailbox validation live diagnostics findings
+
+- The next live blocker is not mailbox rules anymore. It is mailbox validation itself.
+- After applying `1776500000000-add-enterprise-mailbox-validation-error`, the live mailbox admin APIs now expose a persistent validation error field.
+- Real localhost validation of the current sample mailbox profile fails with:
+  - `IMAP connection failed: Client network socket disconnected before secure TLS connection was established`
+- That means the current sample mailbox is not provisionable yet:
+  - `validationStatus = failed`
+  - `connectedAccountId = null`
+  - `messageChannelId = null`
+- This is now an operator-visible state in both:
+  - `Mailbox Accounts`
+  - `Mailbox Health`
+- `Mailbox Rules` creation is now explicitly blocked for mailboxes that are `pending` or `failed`, which prevents admins from attaching operational rules to a mailbox that cannot yet sync.
+
+## 2026-05-08 Mailbox rules operator surface findings
+
+- `preview` and `runtime` are both live again for the seeded local mailbox demo data.
+- Once the service path recovered, the next problem moved to page readability rather than backend correctness.
+- The Rules table now needs to expose the latest outcome per rule, otherwise an operator still has to correlate the rule list with the global results feed by hand.
+- The current Rules page is more usable when it distinguishes:
+  - `Dry-run previews`
+  - `Live runs`
+  - `Actions applied`
+  - `Blocked / failed`
+  - `Skipped / no candidates`
+- This separation is operationally important because tuning a rule and executing a rule are different actions with different risk.
+- After that, the next operator pain point is result density. Once the result list grows, admins need to narrow it quickly by rule and by execution outcome instead of scanning the entire feed.
+- After rule/outcome filters, the next operator pain point is row inspection.
+- Summary-level result rows are not enough once runtime actions start creating tasks or CRM links.
+- The Rules page now needs expandable thread-level detail under each result row so an operator can inspect:
+  - which thread was touched
+  - whether a task was created or reused
+  - which CRM ids were linked
+  - which actions were skipped as unsupported
+- After row-level detail, the next operator pain point is still context switching.
+- Even with a better global results feed, clicking `Run rule now` should reflect immediately under the current rule row.
+- Otherwise the operator still has to visually map:
+  - the button they clicked
+  - the rule row they were editing
+  - the newest global result row
+
+## 2026-05-08 Mailbox rules live runtime recovery follow-up
+
+- The old live failure on `Run rule now` was no longer a DI or migration problem.
+- The remaining runtime breaker was duplicate thread-state insertion:
+  - rule execution tried to insert a fresh `tradeCrmMailThreadState`
+  - some candidate threads already had a `(workspaceId, threadId)` state row
+  - PostgreSQL correctly rejected the duplicate on `IDX_TRADE_CRM_MAIL_THREAD_STATE_WORKSPACE_THREAD`
+- The correct fix is upsert semantics, not retry or ignore:
+  - look up existing thread state by `workspaceId + threadId`
+  - save back through the existing `id` when present
+- After that fix and a clean backend restart, live runtime recovered:
+  - `POST /api/enterprise/mailbox-rules/:id/run` returned `201`
+  - the Rules page inline feedback opened without a failure snackbar
+  - the result ledger and rule-row feedback stayed in sync
+
+## 2026-05-08 Local mailbox readiness clarification
+
+- The earlier IMAP TLS failure is stale history for the local demo mailbox path.
+- The seeded local-development mailbox now runs through the repository's explicit `@amaincrm.local` provisioning path.
+- Current live mailbox state is:
+  - `validationStatus = validated`
+  - `lastValidationError = null`
+  - `lastSyncStatus = ACTIVE`
+  - `connectedAccountId` present
+  - `messageChannelId` present
+- That means mailbox admin and mailbox rules are no longer blocked on provisioning for local development.
+- The next blockers are product-surface issues, not transport readiness.
+
+## 2026-05-08 Mailbox rule result-link findings
+
+- Rule-result detail rows were previously operationally weak because they exposed only raw ids.
+- Operators need to move directly from:
+  - result row
+  - latest inline feedback
+  - target CRM record
+- `task / person / company / opportunity` ids now render as direct links using AMAIN source context.
+- The render path is verified by test and build.
+- A live browser pass is now complete against a real `customer-auto-link` result row.
+- Verified live behavior:
+  - `Person / Company / Opportunity` ids render as links inside `Recent rule results`
+  - clicking the `Person` link lands on the real `/object/person/:id` page
+  - the object page keeps AMAIN navigation semantics and does not reintroduce Twenty `工作区`
+- This confirms the record-link pattern is no longer just test-fixture coverage. It is live on the operator page.

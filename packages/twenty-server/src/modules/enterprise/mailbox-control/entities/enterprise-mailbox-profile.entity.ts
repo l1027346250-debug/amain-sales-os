@@ -68,6 +68,9 @@ export class EnterpriseMailboxProfileEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'timestamptz', nullable: true })
   lastValidatedAt: Date | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  lastValidationError: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   lastSyncAt: Date | null;
 

@@ -386,7 +386,36 @@
      - pending / task linked / CRM linked
      - matched signals
      - planned actions
-   - 当前下一步：补真正的规则执行结果和失败原因，不再停留在 readiness + dry-run
+   - 已完成：规则页新增 `Recent rule results`
+   - 已完成：后端新增 `GET /api/enterprise/mailbox-rules/results`
+   - 已完成：preview 调用现在会写入结果表，明确区分
+     - `executionType = preview`
+     - `outcome = matched / no-match / blocked`
+   - 已完成：规则页支持 `Run rule now`
+   - 已完成：后端新增 `POST /api/enterprise/mailbox-rules/:id/run`
+   - 已完成：`pending-reply` 规则 runtime 当前会真实执行
+     - thread state -> `isPending = true`
+     - optional `pending-reply` tag
+     - optional follow-up task creation
+     - thread -> task link 回写
+     - runtime result 写入 `enterpriseMailboxRuleResult`
+   - 已完成：`folder-routing` 规则 runtime 当前会真实执行
+     - message-channel association 从 source folder 迁移到 target folder
+     - runtime result 明确记录 `targetFolderId / targetFolderName`
+     - `markAsRead` 当前不伪造执行，会写入 `unsupportedActions = ['markAsRead']`
+   - 已完成：`customer-auto-link` 规则 runtime 当前会真实执行
+     - 复用 preview 命中的 `personId`
+     - 通过 `person -> company -> latest opportunity` 回写 thread CRM link
+     - runtime result 明确记录 `personId / companyId / opportunityId`
+     - `createLeadWhenUnmatched` 当前不伪造执行，会写入 `unsupportedActions = ['createLeadWhenUnmatched']`
+   - 已完成：`subordinate-escalation` 规则 runtime 当前会真实执行
+     - 按 `maxReplyDelayHours` 做 runtime 阈值判断
+     - `onlyAssignedThreads` 未满足时会明确写 `skipped`
+     - 会把 thread 标成 pending
+     - 可创建 escalation follow-up task
+     - 可把任务指派给 manager handler 或 primary sender
+     - `notifyOwner` 当前不伪造执行，会写入 `unsupportedActions = ['notifyOwner']`
+   - 当前下一步：补浏览器回归，并把 runtime 结果在 Rules 页面上更明确地区分 preview / acted / skipped / failed
 
 ### 当前验收结果
 - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 通过
@@ -394,9 +423,83 @@
 - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 15/15 通过
 - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 19/19 通过
 - `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs` 通过
+- `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` 7/7 通过
+- `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` 8/8 通过
+- `npx jest src/modules/enterprise/mailbox-control/__tests__/enterprise-mailbox-rule.service.spec.ts --config=jest.config.mjs --runInBand` 9/9 通过
 - `npx jest packages/twenty-front/src/pages/enterprise/mailbox-control/__tests__/EnterpriseMailboxControlPages.test.tsx --config=packages/twenty-front/jest.config.mjs --runInBand` 6/6 通过
 - `corepack yarn nx typecheck twenty-front` 通过
 - `corepack yarn nx build twenty-front` 通过
 - `npx nx build twenty-server` 通过
 - 当前 mailbox admin 真实运行依赖已满足，后续阻塞不再是“表不存在”或“页面测试挂掉”
 - assignment 权限编辑链路已经具备前后端闭环，当前待确认点只剩浏览器运行态回归和一次前端 Jest 模块解析抖动
+- 已完成：`Rules` 页结果面已经改成运营可读视图
+  - 区分 `Dry-run preview / Live run`
+  - 区分 `Preview would act / Actions applied / Skipped by guardrail / Execution failed`
+  - 回显 `Thread / Task / Unsupported actions / Signals / Planned actions`
+  - 回显结果摘要计数：
+    - `Dry-run previews`
+    - `Actions applied`
+    - `Skipped / no candidates`
+    - `Failed runs`
+- 当前下一步：对 `Rules` 页做一次浏览器回归，确认 `Run rule now` 后结果列表在真实页面上清晰可读
+
+- [x] Recover live `Mailbox Rules` preview/run runtime on the real Rules page
+  - [x] fix backend DI for `TradeCrmMailThreadTagEntityRepository`
+  - [x] wrap mailbox message-channel reads with workspace ORM context
+  - [x] apply `AddEnterpriseMailboxRuleResult1776200000000` migration
+  - [x] verify `preview / run / results` return `200/201` on localhost
+  - [x] verify `/enterprise/mailbox/rules` shows live result rows
+- [x] Connect a validated mailbox profile to a synced local-development message channel so rules can operate on candidate threads
+  - [x] local `@amaincrm.local` mailbox profile now provisions `connectedAccountId` and `messageChannelId`
+  - [x] live `preview / run / results` paths now operate on candidate threads instead of failing on readiness
+- [x] Add live mailbox validation diagnostics and persist the failure reason on mailbox profiles
+  - [x] migration `1776500000000-add-enterprise-mailbox-validation-error` applied through `npx nx run twenty-server:database:migrate`
+  - [x] `GET /api/enterprise/mailbox-profiles` and `GET /api/enterprise/mailbox-health` now return `lastValidationError`
+  - [x] live `POST /api/enterprise/mailbox-profiles/:id/validate` now fails with the real IMAP TLS error instead of a generic failure
+  - [x] Mailbox Accounts now surfaces the exact validation error
+  - [x] Mailbox Rules creation is blocked when the selected mailbox is still `pending` or `failed`
+- [x] Replace the old demo-mailbox blocker with a stable local-development mailbox transport
+  - [x] current seeded mailbox `sales.alibaba.demo@amaincrm.local` is `validated`
+  - [x] current seeded mailbox reports `lastSyncStatus = ACTIVE`
+  - [x] mailbox admin is no longer blocked by the old IMAP TLS sample failure
+- [x] Make `Rules` results surface read like an operator panel instead of a raw log
+  - [x] add per-rule `Last result` summary to the rules table
+  - [x] split result summary into `Dry-run previews / Live runs / Actions applied / Blocked-failed / Skipped-no candidates`
+  - [x] keep `preview / runtime` visibly distinct on the page
+  - [x] verify via mailbox-control page test, `typecheck`, and `twenty-front` build
+- [x] Run browser-level regression on `/enterprise/mailbox/rules` and confirm `Last result` plus runtime counters render clearly in the live page
+  - [x] live screenshot and JSON report captured for the operator-surface pass
+- [x] Add result filters to `Rules` so operators can isolate one rule or one execution outcome
+  - [x] `Filter by rule`
+  - [x] `Filter by result type`
+  - [x] summary cards now recalculate from the filtered result set
+  - [x] mailbox-control rules page test updated and passing
+- [x] Add expandable thread-level result details under each runtime row
+  - [x] keep the current summary row intact
+  - [x] add `Show result details / Hide result details`
+  - [x] expand thread, task, CRM link, matched signals, planned actions, and unsupported actions inline
+  - [x] mailbox-control rules page test updated and passing
+- [x] Show per-rule run feedback directly under the current rule row after `Run rule now`
+  - [x] add `Show latest run feedback / Hide latest run feedback`
+  - [x] auto-expand the current rule after a successful `Run rule now`
+  - [x] surface execution, outcome, time, summary, and thread/task/CRM detail inline
+  - [x] mailbox-control rules page test updated and passing
+- [x] Run browser-level regression on `/enterprise/mailbox/rules` and confirm the new rule-row feedback panel reads cleanly next to `Preview rule` and `Run rule now`
+  - [x] live `Run rule now` now expands inline feedback without showing a failure snackbar
+  - [x] current rule row and global results ledger stay in sync after a successful run
+
+- [x] Recover live `Run rule now` runtime when thread state already exists
+  - [x] replace blind thread-state inserts with `workspaceId + threadId` upsert logic
+  - [x] verify live `POST /api/enterprise/mailbox-rules/:id/run` returns `201` with `executedCount`
+  - [x] restart stable backend so localhost serves the fixed runtime path
+- [x] Make mailbox-rule result ids actionable links
+  - [x] `task / person / company / opportunity` ids now render as record links in result details
+  - [x] per-rule latest feedback panel reuses the same record links
+  - [x] re-run a browser click-path against a live result row that includes CRM ids and confirm navigation keeps AMAIN navigation semantics
+  - [x] verified person-record navigation from `Recent rule results`
+  - [x] verified record page does not reintroduce Twenty `工作区` navigation
+
+- [ ] Next: move back to the mailbox workbench and add more true inbox behavior
+  - [ ] batch toolbar actions for selected threads
+  - [ ] reply / forward surface on selected-thread detail
+  - [ ] make pending / inbox / unread behave like a real mailbox first, not just a CRM-adjacent thread list

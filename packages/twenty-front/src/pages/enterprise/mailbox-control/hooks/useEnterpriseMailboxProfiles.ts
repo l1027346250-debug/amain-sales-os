@@ -35,6 +35,36 @@ export const useEnterpriseMailboxProfiles = () => {
     }
   };
 
+  const getEnterpriseErrorMessage = async (response: Response) => {
+    try {
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string | string[];
+        messages?: string[];
+      };
+
+      if (Array.isArray(data.messages) && data.messages.length > 0) {
+        return data.messages.join(', ');
+      }
+
+      if (Array.isArray(data.message) && data.message.length > 0) {
+        return data.message.join(', ');
+      }
+
+      if (typeof data.message === 'string' && data.message.length > 0) {
+        return data.message;
+      }
+
+      if (typeof data.error === 'string' && data.error.length > 0) {
+        return data.error;
+      }
+
+      return 'Enterprise mailbox request failed';
+    } catch {
+      return 'Enterprise mailbox request failed';
+    }
+  };
+
   useEffect(() => {
     void loadMailboxProfiles();
   }, []);
@@ -68,7 +98,7 @@ export const useEnterpriseMailboxProfiles = () => {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to create mailbox profile');
+      throw new Error(await getEnterpriseErrorMessage(response));
     }
 
     enqueueSuccessSnackBar({ message: 'Mailbox account created' });
@@ -76,19 +106,22 @@ export const useEnterpriseMailboxProfiles = () => {
   };
 
   const validateMailboxProfile = async (mailboxProfileId: string) => {
-    const response = await enterpriseApiRequest(
-      `/api/enterprise/mailbox-profiles/${mailboxProfileId}/validate`,
-      {
-        method: 'POST',
-      },
-    );
+    try {
+      const response = await enterpriseApiRequest(
+        `/api/enterprise/mailbox-profiles/${mailboxProfileId}/validate`,
+        {
+          method: 'POST',
+        },
+      );
 
-    if (!response.ok) {
-      throw new Error('Failed to validate mailbox profile');
+      if (!response.ok) {
+        throw new Error(await getEnterpriseErrorMessage(response));
+      }
+
+      enqueueSuccessSnackBar({ message: 'Mailbox validation succeeded' });
+    } finally {
+      await loadMailboxProfiles();
     }
-
-    enqueueSuccessSnackBar({ message: 'Mailbox validation succeeded' });
-    await loadMailboxProfiles();
   };
 
   return {

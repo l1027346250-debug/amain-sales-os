@@ -69,11 +69,14 @@ export class EnterpriseMailboxProfilesController {
     @Param('id') mailboxProfileId: string,
     @Req() request: Request,
   ) {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
     await this.assertPermission(workspace.id, request, 'enterprise.mailbox.update');
 
     return this.enterpriseMailboxProfileService.validateMailboxProfile(
       workspace.id,
       mailboxProfileId,
+      authenticatedRequest.workspaceMember?.id ?? null,
     );
   }
 

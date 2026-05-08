@@ -4,6 +4,7 @@ import { useEnterpriseApiRequest } from '@/enterprise/shared/hooks/useEnterprise
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 
 import {
+  type EnterpriseMailboxRuleExecutionResult,
   type EnterpriseMailboxRuleDryRunPreview,
   type EnterpriseMailboxRule,
   type EnterpriseMailboxRuleActivity,
@@ -37,6 +38,9 @@ export const useEnterpriseMailboxRules = () => {
   const [mailboxRules, setMailboxRules] = useState<EnterpriseMailboxRule[]>([]);
   const [mailboxRuleActivity, setMailboxRuleActivity] = useState<
     EnterpriseMailboxRuleActivity[]
+  >([]);
+  const [mailboxRuleResults, setMailboxRuleResults] = useState<
+    EnterpriseMailboxRuleExecutionResult[]
   >([]);
   const [mailboxRuleReadiness, setMailboxRuleReadiness] = useState<
     EnterpriseMailboxRuleReadinessPreview[]
@@ -78,6 +82,22 @@ export const useEnterpriseMailboxRules = () => {
         }
       } catch {
         setMailboxRuleActivity([]);
+      }
+
+      try {
+        const resultsResponse = await enterpriseApiRequest(
+          '/api/enterprise/mailbox-rules/results',
+        );
+
+        if (resultsResponse.ok) {
+          const resultsData =
+            (await resultsResponse.json()) as EnterpriseMailboxRuleExecutionResult[];
+          setMailboxRuleResults(resultsData);
+        } else {
+          setMailboxRuleResults([]);
+        }
+      } catch {
+        setMailboxRuleResults([]);
       }
 
       try {
@@ -127,6 +147,22 @@ export const useEnterpriseMailboxRules = () => {
     } finally {
       setPreviewLoadingRuleId(null);
     }
+  };
+
+  const runMailboxRuleNow = async (mailboxRuleId: string) => {
+    const response = await enterpriseApiRequest(
+      `/api/enterprise/mailbox-rules/${mailboxRuleId}/run`,
+      {
+        method: 'POST',
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to run mailbox rule');
+    }
+
+    enqueueSuccessSnackBar({ message: 'Mailbox rule executed' });
+    await loadMailboxRules();
   };
 
   useEffect(() => {
@@ -179,10 +215,12 @@ export const useEnterpriseMailboxRules = () => {
     loadMailboxRules,
     loadMailboxRulePreview,
     mailboxRuleActivity,
+    mailboxRuleResults,
     mailboxRulePreviewsById,
     mailboxRuleReadiness,
     mailboxRules,
     previewLoadingRuleId,
+    runMailboxRuleNow,
     updateMailboxRule,
   };
 };

@@ -40,6 +40,67 @@ const getValidationTone = (validationStatus: string) => {
   return 'neutral' as const;
 };
 
+const getProvisioningTone = (mailboxProfile: {
+  connectedAccountId?: string | null;
+  messageChannelId?: string | null;
+}) => {
+  if (mailboxProfile.connectedAccountId && mailboxProfile.messageChannelId) {
+    return 'success' as const;
+  }
+
+  if (mailboxProfile.connectedAccountId || mailboxProfile.messageChannelId) {
+    return 'warning' as const;
+  }
+
+  return 'neutral' as const;
+};
+
+const getProvisioningLabel = (mailboxProfile: {
+  connectedAccountId?: string | null;
+  messageChannelId?: string | null;
+}) => {
+  if (mailboxProfile.connectedAccountId && mailboxProfile.messageChannelId) {
+    return 'linked';
+  }
+
+  if (mailboxProfile.connectedAccountId || mailboxProfile.messageChannelId) {
+    return 'partial';
+  }
+
+  return 'not linked';
+};
+
+const buildMailboxDiagnostics = (mailboxProfile: {
+  connectedAccountId?: string | null;
+  lastValidationError?: string | null;
+  messageChannelId?: string | null;
+  validationStatus: string;
+}) => {
+  if (
+    mailboxProfile.validationStatus === 'failed' &&
+    mailboxProfile.lastValidationError
+  ) {
+    return mailboxProfile.lastValidationError;
+  }
+
+  if (
+    mailboxProfile.validationStatus === 'validated' &&
+    mailboxProfile.connectedAccountId &&
+    !mailboxProfile.messageChannelId
+  ) {
+    return 'Credentials validated, but no synced message channel is linked yet.';
+  }
+
+  if (
+    mailboxProfile.validationStatus === 'validated' &&
+    mailboxProfile.messageChannelId
+  ) {
+    return `Channel linked: ${mailboxProfile.messageChannelId}`;
+  }
+
+  return 'Validate and provision this mailbox before assigning rules.';
+};
+
 export const EnterpriseMailboxAccountsPage = () => {
   const sidebar = useMemo(buildEnterpriseSidebar, []);
   const { enqueueErrorSnackBar } = useSnackBar();
@@ -77,9 +138,12 @@ export const EnterpriseMailboxAccountsPage = () => {
   const onValidateMailboxProfile = async (mailboxProfileId: string) => {
     try {
       await validateMailboxProfile(mailboxProfileId);
-    } catch {
+    } catch (error) {
       enqueueErrorSnackBar({
-        message: 'Mailbox validation failed. Check the IMAP/SMTP credentials.',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Mailbox validation failed. Check the IMAP/SMTP credentials.',
       });
     }
   };
@@ -185,6 +249,9 @@ export const EnterpriseMailboxAccountsPage = () => {
                     <th>IMAP</th>
                     <th>SMTP</th>
                     <th>Validation</th>
+                    <th>Provisioning</th>
+                    <th>Sync</th>
+                    <th>Diagnostics</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -207,9 +274,39 @@ export const EnterpriseMailboxAccountsPage = () => {
                         </StyledStatus>
                       </td>
                       <td>
+                        <StyledStatus tone={getProvisioningTone(mailboxProfile)}>
+                          {getProvisioningLabel(mailboxProfile)}
+                        </StyledStatus>
+                      </td>
+                      <td>
+                        {mailboxProfile.lastSyncStatus ? (
+                          <div>
+                            <div>{mailboxProfile.lastSyncStatus}</div>
+                            {mailboxProfile.lastSyncAt ? (
+                              <StyledSectionText>
+                                {new Date(mailboxProfile.lastSyncAt).toLocaleString()}
+                              </StyledSectionText>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <StyledSectionText>
+                            No sync yet
+                          </StyledSectionText>
+                        )}
+                      </td>
+                      <td>
+                        <StyledSectionText>
+                          {buildMailboxDiagnostics(mailboxProfile)}
+                        </StyledSectionText>
+                      </td>
+                      <td>
                         <Button
                           variant="secondary"
-                          title="Validate"
+                          title={
+                            mailboxProfile.validationStatus === 'validated'
+                              ? 'Revalidate & provision'
+                              : 'Validate & provision'
+                          }
                           onClick={() =>
                             void onValidateMailboxProfile(mailboxProfile.id)
                           }
