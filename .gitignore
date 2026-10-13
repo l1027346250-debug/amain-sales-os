@@ -54,3 +54,10 @@ mcp.json
 /.junie/
 TRANSLATION_QA_REPORT.md
 .playwright-mcp/
+
+# local runtime artifacts (logs / caches) must never be committed
+.codex-runtime/
+.playwright-cli/
+.npm-cache/
+tmp-vite-front*.log
+*.tsbuildinfo

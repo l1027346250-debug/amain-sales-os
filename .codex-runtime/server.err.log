@@ -1,7 +1,0 @@
-[Error: EPERM: operation not permitted, rmdir 'G:\codex\twentyCRM\amainCRM\packages\twenty-server\dist\engine\metadata-modules\view\utils\__tests__'] {
-  errno: [33m-4048[39m,
-  code: [32m'EPERM'[39m,
-  syscall: [32m'rmdir'[39m,
-  path: [32m'G:\\codex\\twentyCRM\\amainCRM\\packages\\twenty-server\\dist\\engine\\metadata-modules\\view\\utils\\__tests__'[39m
-}
-Warning: command "rimraf dist && NODE_ENV=development nest start --watch" exited with non-zero status code

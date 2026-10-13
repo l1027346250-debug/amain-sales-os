@@ -1,3 +1,0 @@
-Successfully compiled: 5453 files with swc (145.97ms)
-�����﷨����ȷ��
-Warning: command "mkdir -p dist/assets/twenty-client-sdk && cp ../twenty-client-sdk/package.json dist/assets/twenty-client-sdk/ && cp -r ../twenty-client-sdk/dist dist/assets/twenty-client-sdk/dist" exited with non-zero status code
