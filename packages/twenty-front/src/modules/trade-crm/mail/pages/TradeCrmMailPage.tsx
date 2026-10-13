@@ -23,6 +23,7 @@ import { TradeCrmMailFolderTree } from '@/trade-crm/mail/components/TradeCrmMail
 import {
   getTradeCrmMailSidebarLink,
   getTradeCrmMailWorkspace,
+  type TradeCrmMailListItem,
   type TradeCrmMailSidebarItem,
   type TradeCrmMailViewKey,
 } from '@/trade-crm/mail/constants/trade-crm-mail-workspace';
@@ -34,7 +35,9 @@ import { QUEUE_DEVELOPMENT_EMAIL_CAMPAIGN } from '@/trade-crm/mail/graphql/mutat
 import { RECORD_DEVELOPMENT_EMAIL_BOUNCE_EVENT } from '@/trade-crm/mail/graphql/mutations/recordDevelopmentEmailBounceEvent';
 import { RECORD_DEVELOPMENT_EMAIL_EVENT } from '@/trade-crm/mail/graphql/mutations/recordDevelopmentEmailEvent';
 import { RECORD_DEVELOPMENT_EMAIL_UNSUBSCRIBE } from '@/trade-crm/mail/graphql/mutations/recordDevelopmentEmailUnsubscribe';
+import { DELETE_TRADE_CRM_MAIL_THREAD_DRAFT } from '@/trade-crm/mail/graphql/mutations/deleteTradeCrmMailThreadDraft';
 import { UPSERT_TRADE_CRM_MAIL_THREAD_TASK_LINK } from '@/trade-crm/mail/graphql/mutations/upsertTradeCrmMailThreadTaskLink';
+import { UPSERT_TRADE_CRM_MAIL_THREAD_DRAFT } from '@/trade-crm/mail/graphql/mutations/upsertTradeCrmMailThreadDraft';
 import { START_DEVELOPMENT_EMAIL_SEND_JOB } from '@/trade-crm/mail/graphql/mutations/startDevelopmentEmailSendJob';
 import { UPDATE_TRADE_CRM_MAIL_THREAD_TAG } from '@/trade-crm/mail/graphql/mutations/updateTradeCrmMailThreadTag';
 import { UPDATE_TRADE_CRM_MAIL_THREAD_STATE } from '@/trade-crm/mail/graphql/mutations/updateTradeCrmMailThreadState';
@@ -51,6 +54,7 @@ import { GET_DEVELOPMENT_EMAIL_TRACKING_LINKS } from '@/trade-crm/mail/graphql/q
 import { GET_DEVELOPMENT_EMAIL_UNSUBSCRIBES } from '@/trade-crm/mail/graphql/queries/getDevelopmentEmailUnsubscribes';
 import { GET_DEVELOPMENT_EMAIL_WORKSPACE } from '@/trade-crm/mail/graphql/queries/getDevelopmentEmailWorkspace';
 import { GET_MY_INBOX_THREADS } from '@/trade-crm/mail/graphql/queries/getMyInboxThreads';
+import { GET_TRADE_CRM_MAIL_THREAD_DRAFTS } from '@/trade-crm/mail/graphql/queries/getTradeCrmMailThreadDrafts';
 import { GET_TRADE_CRM_MAIL_THREAD_TASK_LINKS } from '@/trade-crm/mail/graphql/queries/getTradeCrmMailThreadTaskLinks';
 import { useTradeCrmMailWorkspaceData } from '@/trade-crm/mail/hooks/useTradeCrmMailWorkspaceData';
 import {
@@ -88,6 +92,61 @@ type TradeCrmMailThreadTaskLinkRecord = {
   taskId: string;
   updatedAt: string;
 };
+
+type MailComposeMode = 'reply' | 'reply-all' | 'forward';
+
+type TradeCrmSavedDraftRecord = {
+  id: string;
+  mode: MailComposeMode;
+  sourceThreadId: string | null;
+  customerLabel: string;
+  threadTitle: string;
+  contextLabel: string;
+  contextValue: string;
+  recipients: string;
+  ccRecipients: string;
+  subject: string;
+  body: string;
+  savedAt: string;
+};
+
+type TradeCrmMailThreadDraftRecord = {
+  id: string;
+  threadId: string | null;
+  mode: MailComposeMode;
+  customerLabel: string;
+  threadTitle: string;
+  contextLabel: string;
+  contextValue: string;
+  recipients: string;
+  ccRecipients: string;
+  subject: string;
+  body: string;
+  savedAt: string;
+  updatedAt: string;
+};
+
+const TRADE_CRM_MAIL_DRAFTS_STORAGE_KEY = 'trade-crm-mail-drafts';
+
+const truncate = (value: string, maxLength: number) =>
+  value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
+
+const mapThreadDraftRecordToSavedDraft = (
+  draftRecord: TradeCrmMailThreadDraftRecord,
+): TradeCrmSavedDraftRecord => ({
+  id: draftRecord.id,
+  mode: draftRecord.mode,
+  sourceThreadId: draftRecord.threadId,
+  customerLabel: draftRecord.customerLabel,
+  threadTitle: draftRecord.threadTitle,
+  contextLabel: draftRecord.contextLabel,
+  contextValue: draftRecord.contextValue,
+  recipients: draftRecord.recipients,
+  ccRecipients: draftRecord.ccRecipients,
+  subject: draftRecord.subject,
+  body: draftRecord.body,
+  savedAt: draftRecord.savedAt,
+});
 
 const getTaskTargets = (record: GenericTaskRecord | undefined) => {
   if (!record || !('taskTargets' in record)) {
@@ -680,24 +739,45 @@ const StyledMailWorkbenchList = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-const StyledMailWorkbenchListHeader = styled.div`
+const StyledMailWorkbenchListHeader = styled.div<{ $selectable?: boolean }>`
   align-items: center;
   color: #7a8799;
   display: grid;
   font-size: ${themeCssVariables.font.size.xs};
   font-weight: ${themeCssVariables.font.weight.semiBold};
   gap: ${themeCssVariables.spacing[2]};
-  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr) 96px;
+  grid-template-columns: ${({ $selectable }) =>
+    $selectable
+      ? '28px minmax(120px, 0.45fr) minmax(0, 1fr) 96px'
+      : 'minmax(120px, 0.45fr) minmax(0, 1fr) 96px'};
   letter-spacing: 0.08em;
   padding: 0 ${themeCssVariables.spacing[3]};
   text-transform: uppercase;
 `;
 
-const StyledMailWorkbenchRow = styled.div`
+const StyledMailWorkbenchRow = styled.div<{ $selectable?: boolean }>`
   align-items: flex-start;
   display: grid;
   gap: ${themeCssVariables.spacing[2]};
-  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr) 96px;
+  grid-template-columns: ${({ $selectable }) =>
+    $selectable
+      ? '28px minmax(120px, 0.45fr) minmax(0, 1fr) 96px'
+      : 'minmax(120px, 0.45fr) minmax(0, 1fr) 96px'};
+`;
+
+const StyledMailSelectionCell = styled.div`
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  padding-top: 2px;
+`;
+
+const StyledMailCheckbox = styled.input`
+  accent-color: #0a6aff;
+  cursor: pointer;
+  height: 16px;
+  margin: 0;
+  width: 16px;
 `;
 
 const StyledMailSenderCell = styled.div`
@@ -815,6 +895,63 @@ const StyledMailPreviewSideStack = styled.div`
   display: grid;
   gap: ${themeCssVariables.spacing[3]};
   grid-template-columns: minmax(0, 1fr);
+`;
+
+const StyledMailSelectionSummary = styled.div`
+  align-items: center;
+  background: #f8fbff;
+  border: 1px solid rgba(10, 106, 255, 0.12);
+  border-radius: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: space-between;
+  padding: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledMailSelectionSummaryCopy = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const StyledMailSelectionSummaryValue = styled.div`
+  color: #1e2126;
+  font-size: ${themeCssVariables.font.size.sm};
+  font-weight: ${themeCssVariables.font.weight.semiBold};
+`;
+
+const StyledMailSelectionSummaryText = styled.div`
+  color: #76839b;
+  font-size: ${themeCssVariables.font.size.sm};
+  line-height: 1.5;
+`;
+
+const StyledMailToolbarActions = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledComposePanel = styled.div`
+  background: #ffffff;
+  border: 1px solid rgba(31, 64, 112, 0.08);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[3]};
+  padding: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledComposeMetaGrid = styled.div`
+  display: grid;
+  gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const StyledMailRelationshipPreviewGrid = styled.div`
@@ -1103,6 +1240,11 @@ const StyledPrimaryButton = styled.button`
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.medium};
   padding: ${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]};
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
 `;
 
 const StyledSecondaryButton = styled.button`
@@ -1114,6 +1256,11 @@ const StyledSecondaryButton = styled.button`
   font-size: ${themeCssVariables.font.size.sm};
   font-weight: ${themeCssVariables.font.weight.medium};
   padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
 `;
 
 const StyledFilterPresetRow = styled.div`
@@ -1393,6 +1540,27 @@ const getInsightPanelCopy = (scope: TradeCrmMailScopeKey) => {
   };
 };
 
+const mapSavedDraftToListItem = (
+  savedDraft: TradeCrmSavedDraftRecord,
+): TradeCrmMailListItem => ({
+  id: savedDraft.id,
+  primary: savedDraft.recipients || savedDraft.customerLabel || 'Draft',
+  secondary: savedDraft.subject || savedDraft.threadTitle || 'Untitled draft',
+  tertiary:
+    savedDraft.body.trim().length > 0
+      ? truncate(savedDraft.body.replace(/\s+/g, ' '), 140)
+      : 'No draft content yet.',
+  meta: `Saved ${formatToHumanReadableDate(savedDraft.savedAt)}`,
+  status:
+    savedDraft.mode === 'reply'
+      ? 'Reply draft'
+      : savedDraft.mode === 'reply-all'
+        ? 'Reply-all draft'
+        : 'Forward draft',
+  threadId: savedDraft.id,
+  primaryRecordLabel: 'Open source thread',
+});
+
 export const TradeCrmMailPage = () => {
   const apolloCoreClient = useApolloCoreClient();
   const location = useLocation();
@@ -1467,6 +1635,20 @@ export const TradeCrmMailPage = () => {
     string | null
   >(null);
   const [threadTagDraft, setThreadTagDraft] = useState('');
+  const [selectedThreadIds, setSelectedThreadIds] = useState<string[]>([]);
+  const [showBulkTagEditor, setShowBulkTagEditor] = useState(false);
+  const [bulkTagDraft, setBulkTagDraft] = useState('important-customer');
+  const [composeMode, setComposeMode] = useState<MailComposeMode | null>(null);
+  const [composeRecipients, setComposeRecipients] = useState('');
+  const [composeCcRecipients, setComposeCcRecipients] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [composeDraftId, setComposeDraftId] = useState<string | null>(null);
+  const [composeThreadId, setComposeThreadId] = useState<string | null>(null);
+  const [composeSavedAtLabel, setComposeSavedAtLabel] = useState<
+    string | null
+  >(null);
+  const [savedDrafts, setSavedDrafts] = useState<TradeCrmSavedDraftRecord[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1481,6 +1663,58 @@ export const TradeCrmMailPage = () => {
 
     setSearchParams(nextSearchParams, { replace: true });
   }, [legacyMailRouteTarget, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const storedDrafts = window.localStorage.getItem(
+        TRADE_CRM_MAIL_DRAFTS_STORAGE_KEY,
+      );
+
+      if (!storedDrafts) {
+        return;
+      }
+
+      const parsedDrafts = JSON.parse(storedDrafts) as unknown;
+
+      if (!Array.isArray(parsedDrafts)) {
+        return;
+      }
+
+      setSavedDrafts(
+        parsedDrafts.filter(
+          (draftRecord): draftRecord is TradeCrmSavedDraftRecord =>
+            typeof draftRecord === 'object' &&
+            draftRecord !== null &&
+            typeof (draftRecord as TradeCrmSavedDraftRecord).id === 'string' &&
+            typeof (draftRecord as TradeCrmSavedDraftRecord).mode === 'string' &&
+            typeof (draftRecord as TradeCrmSavedDraftRecord).subject ===
+              'string' &&
+            typeof (draftRecord as TradeCrmSavedDraftRecord).body === 'string',
+        ),
+      );
+    } catch (error) {
+      console.log('Failed to load saved mail drafts:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        TRADE_CRM_MAIL_DRAFTS_STORAGE_KEY,
+        JSON.stringify(savedDrafts),
+      );
+    } catch (error) {
+      console.log('Failed to persist mail drafts:', error);
+    }
+  }, [savedDrafts]);
 
   const [
     createDevelopmentEmailAudienceMutation,
@@ -1513,6 +1747,16 @@ export const TradeCrmMailPage = () => {
     updateTradeCrmMailThreadStateMutation,
     { loading: updatingTradeCrmMailThreadState },
   ] = useMutation(UPDATE_TRADE_CRM_MAIL_THREAD_STATE);
+  const [upsertTradeCrmMailThreadDraftMutation] = useMutation<{
+    upsertTradeCrmMailThreadDraft: TradeCrmMailThreadDraftRecord | null;
+  }>(UPSERT_TRADE_CRM_MAIL_THREAD_DRAFT, {
+    client: apolloCoreClient,
+  });
+  const [deleteTradeCrmMailThreadDraftMutation] = useMutation<{
+    deleteTradeCrmMailThreadDraft: boolean;
+  }>(DELETE_TRADE_CRM_MAIL_THREAD_DRAFT, {
+    client: apolloCoreClient,
+  });
   const [upsertTradeCrmMailThreadTaskLinkMutation] = useMutation(
     UPSERT_TRADE_CRM_MAIL_THREAD_TASK_LINK,
     {
@@ -2204,6 +2448,44 @@ export const TradeCrmMailPage = () => {
     receivedAtFrom: currentScope === 'mail' ? mailReceivedAtFrom : undefined,
     receivedAtTo: currentScope === 'mail' ? mailReceivedAtTo : undefined,
   });
+  const {
+    data: tradeCrmMailThreadDraftsData,
+    refetch: refetchTradeCrmMailThreadDrafts,
+  } = useQuery<{
+    getTradeCrmMailThreadDrafts: TradeCrmMailThreadDraftRecord[];
+  }>(GET_TRADE_CRM_MAIL_THREAD_DRAFTS, {
+    client: apolloCoreClient,
+    fetchPolicy: 'network-only',
+    nextFetchPolicy: 'cache-first',
+  });
+
+  useEffect(() => {
+    if (!tradeCrmMailThreadDraftsData) {
+      return;
+    }
+
+    const nextDrafts = (
+      tradeCrmMailThreadDraftsData.getTradeCrmMailThreadDrafts ?? []
+    ).map(mapThreadDraftRecordToSavedDraft);
+
+    setSavedDrafts((currentSavedDrafts) =>
+      nextDrafts.length === 0 && currentSavedDrafts.length > 0
+        ? currentSavedDrafts
+        : nextDrafts,
+    );
+  }, [tradeCrmMailThreadDraftsData]);
+
+  const draftListItems = useMemo(
+    () =>
+      savedDrafts
+        .toSorted(
+          (leftDraft, rightDraft) =>
+            new Date(rightDraft.savedAt).getTime() -
+            new Date(leftDraft.savedAt).getTime(),
+        )
+        .map(mapSavedDraftToListItem),
+    [savedDrafts],
+  );
   const renderedMetrics =
     inboxMetrics.length > 0 ? inboxMetrics : workspace.metrics;
   const shouldUseWorkspaceListFallback =
@@ -2221,11 +2503,13 @@ export const TradeCrmMailPage = () => {
       'reports',
     ].includes(currentViewKey);
   const renderedListItems =
-    recentThreads.length > 0
-      ? recentThreads
-      : shouldUseWorkspaceListFallback
-        ? workspace.listItems
-        : [];
+    currentScope === 'mail' && currentViewKey === 'drafts'
+      ? draftListItems
+      : recentThreads.length > 0
+        ? recentThreads
+        : shouldUseWorkspaceListFallback
+          ? workspace.listItems
+          : [];
   const filteredRenderedListItems =
     currentScope === 'campaign' && currentViewKey === 'jobs'
       ? renderedListItems.filter((item) => {
@@ -2261,13 +2545,32 @@ export const TradeCrmMailPage = () => {
     ['inbox', 'sent', 'unread', 'tagged', 'search'].includes(
       currentViewKey,
     );
+  const isDraftWorkbenchView =
+    currentScope === 'mail' && currentViewKey === 'drafts';
   const isPendingActionQueueView =
     currentScope === 'mail' && currentViewKey === 'pending';
-  const pendingThreadIds = isPendingActionQueueView
-    ? filteredRenderedListItems
-        .map((item) => item.threadId)
-        .filter((threadId): threadId is string => typeof threadId === 'string')
-    : [];
+  const pendingThreadIds = useMemo(
+    () =>
+      isPendingActionQueueView
+        ? filteredRenderedListItems
+            .map((item) => item.threadId)
+            .filter(
+              (threadId): threadId is string => typeof threadId === 'string',
+            )
+        : [],
+    [filteredRenderedListItems, isPendingActionQueueView],
+  );
+  const selectableThreadIds = useMemo(
+    () =>
+      currentScope === 'mail'
+        ? filteredRenderedListItems
+            .map((item) => item.threadId)
+            .filter(
+              (threadId): threadId is string => typeof threadId === 'string',
+            )
+        : [],
+    [currentScope, filteredRenderedListItems],
+  );
   const { data: pendingThreadTaskLinksData } = useQuery<{
     getTradeCrmMailThreadTaskLinks: TradeCrmMailThreadTaskLinkRecord[];
   }>(GET_TRADE_CRM_MAIL_THREAD_TASK_LINKS, {
@@ -2476,6 +2779,12 @@ export const TradeCrmMailPage = () => {
         )
       : null) ??
     (isPendingActionQueueView ? filteredRenderedListItems[0] : undefined);
+  const selectedDraftPreviewItem =
+    (isDraftWorkbenchView
+      ? filteredRenderedListItems.find(
+          (item) => item.threadId === selectedPreviewThreadId,
+        )
+      : null) ?? (isDraftWorkbenchView ? filteredRenderedListItems[0] : undefined);
   const selectedCustomerPreviewItem =
     (isCustomerWorkbenchView
       ? filteredRenderedListItems.find(
@@ -2483,6 +2792,55 @@ export const TradeCrmMailPage = () => {
         )
       : null) ??
     (isCustomerWorkbenchView ? filteredRenderedListItems[0] : undefined);
+  const selectedMailThreadItems = useMemo(
+    () =>
+      filteredRenderedListItems.filter(
+        (item) =>
+          typeof item.threadId === 'string' &&
+          selectedThreadIds.includes(item.threadId),
+      ),
+    [filteredRenderedListItems, selectedThreadIds],
+  );
+  const activeSelectedThreadItem =
+    selectedMailThreadItems[0] ??
+    selectedMailboxPreviewItem ??
+    selectedPendingPreviewItem;
+  const selectedDraftRecord =
+    composeDraftId !== null
+      ? savedDrafts.find((savedDraft) => savedDraft.id === composeDraftId)
+      : undefined;
+  const selectedThreadCount = selectedMailThreadItems.length;
+  const singleSelectedThreadItem =
+    selectedThreadCount === 1 ? selectedMailThreadItems[0] : undefined;
+  const allVisibleThreadsSelected =
+    selectableThreadIds.length > 0 &&
+    selectableThreadIds.every((threadId) => selectedThreadIds.includes(threadId));
+  useEffect(() => {
+    setSelectedThreadIds((currentSelectedThreadIds) =>
+      currentSelectedThreadIds.every((threadId) =>
+        selectableThreadIds.includes(threadId),
+      )
+        ? currentSelectedThreadIds
+        : currentSelectedThreadIds.filter((threadId) =>
+            selectableThreadIds.includes(threadId),
+          ),
+    );
+  }, [selectableThreadIds]);
+  useEffect(() => {
+    if (
+      !isDraftWorkbenchView ||
+      !selectedDraftPreviewItem?.id ||
+      composeDraftId === selectedDraftPreviewItem.id
+    ) {
+      return;
+    }
+
+    handlePreviewDraftSelection(selectedDraftPreviewItem.id);
+  }, [
+    composeDraftId,
+    isDraftWorkbenchView,
+    selectedDraftPreviewItem?.id,
+  ]);
   const hasSelectedMailboxThread = Boolean(
     selectedMailboxPreviewItem?.threadId,
   );
@@ -3407,6 +3765,256 @@ export const TradeCrmMailPage = () => {
     setThreadTagDraft('');
   };
 
+  const handleToggleThreadSelection = (threadId: string) => {
+    setSelectedThreadIds((currentSelectedThreadIds) =>
+      currentSelectedThreadIds.includes(threadId)
+        ? currentSelectedThreadIds.filter(
+            (currentThreadId) => currentThreadId !== threadId,
+          )
+        : [...currentSelectedThreadIds, threadId],
+    );
+  };
+
+  const handleToggleAllVisibleThreadSelections = () => {
+    if (selectableThreadIds.length === 0) {
+      return;
+    }
+
+    setSelectedThreadIds((currentSelectedThreadIds) =>
+      selectableThreadIds.every((threadId) =>
+        currentSelectedThreadIds.includes(threadId),
+      )
+        ? currentSelectedThreadIds.filter(
+            (threadId) => !selectableThreadIds.includes(threadId),
+          )
+        : Array.from(
+            new Set([...currentSelectedThreadIds, ...selectableThreadIds]),
+          ),
+    );
+  };
+
+  const handleClearThreadSelection = () => {
+    setSelectedThreadIds([]);
+  };
+
+  const handlePreviewDraftSelection = (draftId: string) => {
+    const selectedDraft = savedDrafts.find((savedDraft) => savedDraft.id === draftId);
+
+    if (!selectedDraft) {
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    nextSearchParams.set('previewThreadId', draftId);
+    setSearchParams(nextSearchParams);
+    setComposeMode(selectedDraft.mode);
+    setComposeDraftId(selectedDraft.id);
+    setComposeThreadId(selectedDraft.sourceThreadId);
+    setComposeRecipients(selectedDraft.recipients);
+    setComposeCcRecipients(selectedDraft.ccRecipients);
+    setComposeSubject(selectedDraft.subject);
+    setComposeBody(selectedDraft.body);
+    setComposeSavedAtLabel(formatToHumanReadableDate(selectedDraft.savedAt));
+  };
+
+  const buildComposeSubject = ({
+    mode,
+    subject,
+  }: {
+    mode: MailComposeMode;
+    subject: string;
+  }) => {
+    const trimmedSubject = subject.trim() || 'No subject';
+
+    if (mode === 'forward') {
+      return trimmedSubject.startsWith('Fwd:')
+        ? trimmedSubject
+        : `Fwd: ${trimmedSubject}`;
+    }
+
+    return trimmedSubject.startsWith('Re:')
+      ? trimmedSubject
+      : `Re: ${trimmedSubject}`;
+  };
+
+  const handleOpenComposePanel = ({
+    mode,
+    item,
+  }: {
+    mode: MailComposeMode;
+    item: (typeof selectedMailboxPreviewItem) | (typeof selectedPendingPreviewItem);
+  }) => {
+    if (!item) {
+      return;
+    }
+
+    const recipientLabel =
+      item.primaryRecordLabel === 'Open contact record'
+        ? item.primary
+        : item.primary;
+    const threadSummary = item.tertiary.trim() || 'No preview available.';
+
+    setComposeMode(mode);
+    setComposeDraftId(null);
+    setComposeThreadId(item.threadId ?? null);
+    setComposeRecipients(mode === 'forward' ? '' : recipientLabel);
+    setComposeCcRecipients(mode === 'reply-all' ? 'team@amaincrm.local' : '');
+    setComposeSubject(
+      buildComposeSubject({
+        mode,
+        subject: item.secondary,
+      }),
+    );
+    setComposeBody(
+      [
+        mode === 'forward'
+          ? 'Forwarding this thread for review.'
+          : 'Draft prepared from the current mailbox thread.',
+        '',
+        `Thread: ${item.secondary}`,
+        `Customer: ${item.primary}`,
+        `Latest summary: ${threadSummary}`,
+        '',
+        'Reply intent:',
+        '- Confirm next action',
+        '- Keep CRM linkage visible',
+        '- Review before sending',
+      ].join('\n'),
+    );
+    setComposeSavedAtLabel(null);
+  };
+
+  const handleCloseComposePanel = () => {
+    setComposeMode(null);
+    setComposeDraftId(null);
+    setComposeThreadId(null);
+    setComposeRecipients('');
+    setComposeCcRecipients('');
+    setComposeSubject('');
+    setComposeBody('');
+    setComposeSavedAtLabel(null);
+  };
+
+  const handleSaveComposeDraft = async () => {
+    if (composeMode === null) {
+      return;
+    }
+
+    const sourceItem =
+      selectedPendingPreviewItem ??
+      selectedMailboxPreviewItem ??
+      selectedDraftPreviewItem;
+    const savedAt = new Date().toISOString();
+    const nextDraftRecordInput = {
+      id: composeDraftId,
+      mode: composeMode,
+      threadId: composeThreadId ?? sourceItem?.threadId ?? null,
+      customerLabel: sourceItem?.primary ?? '',
+      threadTitle: sourceItem?.secondary ?? composeSubject,
+      contextLabel:
+        currentViewKey === 'pending' ? 'Pending context' : 'Thread context',
+      contextValue:
+        currentViewKey === 'pending'
+          ? `${pendingSelectedReason} · ${pendingSelectedUpdatedAt}`
+          : mailboxSelectedThreadMeta,
+      recipients: composeRecipients,
+      ccRecipients: composeCcRecipients,
+      subject: composeSubject,
+      body: composeBody,
+    };
+
+    const { data } = await upsertTradeCrmMailThreadDraftMutation({
+      variables: {
+        input: nextDraftRecordInput,
+      },
+    });
+
+    const persistedDraft = data?.upsertTradeCrmMailThreadDraft;
+
+    if (!persistedDraft) {
+      return;
+    }
+
+    const nextDraftRecord = mapThreadDraftRecordToSavedDraft(persistedDraft);
+
+    setSavedDrafts((currentSavedDrafts) => [
+      nextDraftRecord,
+      ...currentSavedDrafts.filter(
+        (savedDraft) => savedDraft.id !== nextDraftRecord.id,
+      ),
+    ]);
+    setComposeDraftId(nextDraftRecord.id);
+    setComposeSavedAtLabel(formatToHumanReadableDate(savedAt));
+    void refetchTradeCrmMailThreadDrafts();
+  };
+
+  const handleDeleteDraft = async (draftId: string) => {
+    const { data } = await deleteTradeCrmMailThreadDraftMutation({
+      variables: {
+        draftId,
+      },
+    });
+
+    if (data?.deleteTradeCrmMailThreadDraft !== true) {
+      return;
+    }
+
+    setSavedDrafts((currentSavedDrafts) =>
+      currentSavedDrafts.filter((savedDraft) => savedDraft.id !== draftId),
+    );
+    void refetchTradeCrmMailThreadDrafts();
+
+    if (composeDraftId === draftId) {
+      handleCloseComposePanel();
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (nextSearchParams.get('previewThreadId') === draftId) {
+      nextSearchParams.delete('previewThreadId');
+      setSearchParams(nextSearchParams);
+    }
+  };
+
+  const handleApplyPendingStateToSelectedThreads = async (
+    isPending: boolean,
+  ) => {
+    for (const threadId of selectedThreadIds) {
+      await handleUpdateThreadPendingState({
+        threadId,
+        isPending,
+      });
+    }
+  };
+
+  const handleApplyTagToSelectedThreads = async () => {
+    const tag = bulkTagDraft.trim();
+
+    if (!tag) {
+      return;
+    }
+
+    for (const threadId of selectedThreadIds) {
+      await handleUpdateThreadTag({
+        threadId,
+        mode: 'ADD',
+        tag,
+      });
+    }
+
+    setShowBulkTagEditor(false);
+  };
+
+  const handleClearTagsFromSelectedThreads = async () => {
+    for (const threadId of selectedThreadIds) {
+      await handleUpdateThreadTag({
+        threadId,
+        mode: 'CLEAR_ALL',
+      });
+    }
+  };
+
   const handleMailSearchChange = (value: string) => {
     const nextSearchParams = new URLSearchParams(searchParams);
 
@@ -4034,6 +4642,143 @@ export const TradeCrmMailPage = () => {
                       {tr('搜索邮件')}
                     </StyledActionLink>
                   </StyledFilterPresetRow>
+                ) : null}
+                {currentScope === 'mail' && selectedThreadCount > 0 ? (
+                  <StyledMailSelectionSummary>
+                    <StyledMailSelectionSummaryCopy>
+                      <StyledMailSelectionSummaryValue>
+                        {tr(`已选中 ${selectedThreadCount} 封线程`)}
+                      </StyledMailSelectionSummaryValue>
+                      <StyledMailSelectionSummaryText>
+                        {tr(
+                          selectedThreadCount === 1
+                            ? '可以直接回复、转发、补标签或改待处理状态。'
+                            : '先完成批量标签和待处理动作，再决定是否回到单线程回复。',
+                        )}
+                      </StyledMailSelectionSummaryText>
+                    </StyledMailSelectionSummaryCopy>
+                    <StyledMailToolbarActions>
+                      <StyledSecondaryButton
+                        onClick={() => void handleApplyPendingStateToSelectedThreads(true)}
+                        type="button"
+                      >
+                        {tr('批量标记待处理')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        onClick={() =>
+                          void handleApplyPendingStateToSelectedThreads(false)
+                        }
+                        type="button"
+                      >
+                        {tr('批量清除待处理')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        onClick={() => setShowBulkTagEditor((value) => !value)}
+                        type="button"
+                      >
+                        {tr(showBulkTagEditor ? '收起批量标签' : '批量加标签')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        onClick={() => void handleClearTagsFromSelectedThreads()}
+                        type="button"
+                      >
+                        {tr('批量清空标签')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        disabled={selectedThreadCount !== 1}
+                        onClick={() =>
+                          singleSelectedThreadItem?.threadId
+                            ? openEmailThreadInSidePanel(
+                                singleSelectedThreadItem.threadId,
+                              )
+                            : undefined
+                        }
+                        type="button"
+                      >
+                        {tr('打开选中线程')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        disabled={
+                          selectedThreadCount !== 1 ||
+                          singleSelectedThreadItem == null
+                        }
+                        onClick={() =>
+                          handleOpenComposePanel({
+                            mode: 'reply',
+                            item: singleSelectedThreadItem,
+                          })
+                        }
+                        type="button"
+                      >
+                        {tr('Reply')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        disabled={
+                          selectedThreadCount !== 1 ||
+                          singleSelectedThreadItem == null
+                        }
+                        onClick={() =>
+                          handleOpenComposePanel({
+                            mode: 'reply-all',
+                            item: singleSelectedThreadItem,
+                          })
+                        }
+                        type="button"
+                      >
+                        {tr('Reply all')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        disabled={
+                          selectedThreadCount !== 1 ||
+                          singleSelectedThreadItem == null
+                        }
+                        onClick={() =>
+                          handleOpenComposePanel({
+                            mode: 'forward',
+                            item: singleSelectedThreadItem,
+                          })
+                        }
+                        type="button"
+                      >
+                        {tr('Forward')}
+                      </StyledSecondaryButton>
+                      <StyledSecondaryButton
+                        onClick={handleClearThreadSelection}
+                        type="button"
+                      >
+                        {tr('清空选择')}
+                      </StyledSecondaryButton>
+                    </StyledMailToolbarActions>
+                  </StyledMailSelectionSummary>
+                ) : null}
+                {currentScope === 'mail' && selectedThreadCount > 0 && showBulkTagEditor ? (
+                  <StyledComposePanel>
+                    <StyledMailPreviewLabel>{tr('批量标签')}</StyledMailPreviewLabel>
+                    <StyledComposeMetaGrid>
+                      <StyledFormField>
+                        {tr('标签名')}
+                        <StyledInput
+                          onChange={(event) => setBulkTagDraft(event.target.value)}
+                          placeholder={tr('important-customer')}
+                          value={bulkTagDraft}
+                        />
+                      </StyledFormField>
+                    </StyledComposeMetaGrid>
+                    <StyledButtonRow>
+                      <StyledPrimaryButton
+                        onClick={() => void handleApplyTagToSelectedThreads()}
+                        type="button"
+                      >
+                        {tr('应用到选中线程')}
+                      </StyledPrimaryButton>
+                      <StyledSecondaryButton
+                        onClick={() => setShowBulkTagEditor(false)}
+                        type="button"
+                      >
+                        {tr('取消')}
+                      </StyledSecondaryButton>
+                    </StyledButtonRow>
+                  </StyledComposePanel>
                 ) : null}
                 {currentScope === 'campaign' && currentViewKey === 'jobs' ? (
                   <StyledFilterPresetRow>
@@ -5770,7 +6515,14 @@ export const TradeCrmMailPage = () => {
                 {isMailboxWorkbenchView ? (
                   <StyledMailWorkbench>
                     <StyledMailWorkbenchList>
-                      <StyledMailWorkbenchListHeader>
+                      <StyledMailWorkbenchListHeader $selectable>
+                        <StyledMailSelectionCell>
+                          <StyledMailCheckbox
+                            checked={allVisibleThreadsSelected}
+                            onChange={handleToggleAllVisibleThreadSelections}
+                            type="checkbox"
+                          />
+                        </StyledMailSelectionCell>
                         <div>{tr('发件人')}</div>
                         <div>{tr('主题与摘要')}</div>
                         <div>{tr('时间 / 状态')}</div>
@@ -5789,7 +6541,23 @@ export const TradeCrmMailPage = () => {
                           }
                           type="button"
                         >
-                          <StyledMailWorkbenchRow>
+                          <StyledMailWorkbenchRow $selectable>
+                            <StyledMailSelectionCell
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <StyledMailCheckbox
+                                checked={
+                                  typeof item.threadId === 'string' &&
+                                  selectedThreadIds.includes(item.threadId)
+                                }
+                                onChange={() =>
+                                  item.threadId
+                                    ? handleToggleThreadSelection(item.threadId)
+                                    : undefined
+                                }
+                                type="checkbox"
+                              />
+                            </StyledMailSelectionCell>
                             <StyledMailSenderCell>
                               {tr(item.primary)}
                             </StyledMailSenderCell>
@@ -5942,6 +6710,45 @@ export const TradeCrmMailPage = () => {
                             {selectedMailboxPreviewItem.threadId ? (
                               <StyledSecondaryButton
                                 onClick={() =>
+                                  handleOpenComposePanel({
+                                    mode: 'reply',
+                                    item: selectedMailboxPreviewItem,
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr('Reply')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedMailboxPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  handleOpenComposePanel({
+                                    mode: 'reply-all',
+                                    item: selectedMailboxPreviewItem,
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr('Reply all')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedMailboxPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  handleOpenComposePanel({
+                                    mode: 'forward',
+                                    item: selectedMailboxPreviewItem,
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr('Forward')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedMailboxPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
                                   handleUpdateThreadPendingState({
                                     threadId:
                                       selectedMailboxPreviewItem.threadId ?? '',
@@ -5958,6 +6765,88 @@ export const TradeCrmMailPage = () => {
                               </StyledSecondaryButton>
                             ) : null}
                           </StyledButtonRow>
+                          {composeMode !== null &&
+                          composeThreadId === selectedMailboxPreviewItem.threadId ? (
+                            <StyledComposePanel>
+                              <StyledMailPreviewLabel>
+                                {tr(
+                                  composeMode === 'reply'
+                                    ? 'Reply draft'
+                                    : composeMode === 'reply-all'
+                                      ? 'Reply-all draft'
+                                      : 'Forward draft',
+                                )}
+                              </StyledMailPreviewLabel>
+                              <StyledComposeMetaGrid>
+                                <StyledFormField>
+                                  {tr('To')}
+                                  <StyledInput
+                                    onChange={(event) =>
+                                      setComposeRecipients(event.target.value)
+                                    }
+                                    value={composeRecipients}
+                                  />
+                                </StyledFormField>
+                                <StyledFormField>
+                                  {tr('Cc')}
+                                  <StyledInput
+                                    onChange={(event) =>
+                                      setComposeCcRecipients(event.target.value)
+                                    }
+                                    placeholder={tr('Optional')}
+                                    value={composeCcRecipients}
+                                  />
+                                </StyledFormField>
+                                <StyledFormField>
+                                  {tr('Subject')}
+                                  <StyledInput
+                                    onChange={(event) =>
+                                      setComposeSubject(event.target.value)
+                                    }
+                                    value={composeSubject}
+                                  />
+                                </StyledFormField>
+                                <StyledFormField>
+                                  {tr('Thread context')}
+                                  <StyledInput
+                                    readOnly
+                                    value={mailboxSelectedThreadMeta}
+                                  />
+                                </StyledFormField>
+                              </StyledComposeMetaGrid>
+                              <StyledFormField>
+                                {tr('Draft body')}
+                                <StyledTextArea
+                                  onChange={(event) =>
+                                    setComposeBody(event.target.value)
+                                  }
+                                  value={composeBody}
+                                />
+                              </StyledFormField>
+                              {composeSavedAtLabel ? (
+                                <StyledListMeta>
+                                  {tr(`Draft saved ${composeSavedAtLabel}`)}
+                                </StyledListMeta>
+                              ) : null}
+                              <StyledButtonRow>
+                                <StyledPrimaryButton
+                                  onClick={handleSaveComposeDraft}
+                                  type="button"
+                                >
+                                  {tr('Save draft')}
+                                </StyledPrimaryButton>
+                                <StyledSecondaryButton
+                                  onClick={handleCloseComposePanel}
+                                  type="button"
+                                >
+                                  {tr('Discard draft')}
+                                </StyledSecondaryButton>
+                                <StyledActionLink to={composeEntryPath}>
+                                  {tr('Open drafts workspace')}
+                                </StyledActionLink>
+                              </StyledButtonRow>
+                            </StyledComposePanel>
+                          ) : null}
                         </>
                       ) : (
                         <StyledMailPreviewBlock>
@@ -5974,7 +6863,14 @@ export const TradeCrmMailPage = () => {
                 ) : isPendingActionQueueView ? (
                   <StyledMailWorkbench>
                     <StyledMailWorkbenchList>
-                      <StyledMailWorkbenchListHeader>
+                      <StyledMailWorkbenchListHeader $selectable>
+                        <StyledMailSelectionCell>
+                          <StyledMailCheckbox
+                            checked={allVisibleThreadsSelected}
+                            onChange={handleToggleAllVisibleThreadSelections}
+                            type="checkbox"
+                          />
+                        </StyledMailSelectionCell>
                         <div>{tr('客户 / 线程')}</div>
                         <div>{tr('待处理原因')}</div>
                         <div>{tr('更新时间 / 状态')}</div>
@@ -5990,7 +6886,23 @@ export const TradeCrmMailPage = () => {
                           }
                           type="button"
                         >
-                          <StyledMailWorkbenchRow>
+                          <StyledMailWorkbenchRow $selectable>
+                            <StyledMailSelectionCell
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <StyledMailCheckbox
+                                checked={
+                                  typeof item.threadId === 'string' &&
+                                  selectedThreadIds.includes(item.threadId)
+                                }
+                                onChange={() =>
+                                  item.threadId
+                                    ? handleToggleThreadSelection(item.threadId)
+                                    : undefined
+                                }
+                                type="checkbox"
+                              />
+                            </StyledMailSelectionCell>
                             <StyledMailSenderCell>
                               {tr(item.primary)}
                             </StyledMailSenderCell>
@@ -6140,6 +7052,45 @@ export const TradeCrmMailPage = () => {
                             {selectedPendingPreviewItem.threadId ? (
                               <StyledSecondaryButton
                                 onClick={() =>
+                                  handleOpenComposePanel({
+                                    mode: 'reply',
+                                    item: selectedPendingPreviewItem,
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr('Reply')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedPendingPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  handleOpenComposePanel({
+                                    mode: 'reply-all',
+                                    item: selectedPendingPreviewItem,
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr('Reply all')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedPendingPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  handleOpenComposePanel({
+                                    mode: 'forward',
+                                    item: selectedPendingPreviewItem,
+                                  })
+                                }
+                                type="button"
+                              >
+                                {tr('Forward')}
+                              </StyledSecondaryButton>
+                            ) : null}
+                            {selectedPendingPreviewItem.threadId ? (
+                              <StyledSecondaryButton
+                                onClick={() =>
                                   handleUpdateThreadPendingState({
                                     threadId:
                                       selectedPendingPreviewItem.threadId ?? '',
@@ -6173,6 +7124,88 @@ export const TradeCrmMailPage = () => {
                               {tr(pendingSecondaryActionLabel)}
                             </StyledActionLink>
                           </StyledButtonRow>
+                          {composeMode !== null &&
+                          composeThreadId === selectedPendingPreviewItem.threadId ? (
+                            <StyledComposePanel>
+                              <StyledMailPreviewLabel>
+                                {tr(
+                                  composeMode === 'reply'
+                                    ? 'Reply draft'
+                                    : composeMode === 'reply-all'
+                                      ? 'Reply-all draft'
+                                      : 'Forward draft',
+                                )}
+                              </StyledMailPreviewLabel>
+                              <StyledComposeMetaGrid>
+                                <StyledFormField>
+                                  {tr('To')}
+                                  <StyledInput
+                                    onChange={(event) =>
+                                      setComposeRecipients(event.target.value)
+                                    }
+                                    value={composeRecipients}
+                                  />
+                                </StyledFormField>
+                                <StyledFormField>
+                                  {tr('Cc')}
+                                  <StyledInput
+                                    onChange={(event) =>
+                                      setComposeCcRecipients(event.target.value)
+                                    }
+                                    placeholder={tr('Optional')}
+                                    value={composeCcRecipients}
+                                  />
+                                </StyledFormField>
+                                <StyledFormField>
+                                  {tr('Subject')}
+                                  <StyledInput
+                                    onChange={(event) =>
+                                      setComposeSubject(event.target.value)
+                                    }
+                                    value={composeSubject}
+                                  />
+                                </StyledFormField>
+                                <StyledFormField>
+                                  {tr('Pending context')}
+                                  <StyledInput
+                                    readOnly
+                                    value={`${pendingSelectedReason} · ${pendingSelectedUpdatedAt}`}
+                                  />
+                                </StyledFormField>
+                              </StyledComposeMetaGrid>
+                              <StyledFormField>
+                                {tr('Draft body')}
+                                <StyledTextArea
+                                  onChange={(event) =>
+                                    setComposeBody(event.target.value)
+                                  }
+                                  value={composeBody}
+                                />
+                              </StyledFormField>
+                              {composeSavedAtLabel ? (
+                                <StyledListMeta>
+                                  {tr(`Draft saved ${composeSavedAtLabel}`)}
+                                </StyledListMeta>
+                              ) : null}
+                              <StyledButtonRow>
+                                <StyledPrimaryButton
+                                  onClick={handleSaveComposeDraft}
+                                  type="button"
+                                >
+                                  {tr('Save draft')}
+                                </StyledPrimaryButton>
+                                <StyledSecondaryButton
+                                  onClick={handleCloseComposePanel}
+                                  type="button"
+                                >
+                                  {tr('Discard draft')}
+                                </StyledSecondaryButton>
+                                <StyledActionLink to={composeEntryPath}>
+                                  {tr('Open drafts workspace')}
+                                </StyledActionLink>
+                              </StyledButtonRow>
+                            </StyledComposePanel>
+                          ) : null}
                           </>
                       ) : (
                         <StyledMailPreviewBlock>
@@ -6181,6 +7214,184 @@ export const TradeCrmMailPage = () => {
                           </StyledMailPreviewLabel>
                           <StyledListMeta>
                             {tr('当前筛选条件下没有待处理邮件。')}
+                          </StyledListMeta>
+                        </StyledMailPreviewBlock>
+                      )}
+                    </StyledMailWorkbenchPreview>
+                  </StyledMailWorkbench>
+                ) : isDraftWorkbenchView ? (
+                  <StyledMailWorkbench>
+                    <StyledMailWorkbenchList>
+                      <StyledMailWorkbenchListHeader>
+                        <div>{tr('Draft')}</div>
+                        <div>{tr('Content')}</div>
+                        <div>{tr('Saved at')}</div>
+                      </StyledMailWorkbenchListHeader>
+                      {filteredRenderedListItems.map((item) => (
+                        <StyledMailWorkbenchItem
+                          $active={item.id === selectedDraftPreviewItem?.id}
+                          key={item.id}
+                          onClick={() => handlePreviewDraftSelection(item.id)}
+                          type="button"
+                        >
+                          <StyledMailWorkbenchRow>
+                            <StyledMailSenderCell>
+                              {tr(item.primary)}
+                            </StyledMailSenderCell>
+                            <StyledMailSubjectCell>
+                              <StyledMailWorkbenchTitle>
+                                {tr(item.secondary)}
+                              </StyledMailWorkbenchTitle>
+                              <StyledListTertiary>
+                                {tr(item.tertiary)}
+                              </StyledListTertiary>
+                            </StyledMailSubjectCell>
+                            <StyledMailTimeCell>
+                              <div>{tr(item.meta)}</div>
+                              <StyledMailWorkbenchSummaryRow>
+                                <StyledMailWorkbenchChip $tone="accent">
+                                  {tr(item.status)}
+                                </StyledMailWorkbenchChip>
+                              </StyledMailWorkbenchSummaryRow>
+                            </StyledMailTimeCell>
+                          </StyledMailWorkbenchRow>
+                        </StyledMailWorkbenchItem>
+                      ))}
+                    </StyledMailWorkbenchList>
+                    <StyledMailWorkbenchPreview>
+                      {selectedDraftPreviewItem && selectedDraftRecord ? (
+                        <>
+                          <StyledMailPreviewTopbar>
+                            <StyledMailPreviewTopbarCopy>
+                              <StyledMailPreviewLabel>
+                                {tr('Draft workspace')}
+                              </StyledMailPreviewLabel>
+                              <StyledMailPreviewTitle>
+                                {tr(selectedDraftPreviewItem.secondary)}
+                              </StyledMailPreviewTitle>
+                            </StyledMailPreviewTopbarCopy>
+                            <StyledMailWorkbenchSummaryRow>
+                              <StyledMailWorkbenchChip $tone="accent">
+                                {tr(selectedDraftPreviewItem.status)}
+                              </StyledMailWorkbenchChip>
+                              <StyledMailWorkbenchChip>
+                                {tr(
+                                  `Saved ${formatToHumanReadableDate(
+                                    selectedDraftRecord.savedAt,
+                                  )}`,
+                                )}
+                              </StyledMailWorkbenchChip>
+                            </StyledMailWorkbenchSummaryRow>
+                          </StyledMailPreviewTopbar>
+                          <StyledMailPreviewBlock>
+                            <StyledMailPreviewLabel>
+                              {tr('Source context')}
+                            </StyledMailPreviewLabel>
+                            <StyledListPrimary>
+                              {tr(selectedDraftRecord.customerLabel)}
+                            </StyledListPrimary>
+                            <StyledListMeta>
+                              {tr(selectedDraftRecord.threadTitle)}
+                            </StyledListMeta>
+                          </StyledMailPreviewBlock>
+                          <StyledComposePanel>
+                            <StyledMailPreviewLabel>
+                              {tr(
+                                selectedDraftRecord.mode === 'reply'
+                                  ? 'Reply draft'
+                                  : selectedDraftRecord.mode === 'reply-all'
+                                    ? 'Reply-all draft'
+                                    : 'Forward draft',
+                              )}
+                            </StyledMailPreviewLabel>
+                            <StyledComposeMetaGrid>
+                              <StyledFormField>
+                                {tr('To')}
+                                <StyledInput
+                                  onChange={(event) =>
+                                    setComposeRecipients(event.target.value)
+                                  }
+                                  value={composeRecipients}
+                                />
+                              </StyledFormField>
+                              <StyledFormField>
+                                {tr('Cc')}
+                                <StyledInput
+                                  onChange={(event) =>
+                                    setComposeCcRecipients(event.target.value)
+                                  }
+                                  placeholder={tr('Optional')}
+                                  value={composeCcRecipients}
+                                />
+                              </StyledFormField>
+                              <StyledFormField>
+                                {tr('Subject')}
+                                <StyledInput
+                                  onChange={(event) =>
+                                    setComposeSubject(event.target.value)
+                                  }
+                                  value={composeSubject}
+                                />
+                              </StyledFormField>
+                              <StyledFormField>
+                                {tr(selectedDraftRecord.contextLabel)}
+                                <StyledInput
+                                  readOnly
+                                  value={selectedDraftRecord.contextValue}
+                                />
+                              </StyledFormField>
+                            </StyledComposeMetaGrid>
+                            <StyledFormField>
+                              {tr('Draft body')}
+                              <StyledTextArea
+                                onChange={(event) =>
+                                  setComposeBody(event.target.value)
+                                }
+                                value={composeBody}
+                              />
+                            </StyledFormField>
+                            {composeSavedAtLabel ? (
+                              <StyledListMeta>
+                                {tr(`Draft saved ${composeSavedAtLabel}`)}
+                              </StyledListMeta>
+                            ) : null}
+                            <StyledButtonRow>
+                              {selectedDraftRecord.sourceThreadId ? (
+                                <StyledSecondaryButton
+                                  onClick={() =>
+                                    openEmailThreadInSidePanel(
+                                      selectedDraftRecord.sourceThreadId ?? '',
+                                    )
+                                  }
+                                  type="button"
+                                >
+                                  {tr('打开原线程')}
+                                </StyledSecondaryButton>
+                              ) : null}
+                              <StyledPrimaryButton
+                                onClick={handleSaveComposeDraft}
+                                type="button"
+                              >
+                                {tr('Save draft')}
+                              </StyledPrimaryButton>
+                              <StyledSecondaryButton
+                                onClick={() =>
+                                  handleDeleteDraft(selectedDraftRecord.id)
+                                }
+                                type="button"
+                              >
+                                {tr('Delete draft')}
+                              </StyledSecondaryButton>
+                            </StyledButtonRow>
+                          </StyledComposePanel>
+                        </>
+                      ) : (
+                        <StyledMailPreviewBlock>
+                          <StyledMailPreviewLabel>
+                            {tr('Draft workspace')}
+                          </StyledMailPreviewLabel>
+                          <StyledListMeta>
+                            {tr('当前还没有保存的草稿。请先从 Inbox 或 Pending 里保存一条 Reply draft。')}
                           </StyledListMeta>
                         </StyledMailPreviewBlock>
                       )}

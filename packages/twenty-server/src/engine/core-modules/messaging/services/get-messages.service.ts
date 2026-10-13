@@ -5,6 +5,8 @@ import { In, Repository } from 'typeorm';
 import { TIMELINE_THREADS_DEFAULT_PAGE_SIZE } from 'src/engine/core-modules/messaging/constants/messaging.constants';
 import { type TimelineCompanyThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-company-threads-with-total.dto';
 import { type TimelineThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-threads-with-total.dto';
+import { UpsertTradeCrmMailThreadDraftInput } from 'src/engine/core-modules/messaging/dtos/upsert-trade-crm-mail-thread-draft.input';
+import { TradeCrmMailThreadDraftEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-draft.entity';
 import { TradeCrmMailThreadTagEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-tag.entity';
 import { TradeCrmMailThreadTaskLinkEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-task-link.entity';
 import { TradeCrmMailThreadStateEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-state.entity';
@@ -23,6 +25,8 @@ export class GetMessagesService {
   constructor(
     @InjectRepository(TradeCrmMailThreadStateEntity)
     private readonly tradeCrmMailThreadStateRepository: Repository<TradeCrmMailThreadStateEntity>,
+    @InjectRepository(TradeCrmMailThreadDraftEntity)
+    private readonly tradeCrmMailThreadDraftRepository: Repository<TradeCrmMailThreadDraftEntity>,
     @InjectRepository(TradeCrmMailThreadTagEntity)
     private readonly tradeCrmMailThreadTagRepository: Repository<TradeCrmMailThreadTagEntity>,
     @InjectRepository(TradeCrmMailThreadTaskLinkEntity)
@@ -149,6 +153,63 @@ export class GetMessagesService {
         updatedAt: 'DESC',
       },
     });
+  }
+
+  async getTradeCrmMailThreadDrafts(
+    workspaceId: string,
+  ): Promise<TradeCrmMailThreadDraftEntity[]> {
+    return this.tradeCrmMailThreadDraftRepository.find({
+      where: { workspaceId },
+      order: {
+        savedAt: 'DESC',
+        updatedAt: 'DESC',
+      },
+    });
+  }
+
+  async upsertTradeCrmMailThreadDraft(
+    workspaceId: string,
+    input: UpsertTradeCrmMailThreadDraftInput,
+  ): Promise<TradeCrmMailThreadDraftEntity> {
+    const existingDraft =
+      input.id == null
+        ? null
+        : await this.tradeCrmMailThreadDraftRepository.findOneBy({
+            workspaceId,
+            id: input.id,
+          });
+
+    const nextDraft =
+      existingDraft ??
+      this.tradeCrmMailThreadDraftRepository.create({
+        workspaceId,
+      });
+
+    nextDraft.threadId = input.threadId ?? null;
+    nextDraft.mode = input.mode;
+    nextDraft.customerLabel = input.customerLabel;
+    nextDraft.threadTitle = input.threadTitle;
+    nextDraft.contextLabel = input.contextLabel;
+    nextDraft.contextValue = input.contextValue;
+    nextDraft.recipients = input.recipients;
+    nextDraft.ccRecipients = input.ccRecipients;
+    nextDraft.subject = input.subject;
+    nextDraft.body = input.body;
+    nextDraft.savedAt = new Date();
+
+    return this.tradeCrmMailThreadDraftRepository.save(nextDraft);
+  }
+
+  async deleteTradeCrmMailThreadDraft(
+    workspaceId: string,
+    draftId: string,
+  ): Promise<boolean> {
+    const deleteResult = await this.tradeCrmMailThreadDraftRepository.delete({
+      workspaceId,
+      id: draftId,
+    });
+
+    return (deleteResult.affected ?? 0) > 0;
   }
 
   async getThreadTaskLinksByThreadId(

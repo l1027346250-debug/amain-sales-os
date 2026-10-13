@@ -1084,3 +1084,71 @@
   - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-link-source-live.png`
   - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-link-target-live.png`
   - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mailbox-rules-result-link-live.json`
+
+## 2026-05-08 AMAIN Mail workbench inbox-behavior recovery
+
+- Switched focus back from Mailbox Admin to the seller-facing mailbox workbench.
+- `TradeCrmMailPage` now has:
+  - explicit thread checkbox selection state
+  - batch action toolbar for selected threads
+  - preview-level `Reply / Reply all / Forward` actions
+  - lightweight compose surface for seller drafts
+- A live browser pass exposed a real gating bug:
+  - batch selection worked
+  - reply actions were visible
+  - but the compose panel failed to render
+- Root cause:
+  - compose rendering was tied to `activeSelectedThreadItem?.threadId`
+  - `activeSelectedThreadItem` prefers `selectedMailThreadItems[0]`
+  - this diverges from the preview thread when the seller checks one thread and previews another
+- Fix:
+  - added explicit `composeThreadId` state
+  - set it inside `handleOpenComposePanel`
+  - clear it inside `handleCloseComposePanel`
+  - render mailbox/pending compose panels by comparing `composeThreadId` against the current preview thread
+- Re-verified:
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - live browser regression confirms:
+    - batch toolbar buttons render after thread selection
+    - preview `Reply / Reply all / Forward` actions are enabled on the active preview thread
+    - compose surface now shows recipient, subject, readonly context, and draft body controls
+- Regression artifacts:
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mail-workbench-selection-regression.json`
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mail-inbox-visible-dom.json`
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mail-inbox-compose-visible-dom.json`
+
+## 2026-05-08 AMAIN Mail workbench Drafts workspace recovery
+
+- Upgraded `TradeCrmMailPage` so Drafts is no longer a static mailbox placeholder.
+- Added a local Drafts persistence layer keyed by `TRADE_CRM_MAIL_DRAFTS_STORAGE_KEY`.
+- Draft records now store:
+  - compose mode
+  - source thread id
+  - recipients / cc
+  - subject / body
+  - customer/context labels
+  - saved timestamp
+- Drafts workbench now:
+  - renders saved draft rows
+  - hydrates the editor when a draft row is opened
+  - preserves `打开原线程`
+  - supports `Save draft` updates
+  - supports `Delete draft`
+- Tightened selection semantics:
+  - batch `打开选中线程 / Reply / Reply all / Forward` now depend on exactly one checked thread via `singleSelectedThreadItem`
+  - the actions are no longer coupled to whichever preview row happens to be open
+- Re-verified:
+  - `corepack yarn nx typecheck twenty-front` passes
+  - `corepack yarn nx build twenty-front` passes
+  - live browser loop passes:
+    - `Reply`
+    - `Save draft`
+    - open `Drafts`
+    - hydrated draft editor visible
+    - `Delete draft`
+    - empty Drafts state restored
+- Regression artifact:
+  - `G:/codex/twentyCRM/amainCRM/.codex-runtime/mail-drafts-regression.json`
+
+- 2026-05-08: Mail Drafts now persist through the backend GraphQL ledger (getTradeCrmMailThreadDrafts / upsertTradeCrmMailThreadDraft / deleteTradeCrmMailThreadDraft). Live browser regression passed after server restart, forced migration, and Apollo fetch-policy fix: Reply -> Save draft -> Drafts -> hydrate saved editor.

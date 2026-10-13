@@ -22,7 +22,9 @@ import { UpdateTradeCrmMailThreadStateInput } from 'src/engine/core-modules/mess
 import { DevelopmentEmailWorkspaceDTO } from 'src/engine/core-modules/messaging/dtos/development-email-workspace.dto';
 import { TimelineCompanyThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-company-threads-with-total.dto';
 import { TimelineThreadsWithTotalDTO } from 'src/engine/core-modules/messaging/dtos/timeline-threads-with-total.dto';
+import { UpsertTradeCrmMailThreadDraftInput } from 'src/engine/core-modules/messaging/dtos/upsert-trade-crm-mail-thread-draft.input';
 import { UpsertTradeCrmMailThreadTaskLinkInput } from 'src/engine/core-modules/messaging/dtos/upsert-trade-crm-mail-thread-task-link.input';
+import { TradeCrmMailThreadDraftEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-draft.entity';
 import { TradeCrmMailThreadTaskLinkEntity } from 'src/engine/core-modules/messaging/entities/trade-crm-mail-thread-task-link.entity';
 import { DevelopmentEmailWorkspaceService } from 'src/engine/core-modules/messaging/services/development-email-workspace.service';
 import { GetMessagesService } from 'src/engine/core-modules/messaging/services/get-messages.service';
@@ -330,6 +332,20 @@ export class TimelineMessagingResolver {
     );
   }
 
+  @Query(() => [TradeCrmMailThreadDraftEntity])
+  async getTradeCrmMailThreadDrafts(
+    @AuthUser() user: AuthContextUser,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ) {
+    if (!(await this.userService.loadWorkspaceMember(user, workspace))) {
+      return [];
+    }
+
+    return this.getMessagesFromPersonIdsService.getTradeCrmMailThreadDrafts(
+      workspace.id,
+    );
+  }
+
   @Mutation(() => Boolean)
   async upsertTradeCrmMailThreadTaskLink(
     @AuthUser() user: AuthContextUser,
@@ -347,6 +363,38 @@ export class TimelineMessagingResolver {
     );
 
     return true;
+  }
+
+  @Mutation(() => TradeCrmMailThreadDraftEntity, { nullable: true })
+  async upsertTradeCrmMailThreadDraft(
+    @AuthUser() user: AuthContextUser,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('input') input: UpsertTradeCrmMailThreadDraftInput,
+  ) {
+    if (!(await this.userService.loadWorkspaceMember(user, workspace))) {
+      return null;
+    }
+
+    return this.getMessagesFromPersonIdsService.upsertTradeCrmMailThreadDraft(
+      workspace.id,
+      input,
+    );
+  }
+
+  @Mutation(() => Boolean)
+  async deleteTradeCrmMailThreadDraft(
+    @AuthUser() user: AuthContextUser,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('draftId', { type: () => UUIDScalarType }) draftId: string,
+  ): Promise<boolean> {
+    if (!(await this.userService.loadWorkspaceMember(user, workspace))) {
+      return false;
+    }
+
+    return this.getMessagesFromPersonIdsService.deleteTradeCrmMailThreadDraft(
+      workspace.id,
+      draftId,
+    );
   }
 
   @Query(() => DevelopmentEmailWorkspaceDTO)

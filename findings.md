@@ -382,3 +382,53 @@
   - clicking the `Person` link lands on the real `/object/person/:id` page
   - the object page keeps AMAIN navigation semantics and does not reintroduce Twenty `工作区`
 - This confirms the record-link pattern is no longer just test-fixture coverage. It is live on the operator page.
+
+## 2026-05-08 Mail workbench inbox-behavior findings
+
+- The mailbox workbench now has a real selection layer in `Inbox / Pending / Unread`, not just row previews.
+- Live browser regression confirmed:
+  - thread checkboxes render in the inbox list
+  - the batch toolbar exposes pending/tag/open/reply actions once threads are checked
+  - preview-level `Reply / Reply all / Forward` actions are visible in the right-side thread panel
+- The first compose-panel regression was real:
+  - `Reply` was clickable
+  - but the draft panel did not render
+  - root cause was the render gate comparing the preview thread to `selectedMailThreadItems[0]`
+- That comparison is wrong whenever the seller checks thread `A` but previews thread `B`.
+- The correct source of truth for the draft panel is the explicitly targeted compose thread, not the first selected checkbox thread.
+- After switching the render gate to an explicit `composeThreadId`, live browser regression confirms the draft surface now appears with:
+  - recipient input
+  - subject input
+  - readonly thread context
+  - draft body textarea
+- Remaining gap:
+  - `Save draft` no longer dies inside preview-local state
+  - it now persists into a seller-visible Drafts workspace backed by browser-local storage
+  - the full live loop is verified: `Reply -> Save draft -> Drafts hydrate -> Delete draft`
+  - this closes the UX gap for mailbox behavior, but it is still not a backend Drafts record
+
+## 2026-05-08 Mail workbench drafts-path findings
+
+- The old mailbox draft flow was not operationally credible because `Save draft` only updated the compose panel timestamp.
+- Sellers need two things from Drafts:
+  - a dedicated workspace they can reopen later
+  - a stable source-thread context when they resume the draft
+- `TradeCrmMailPage` now keeps a local Drafts ledger with:
+  - `mode`
+  - `sourceThreadId`
+  - recipients and cc
+  - subject and body
+  - customer/context labels
+  - saved timestamp
+- `Drafts` now reads from that ledger instead of fake seed items.
+- Live browser verification confirms:
+  - `Reply` opens the compose panel on the preview thread
+  - `Save draft` creates a real row under `Drafts`
+  - opening `Drafts` hydrates the editor with the saved content
+  - `Delete draft` removes the row and restores the empty state
+- Remaining boundary:
+  - this is still browser-local Drafts persistence
+  - it is good enough for mailbox workbench behavior
+  - it is not yet a server-backed Drafts mailbox record or SMTP draft object
+
+- 2026-05-08: Mail Drafts backend ledger initially appeared empty for two separate runtime reasons: the live server process had not been restarted after adding the new GraphQL fields, and the new core.tradeCrmMailThreadDraft table migration had not been applied. After restarting the dist/main.js server, forcing the migration in the local dev workspace, and changing the Drafts query to fetch from network instead of stale Apollo cache, Drafts rendered the saved backend records correctly.

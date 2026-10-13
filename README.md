@@ -1,26 +1,24 @@
-﻿<p align="center">
-  <a href="https://www.twenty.com">
-    <img src="./packages/twenty-website/public/images/core/logo.svg" width="100px" alt="Twenty logo" />
-  </a>
+<p align="center">
+  <img src="./packages/twenty-website/public/images/core/logo.svg" width="96px" alt="AMAIN Sales OS logo" />
 </p>
 
-<h2 align="center" >The #1 Open-Source CRM </h2>
+<h1 align="center">AMAIN Sales OS</h1>
 
-<p align="center"><a href="https://twenty.com">馃寪 Website</a> 路 <a href="https://docs.twenty.com">馃摎 Documentation</a> 路 <a href="https://github.com/orgs/twentyhq/projects/1"><img src="./packages/twenty-website/public/images/readme/planner-icon.svg" width="12" height="12"/> Roadmap </a> 路 <a href="https://discord.gg/cx5n4Jzs57"><img src="./packages/twenty-website/public/images/readme/discord-icon.svg" width="12" height="12"/> Discord</a> 路 <a href="https://www.figma.com/file/xt8O9mFeLl46C5InWwoMrN/Twenty"><img src="./packages/twenty-website/public/images/readme/figma-icon.png"  width="12" height="12"/>  Figma</a></p>
-<br />
-
+<h3 align="center">外贸销售操作系统 · Foreign-Trade Sales Operating System</h3>
 
 <p align="center">
-  <a href="https://www.twenty.com">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/twentyhq/twenty/refs/heads/main/packages/twenty-website/public/images/readme/github-cover-dark.png" />
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/twentyhq/twenty/refs/heads/main/packages/twenty-website/public/images/readme/github-cover-light.png" />
-      <img src="./packages/twenty-website/public/images/readme/github-cover-light.png" alt="Cover" />
-    </picture>
-  </a>
+  面向外贸团队的日常销售作业与经营治理一体化工作台，基于开源 CRM 平台 <b>Twenty</b> 二次开发。
 </p>
 
-<br />
+<p align="center">
+  <b>当前版本：v0.3.0-dev</b>（开发版 / development preview）
+</p>
+
+---
+
+> 本仓库是 AMAIN Sales OS 的 <b>开发版本（development build）</b>。
+> 上游 Twenty 的原始安装与贡献文档保留在下方，仅供本地构建与平台层参考；
+> 产品功能与业务语义以 AMAIN Sales OS 文档为准。
 
 # Installation
 

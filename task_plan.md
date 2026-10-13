@@ -499,7 +499,18 @@
   - [x] verified person-record navigation from `Recent rule results`
   - [x] verified record page does not reintroduce Twenty `工作区` navigation
 
-- [ ] Next: move back to the mailbox workbench and add more true inbox behavior
-  - [ ] batch toolbar actions for selected threads
-  - [ ] reply / forward surface on selected-thread detail
-  - [ ] make pending / inbox / unread behave like a real mailbox first, not just a CRM-adjacent thread list
+- [x] Recover true inbox behavior in the mailbox workbench
+  - [x] batch toolbar actions for selected threads
+  - [x] reply / reply-all / forward surface on selected-thread detail
+  - [x] make pending / inbox / unread behave more like a real mailbox with explicit selection state
+  - [x] fix compose gating so reply draft follows the clicked preview thread instead of `selectedMailThreadItems[0]`
+  - [x] browser regression confirmed: batch toolbar is live and reply draft renders recipient / subject / context / body fields
+
+- [ ] Next: keep pushing mailbox fundamentals
+  - [x] make batch `打开选中线程` follow the active checked thread when exactly one thread is selected
+  - [x] wire `Save draft` to Drafts workspace persistence instead of local-only compose state
+  - [x] verify live `Reply -> Save draft -> Drafts -> Delete draft` in the in-app browser
+  - [ ] validate pending / inbox / unread action feedback against real mailbox mutations, not just rendered controls
+  - [ ] promote Drafts persistence from local Drafts workspace storage to a real backend Drafts path
+
+- [done] Promote Mail Drafts from local-only persistence to backend draft ledger, including runtime schema refresh, forced migration, and network-backed Drafts query refresh (2026-05-08).
